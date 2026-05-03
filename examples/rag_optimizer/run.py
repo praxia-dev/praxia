@@ -1,13 +1,13 @@
 """RAG-Optimization-Flow demo with a tiny in-memory retriever."""
 from __future__ import annotations
 
-from agentloom import AgentLoom
-from agentloom.flows import RAGOptimizationFlow
+from praxia import Praxia
+from praxia.flows import RAGOptimizationFlow
 
 CORPUS = [
-    {"id": "doc1", "text": "AgentLoom は Apache 2.0 ライセンスで配布されています。"},
-    {"id": "doc2", "text": "AgentLoom は Mem0 / LangMem / Letta / Zep / JSON の LTM バックエンドを選択できます。"},
-    {"id": "doc3", "text": "AgentLoom は Qwen / ChatGPT / Gemini / Claude を含む主要 LLM をサポートします。"},
+    {"id": "doc1", "text": "Praxia は Apache 2.0 ライセンスで配布されています。"},
+    {"id": "doc2", "text": "Praxia は Mem0 / LangMem / Letta / Zep / JSON の LTM バックエンドを選択できます。"},
+    {"id": "doc3", "text": "Praxia は Qwen / ChatGPT / Gemini / Claude を含む主要 LLM をサポートします。"},
     {"id": "doc4", "text": "Sleep-time Consolidation は個人メモリを組織メモリへ自動昇格させます。"},
 ]
 
@@ -25,11 +25,11 @@ def naive_retriever(query: str) -> list[dict]:
 
 
 def main() -> None:
-    loom = AgentLoom(user_id="charlie", default_model="auto")
+    loom = Praxia(user_id="charlie", default_model="auto")
     result = loom.run(
         RAGOptimizationFlow,
         inputs={
-            "question": "AgentLoom はどのライセンスで配布されていますか?",
+            "question": "Praxia はどのライセンスで配布されていますか?",
             "retriever": naive_retriever,
         },
     )

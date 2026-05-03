@@ -1,301 +1,327 @@
-# AgentLoom
+# Praxia
 
 > **Specialized Multi-Agent Orchestrator with Cyclic Personal/Organizational Memory**
 >
-> 業務フロー特化型のマルチエージェント・オーケストレーター。個人の暗黙知を**自動的に**組織知へ昇格させる5層メモリ循環機構を内蔵。
+> A workflow-specific multi-agent orchestrator that **automatically promotes** individual tacit knowledge into organizational know-how. Built on a 5-layer memory stack with three independent promotion paths.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
 
+> 🇯🇵 日本語版は [README.ja.md](README.ja.md) を参照してください.
+
 ---
 
-## 🎯 なぜ AgentLoom か (Why AgentLoom?)
+## 🎯 Why Praxia?
 
-汎用的なマルチエージェント・フレームワーク（CrewAI、AutoGen、LangGraph等）は強力ですが、現場ではこんな課題に直面します：
+General-purpose multi-agent frameworks (CrewAI, AutoGen, LangGraph, …) are powerful but stop short on these four problems:
 
-| 既存フレームワークの課題 | AgentLoom のアプローチ |
+| Problem with existing frameworks | Praxia's approach |
 |---|---|
-| 設定が複雑で現場投入が困難 | **業務フロー特化テンプレート**（営業準備 / 論理整合チェック / RAG最適化）を即起動 |
-| ベテランの「効くプロンプト」が個人の引き出しに留まる | **個人メモリ → 組織メモリの自動昇格パイプライン**を内蔵 |
-| 「動く」だけで「効果」の保証がない | **評価エージェント**と**ハルシネーション検知**を標準同梱 |
-| 一度作ったエージェントが進化しない | **Sleep-time Consolidation** が夜間に自分のフローを蒸留・改善 |
+| Setup is complex; production deployment is hard | **Workflow-specific templates** (sales prep / logic check / RAG optimization) that run in 5 minutes |
+| Senior-engineer "magic prompts" stay locked in one person's editor | **Personal-to-org auto-promotion pipeline** built in |
+| "It works" doesn't prove "it works *well*" | **Hallucination detection + retrieval evals** shipped by default |
+| Agents stagnate after launch | **Sleep-time consolidation** distills your past flows nightly |
 
-AgentLoom は「**1人の天才の引き出し**」を「**組織全員のベスプラ**」に変える OSS フレームワークです。
+Praxia turns "one expert's drawer" into "everyone's best practices."
 
 ---
 
-## 🏗 アーキテクチャ概要
-
-### 5層メモリスタック（自律循環）
+## 🏗 Architecture — 5-Layer Memory Stack
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  AI エージェント（Skills + MCP）                          │
+│  AI Agents (Skills + MCP)                                │
 └──────────────┬───────────────────────────────────────────┘
-               │ ユーザは普通に対話するだけ
+               │ Users just have normal conversations
                ▼
 ╔═══════════════════════════════════════════════════════════╗
-║ 第1層: 個人メモリ（自動抽出）                             ║
-║   Mem0 / LangMem ベース、namespace = user_id              ║
-║   ★ 努力ゼロで暗黙知を蓄積                                ║
+║ Layer 1: Personal memory (auto-extracted)                 ║
+║   Mem0 / LangMem / HindSight / Letta / Zep / JSON         ║
+║   namespace = user_id                                     ║
+║   ★ Zero-effort tacit-knowledge capture                   ║
 ╚══════════════╤════════════════════════════════════════════╝
-               │ Sleep-time Consolidation（夜間バッチ）
+               │ Sleep-time Consolidation (nightly batch)
                ▼
 ╔═══════════════════════════════════════════════════════════╗
-║ 第2層: 蒸留・昇格判定エンジン                             ║
-║   3経路の「有効性判定」並走:                              ║
-║     ① 頻度ベース   (N人以上で共通)                        ║
-║     ② 成果連動    (受注/失注などとの相関)                 ║
-║     ③ 自己評価   (LLM スコアリング)                       ║
+║ Layer 2: Distillation & promotion engine                  ║
+║   Three parallel "validity tests":                        ║
+║     ① Frequency  (recurring across N+ users)              ║
+║     ② Outcome    (correlated with wins/losses)            ║
+║     ③ Self-eval  (LLM scored)                             ║
 ╚══════════════╤════════════════════════════════════════════╝
-               │ 閾値超で自動昇格 / 高インパクト案件は人手レビュー
+               │ Auto-promote above threshold; queue otherwise
                ▼
 ╔═══════════════════════════════════════════════════════════╗
-║ 第3層: 共有メモリ（生きた組織知）                         ║
-║   Letta-style Shared Blocks、全エージェントが read/write   ║
+║ Layer 3: Shared memory (living organizational knowledge)  ║
+║   Letta-style shared blocks; all agents read/write        ║
 ╚══════════════╤════════════════════════════════════════════╝
-               │ 重要案件のキュレーション
+               │ PR review for high-impact items
                ▼
 ╔═══════════════════════════════════════════════════════════╗
-║ 第4層: 組織標準（凍結された Best Practices）              ║
-║   Markdown + git + PR レビュー                            ║
-║   GitHub Copilot / Cursor Rules 互換フォーマット          ║
+║ Layer 4: Frozen layer (git-managed best practices)        ║
+║   Markdown + git + PR review                              ║
+║   GitHub Copilot / Cursor Rules-compatible format         ║
 ╚══════════════╤════════════════════════════════════════════╝
-               │（任意）
+               │ (optional)
                ▼
 ╔═══════════════════════════════════════════════════════════╗
-║ 第5層: 関係性領域の Graph 層（任意）                      ║
-║   Zep / Graphiti — 決定履歴・顧客360・障害因果のみ        ║
+║ Layer 5: Graph layer (only relationship-heavy domains)    ║
+║   Zep / Graphiti — decisions, customer 360, incident DAG  ║
 ╚═══════════════════════════════════════════════════════════╝
 
-並走する第6層: Skills レジストリ
-  個人が作った Skill が組織レジストリへ昇格
-  MCP / Claude Skills / Cursor Skills 互換
+Parallel Layer 6: Skills registry
+  Personal skills get promoted to the organizational catalog.
+  MCP / Claude Skills / Cursor Skills compatible.
 ```
 
-3つの昇格経路（**自動 / 統計 / 手動**）を並走させ、単一経路に依存しない設計が肝です。
+Three promotion paths (**auto / statistical / manual**) run side by side — never depending on a single mechanism.
 
-詳細は [docs/architecture.md](docs/architecture.md) を参照。
+For details, see [docs/architecture.md](docs/architecture.md).
 
 ---
 
-## ✨ 同梱される特化リソース
+## ✨ What's Bundled
 
-### 3 つの業務フロー（マルチエージェント・パイプライン）
+### 3 Specialized Multi-Agent Flows
 
-| Flow | 概要 |
+| Flow | What it does |
 |---|---|
-| **Sales-Agent-Flow** | 顧客 IR・過去議事録・RAG を読み込み、**仮説立案 → FAQ → 提案書アウトライン** を生成 |
-| **Logic-Checker-Flow** | 構造抽出 / 矛盾検知 / 読者視点 の 3 エージェントで長文の論理整合性をレビュー |
-| **RAG-Optimization-Flow** | クエリ拡張 → 検索 → 妥当性評価 → ハルシネーション検証 を **自己修復ループ** |
+| **SalesAgentFlow** | Reads customer IR, past minutes, RAG context → generates **hypotheses → FAQ → proposal outline** |
+| **LogicCheckerFlow** | Three agents (structure / contradiction / reader) review long documents for logical consistency |
+| **RAGOptimizationFlow** | Self-correcting RAG: query expansion → retrieval → relevance eval → hallucination check loop |
 
-### 6 つのビジネス・ドメイン・スキル（単独でも、Flow 内でも使える）
+### 6 Default Business-Domain Skills
 
-| Skill | 領域 | 用途 |
+| Skill | Domain | Use cases |
 |---|---|---|
-| **InvestmentSkill** | 投資 | 株式・債券・スタートアップの投資判断、デューデリ |
-| **SalesSkill** | 営業 | アカウント・リサーチ、提案ドラフト、FAQ 準備 |
-| **DesignSkill** | 設計 | システム設計レビュー、要件定義、アーキテクチャ評価 |
-| **PurchasingSkill** | 購買 | サプライヤー評価、RFQ 比較、TCO 算定、BCP リスク |
-| **PatentSkill** | 特許 | 先行技術調査、クレーム作成、特許マップ、出願戦略 |
-| **LegalSkill** | 法務 | 契約書レビュー、コンプライアンス、社内規程整備 |
+| **InvestmentSkill** | Investment | Equity research, due diligence, portfolio decisions |
+| **SalesSkill** | Sales | Account research, proposal drafting, FAQ prep |
+| **DesignSkill** | Engineering Design | System design review, requirements engineering |
+| **PurchasingSkill** | Procurement | Supplier evaluation, RFQ analysis, TCO, BCP risk |
+| **PatentSkill** | IP / Patent | Prior-art search, claims drafting, patent maps |
+| **LegalSkill** | Legal | Contract review, compliance, M&A diligence |
 
-各スキルは Claude Skills / MCP 互換の `SKILL.md` フォーマットでシリアライズ可能。
+Each skill serializes to Claude-Skills / MCP-compatible `SKILL.md`.
 
-### 主要 LLM をすべてサポート
+### All Major LLMs
 
-LiteLLM 経由で **任意のプロバイダ** を 1 行で切り替え。
+LiteLLM-powered single-line provider switching:
 
-| Provider | エイリアス | 認証 |
+| Provider | Aliases | Auth |
 |---|---|---|
 | Anthropic Claude | `claude` / `claude-sonnet` / `claude-haiku` | `ANTHROPIC_API_KEY` |
 | OpenAI ChatGPT | `chatgpt` / `gpt-4o` / `o1` | `OPENAI_API_KEY` |
 | Google Gemini | `gemini` / `gemini-flash` | `GEMINI_API_KEY` |
 | Alibaba Qwen (cloud) | `qwen` / `qwen-72b` | `DASHSCOPE_API_KEY` |
-| Qwen / Llama (local) | `qwen-local` (Ollama) | (none — 自社内) |
+| Qwen / Llama (local) | `qwen-local` (Ollama) | (none — runs in-house) |
 
 ```python
 LLM("claude")        # Anthropic Claude
-LLM("qwen-local")    # ローカル Qwen (Ollama)
-LLM("openai/gpt-4o") # 任意の LiteLLM 形式
+LLM("qwen-local")    # Local Qwen via Ollama
+LLM("openai/gpt-4o") # Any LiteLLM-compatible model string
 ```
 
-### 5 つのメモリ・バックエンドから選択可能
+### 6 Pluggable LTM Backends
 
-| Backend | 特徴 |
+| Backend | Notes |
 |---|---|
-| **json** (default) | ゼロ依存、JSONL on disk、完全に監査可能 |
-| **mem0** | エンティティ・リンキング + ハイブリッド検索（推奨） |
+| **json** (default) | Zero-dependency, JSONL on disk, fully auditable |
+| **mem0** | Entity linking + hybrid search (recommended for production) |
 | **langmem** | LangChain LangMem SDK |
-| **letta** | Letta shared blocks（ポリシー保護機能つき） |
-| **zep** | Zep / Graphiti（時系列 KG / 第5層） |
+| **letta** | Letta shared blocks (with read-only policy support) |
+| **zep** | Zep / Graphiti for temporal KGs (Layer 5) |
+| **hindsight** | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) — agent memory store |
 
-切り替えは 1 行:
+Switch with one line:
 ```python
 PersonalMemory(user_id="alice", backend="mem0")
 ```
+
+### Built-in Authentication & RBAC
+
+- API-key + JWT-based auth (`praxia.auth`)
+- 4 default roles: `admin` / `operator` / `member` / `viewer`
+- Audit logging of every memory read/write and skill invocation
+- Compatible with enterprise SSO via OIDC adapter
 
 ---
 
 ## 🚀 Quickstart
 
 ```bash
-pip install agentloom              # コア
-pip install "agentloom[ui]"        # + Streamlit UI
-pip install "agentloom[all]"       # 全部入り
+pip install praxia              # Core
+pip install "praxia[ui]"        # + Streamlit UI
+pip install "praxia[all]"       # Everything
 
-# 初期化（個人メモリ + Skills レジストリ）
-agentloom init --backend json --model auto
+# Initialize (creates personal memory + skill registry + admin user)
+praxia init --backend json --model auto
 
-# 業務フロー実行
-agentloom run sales --customer-name "Acme" --product "BizFlow"
-agentloom run logic --document path/to/doc.md
-agentloom run rag --question "AgentLoom はどのライセンス?"
+# Run a flow
+praxia run sales --customer-name "Acme" --product "BizFlow"
+praxia run logic --document path/to/doc.md
+praxia run rag --question "What license is Praxia released under?"
 
-# 単一スキル実行（6 業務スキルから選択）
-agentloom skill investment "ソニーグループ株の中期投資判断を教えて"
-agentloom skill legal "業務委託契約書のリスクを教えて"
+# Run a single business skill
+praxia skill investment "Mid-term investment thesis on Sony Group stock"
+praxia skill legal "Review the risk in this services agreement"
 
-# UI 起動
-agentloom ui --port 8501
+# Launch the UI
+praxia ui --port 8501
 
-# 個人メモリ → 組織メモリへの夜間蒸留
-agentloom consolidate --dry-run
+# Distill personal → organizational memory (nightly batch)
+praxia consolidate --dry-run
+
+# Skill promotion (Phase 4)
+praxia skill promote --candidates       # show eligible personal skills
+praxia skill promote --name my_skill    # promote one to org
+
+# Freeze a shared block into Markdown (Phase 3)
+praxia freeze --block team_norms
+
+# User & role management (Phase 5)
+praxia user create alice --role member
+praxia user grant alice promote_skills
 ```
 
-最小コード例：
+Minimal Python example:
 
 ```python
-from agentloom import AgentLoom
-from agentloom.flows import SalesAgentFlow
-from agentloom.skills import InvestmentSkill
+from praxia import Praxia
+from praxia.flows import SalesAgentFlow
+from praxia.skills import InvestmentSkill
 
-loom = AgentLoom(user_id="alice", default_model="claude")
+m = Praxia(user_id="alice", default_model="claude")
 
-# Multi-agent flow
-result = loom.run(SalesAgentFlow, inputs={
+# Run a multi-agent flow
+result = m.run(SalesAgentFlow, inputs={
     "customer_name": "Acme",
     "product": "BizFlow",
 })
 
-# Single business skill
-print(InvestmentSkill().run("Toyota の今後 3 年の投資判断"))
+# Run a single business skill
+print(InvestmentSkill().run("3-year investment thesis on Toyota"))
 
-# 個人メモリには自動的に蓄積（明示 save 不要）
-# 蒸留バッチで組織メモリへの昇格候補が自動抽出される
-loom.consolidate(dry_run=True)
+# Personal memory accumulates automatically — no explicit save needed.
+# The nightly consolidator promotes effective patterns to org memory.
+m.consolidate(dry_run=True)
 ```
 
-詳しくは [docs/quickstart.md](docs/quickstart.md) を参照。
+Full guide: [docs/quickstart.md](docs/quickstart.md).
 
 ---
 
-## 📐 設計思想
+## 📐 Design Philosophy
 
-### 1. **「努力ゼロ」で個人の暗黙知を捕捉する**
-GitHub Copilot Custom Instructions のような明示記述ではなく、**対話の副産物として自動抽出**。Mem0 / LangMem の自動抽出機構を統合。
+### 1. Capture tacit knowledge with **zero effort**
+No explicit `CLAUDE.md`-style writing. Mem0/LangMem/HindSight extract entities and preferences from ordinary conversations.
 
-### 2. **「有効なものだけ」を「自動的に」組織知に昇格させる**
-判定の自動化が核心。AgentLoom は 3 つの判定軸を並走させる：
-- **頻度ベース**: 複数ユーザ・複数セッションで繰り返し現れる事項
-- **成果連動ベース**: 成功事例（受注、テスト合格、PR マージ等）との相関
-- **自己評価ベース**: LLM が「これは重要」と判断
+### 2. Promote only what's **effective**, **automatically**
+Three independent verdicts run in parallel. The framework auto-promotes only when consensus is high; medium-confidence items go to a review queue.
 
-### 3. **「凍結」と「生きた知識」を分離する**
-- **生きた層** (Shared Blocks): 即時更新、全エージェントが共有
-- **凍結層** (Markdown + git): PR レビューを経たベストプラクティスのみ
-- 両方を区別することで、組織知の「鮮度」と「信頼性」を両立。
+### 3. Separate "frozen" from "living" knowledge
+- Living layer (shared blocks): updated instantly, all agents see it
+- Frozen layer (Markdown + git): only PR-reviewed, stable best practices
 
-### 4. **Graph は「関係性が業務価値の中核」な領域のみ**
-Mem0 OSS は 2026年4月に graph_store サポートを廃止。AgentLoom も同様に、**vector + entity linking を主軸**に置き、Graph は決定履歴・顧客360・障害因果など限定領域のみ任意採用。
+This keeps both **freshness** and **trust** intact.
 
-詳細は [docs/design-philosophy.md](docs/design-philosophy.md) 参照。
+### 4. Use Graph storage **only where relationships are the value**
+Mem0 OSS removed `graph_store` support in April 2026. We follow that signal: vector + entity linking is the default; graphs apply only to decision histories, customer 360, and incident causal chains.
 
----
+### 5. **Vendor lock-in is a non-goal**
+- LiteLLM lets any provider work
+- LTM backends are pluggable
+- Markdown + git is the persistence layer of last resort
+- Apache 2.0 license, evolving toward an open-core model
 
-## 📊 業種・業務別ユースケース
+### 6. Ship "**evidence**" alongside the framework
+Hallucination detection (`praxia.eval.hallucination`) and retrieval metrics (`praxia.eval.metrics`) are first-class. Customers don't have to take "it works" on faith.
 
-各業務領域での具体的な Before/After 効果例は **[docs/use-cases.md](docs/use-cases.md)** にまとめてあります。
-ハイライト:
-
-| 業種 | 代表ユースケース | 主な効果 |
-|------|----------------|----------|
-| 投資 | スタートアップへのシード投資判断 | 1 件 4〜6 時間 → **45〜60 分** |
-| 営業 | 新規大手顧客の事前リサーチ + 商談 SB | 提案合意率 **+15〜20pt** |
-| 設計 | 要件定義書のレビュー | シニアの可処分時間 **週 16 時間 → 4 時間** |
-| 購買 | RFQ 結果の TCO 比較 | 隠れコスト発見で初期見積より **+30%** の真コスト把握 |
-| 特許 | 先行技術調査 + 進歩性評価 | 弁理士費用 **50〜70% 削減** |
-| 法務 | M&A 契約レビュー | 外部法律事務所費用 **半減** (案件 1 件 1,000 万円規模) |
-
-**長期効果 (3 年後)**: 新人独り立ち期間 6〜12 ヶ月 → **2〜3 ヶ月** / ベテラン退職時の知見漏出 **ゼロ** / 部門横断ベスプラ流通 **月 30 件以上**
+For more, see [docs/design-philosophy.md](docs/design-philosophy.md).
 
 ---
 
-## 🆚 既存フレームワークとの比較
+## 📊 Use Cases by Industry
 
-| 機能 | CrewAI | AutoGen | LangGraph | **AgentLoom** |
-|---|---|---|---|---|
-| 汎用マルチエージェント | ✅ | ✅ | ✅ | ✅ |
-| 業務フロー特化テンプレート | ❌ | ❌ | ❌ | ✅ |
-| 個人メモリ自動抽出 | ❌ | ❌ | △ | ✅ |
-| 個人→組織メモリ昇格 | ❌ | ❌ | ❌ | ✅ |
-| Sleep-time Consolidation | ❌ | ❌ | ❌ | ✅ |
-| Skills レジストリ循環 | ❌ | ❌ | ❌ | ✅ |
-| ハルシネーション評価標準 | ❌ | ❌ | ❌ | ✅ |
-| MCP / Claude Skills 互換 | △ | △ | △ | ✅ |
+Detailed Before/After tables for each domain are in **[docs/use-cases.md](docs/use-cases.md)**. Highlights:
 
----
-
-## 🗺 ロードマップ
-
-| Phase | 内容 | 状態 |
+| Industry | Representative use case | Headline impact |
 |---|---|---|
-| **Phase 1** | 個人メモリ層 + 3 特化フロー（Alpha） | 🚧 In progress |
-| **Phase 2** | Sleep-time Consolidator + 統計昇格 | 📋 Planned |
-| **Phase 3** | Shared Blocks + Markdown 凍結層 | 📋 Planned |
-| **Phase 4** | Skills レジストリの個人→組織昇格 | 📋 Planned |
-| **Phase 5** | エンタープライズ拡張（GUI / 監査ログ） | 💼 Commercial |
+| Investment | Seed-stage VC due diligence | 4–6h → **45–60 min** per deck |
+| Sales | Pre-meeting research + storyboard | Proposal-acceptance rate **+15–20pt** |
+| Engineering Design | Requirements doc review | Senior architect time freed: **week 16h → 4h** |
+| Procurement | RFQ TCO comparison | Hidden costs found: **+30%** vs initial quote |
+| Patent | Prior-art search + novelty assessment | External patent-attorney fees **−50–70%** |
+| Legal | M&A contract review | External law-firm costs **halved** (~$100k/deal) |
+
+**3-year compounding effects**: New-hire ramp **6–12mo → 2–3mo** / Veteran-departure knowledge loss **→ zero** / Cross-team best-practice diffusion **30+ items/month**.
+
+---
+
+## 🆚 Compared with Existing Frameworks
+
+| Capability | CrewAI | AutoGen | LangGraph | **Praxia** |
+|---|---|---|---|---|
+| General multi-agent | ✅ | ✅ | ✅ | ✅ |
+| Workflow-specific templates | ❌ | ❌ | ❌ | ✅ |
+| Auto-extracting personal memory | ❌ | ❌ | △ | ✅ |
+| Personal → org promotion | ❌ | ❌ | ❌ | ✅ |
+| Sleep-time consolidation | ❌ | ❌ | ❌ | ✅ |
+| Skills registry cycling | ❌ | ❌ | ❌ | ✅ |
+| Hallucination eval bundled | ❌ | ❌ | ❌ | ✅ |
+| Built-in auth + RBAC + audit | ❌ | ❌ | ❌ | ✅ |
+| MCP / Claude Skills compatible | △ | △ | △ | ✅ |
+
+---
+
+## 🗺 Roadmap
+
+| Phase | Scope | Status |
+|---|---|---|
+| **Phase 1** | Personal memory + 3 specialized flows + 6 business skills | ✅ **Done** |
+| **Phase 2** | Sleep-time consolidator + statistical (outcome-correlated) promotion | ✅ **Done** |
+| **Phase 3** | Shared blocks + Markdown freeze workflow + CLI | ✅ **Done** |
+| **Phase 4** | Skill registry promotion (personal → org) | ✅ **Done** |
+| **Phase 5** | Auth, RBAC, audit log, OIDC adapter | ✅ **Done** |
+| **Phase 6** | Enterprise GUI / multi-tenant SaaS | 💼 Commercial |
 
 ---
 
 ## 🤝 Contributing
 
-このプロジェクトは「**業界別レシピ**」のコミュニティ駆動の蓄積を目指します：
+We're building a **community-driven library of industry recipes**. Three primary contribution paths:
 
-1. `agentloom/flows/` に新しい業務フローを追加
-2. `examples/` に具体的なドメイン適用例を追加
-3. `docs/recipes/` に「業種別ベスプラ」を投稿
+1. New workflow flows (`praxia/flows/`)
+2. New business skills (`praxia/skills/business/`)
+3. Industry recipes (`docs/recipes/`)
 
-Pull Request 歓迎。詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照。
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
 ## 📜 License
 
-[Apache License 2.0](LICENSE) — 商用利用・改変・再配布可。
+[Apache License 2.0](LICENSE) — commercial use, modification, and redistribution permitted.
 
-将来的に「**オープンコア・モデル**」（コアは Apache 2.0、企業向け管理機能のみ別ライセンス）を採用予定。
+We may evolve toward an **open-core** model: enterprise GUI / SSO / advanced audit features under a separate license, while the framework remains Apache 2.0.
 
 ---
 
-## 📚 関連プロジェクト & 参考文献
+## 📚 Acknowledgements & Inspirations
 
-- [Mem0](https://github.com/mem0ai/mem0) — Personal memory layer (採用)
-- [Letta](https://github.com/letta-ai/letta) — Shared Memory Blocks の思想を参考
-- [LangMem](https://github.com/langchain-ai/langmem) — Long-term memory SDK
-- [Claude Skills](https://docs.claude.com/) — Skills レジストリ規約
-- [Model Context Protocol](https://modelcontextprotocol.io) — Tool/Skill 連携規約
+- [Mem0](https://github.com/mem0ai/mem0) — personal memory layer
+- [Letta](https://github.com/letta-ai/letta) — shared memory blocks concept
+- [LangMem](https://github.com/langchain-ai/langmem) — long-term memory SDK
+- [LiteLLM](https://github.com/BerriAI/litellm) — unified provider abstraction
+- [Claude Skills](https://docs.claude.com/) — skills registry conventions
+- [Model Context Protocol](https://modelcontextprotocol.io) — tool/skill interop
+- HindSight — Experience / Entity Summary / Belief model
 
-理論的背景：
+Theoretical groundwork:
 - LinkedIn Cognitive Memory Agent (Episodic + Semantic + Procedural)
-- Mem0 論文 (arXiv:2504.19413)
-- Letta Sleep-time Agents
+- Mem0 paper (arXiv:2504.19413)
+- Letta sleep-time agents
 
 ---
 
-## 🙏 謝辞
-
-本プロジェクトは、RAG-1 グランプリでの実戦経験と、自律型 AI エージェントのメモリ機構に関する内部調査から生まれました。
-
-> **「個人の天才性 × 組織の継続性」を AI で結びつける** — それが AgentLoom のミッションです。
+> **Mission**: Bridge "individual brilliance" and "organizational continuity" with AI.

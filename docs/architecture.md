@@ -1,6 +1,6 @@
-# AgentLoom アーキテクチャ
+# Praxia Architecture
 
-## 全体像 — 6 つの層
+## Overview — Six Layers
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -8,7 +8,7 @@
 └────────────────────────────────┬─────────────────────────────────────────┘
                                  │
                     ┌────────────▼─────────────┐
-                    │      Orchestrator        │  (agentloom.core.AgentLoom)
+                    │      Orchestrator        │  (praxia.core.Praxia)
                     │   memory + flow + skill  │
                     └─┬──────────┬──────────┬──┘
                       │          │          │
@@ -19,56 +19,62 @@
                 └────┬────┘ └────┬────┘ └────┬─────┘
                      │           │           │
                 ┌────▼───────────▼───────────▼────┐
-                │            LLM Layer            │  (litellm — multi-provider)
-                │  Claude / ChatGPT / Gemini /    │
-                │  Qwen-API / Qwen-local (Ollama) │
-                └─────────────────────────────────┘
+                │       Auth / RBAC / Audit       │  (praxia.auth)
+                └────┬────────────────────────────┘
+                     │
+                ┌────▼─────────────────────────────┐
+                │            LLM Layer             │  (litellm — multi-provider)
+                │  Claude / ChatGPT / Gemini /     │
+                │  Qwen-API / Qwen-local (Ollama)  │
+                └──────────────────────────────────┘
 ```
 
-## Memory: 5層スタック
+## Memory: 5-Layer Stack
 
-### 第1層: 個人メモリ (PersonalMemory)
-- 自動抽出 (Mem0 / LangMem) で会話の副産物として暗黙知を蓄積
-- バックエンド: `json` (default) / `mem0` / `langmem` / `letta` / `zep`
-- Namespace: `user_id`
+### Layer 1: Personal Memory (`PersonalMemory`)
+- Auto-extracts tacit knowledge from conversations as a side effect of normal use.
+- Pluggable backend: `json` (default) / `mem0` / `langmem` / `letta` / `zep` / `hindsight`.
+- Namespaced by `user_id`.
 
-### 第2層: 蒸留・昇格判定エンジン (SleepTimeConsolidator + PromotionEngine)
-3つの判定軸を並走:
-1. **頻度** — 複数ユーザ・セッションで繰返し現れるか
-2. **成果** — 受注/失敗等の outcome データとの相関
-3. **自己評価** — LLM が「組織知候補度」をスコアリング (0..1)
+### Layer 2: Distillation & Promotion Engine (`SleepTimeConsolidator + PromotionEngine`)
+Three independent verdicts run in parallel:
+1. **Frequency** — does the pattern recur across N+ users / sessions?
+2. **Outcome** — is it correlated with positive outcomes (won deals, passing tests, accepted PRs)?
+3. **Self-eval** — LLM scores the pattern's "org-knowledge candidacy" on a 0..1 scale.
 
-### 第3層: 共有メモリ (SharedMemory)
-- Letta-style **shared blocks**
-- 全エージェント read/write、`read_only` でポリシー保護
+The final score is a weighted blend; auto-promote above one threshold, route to a review queue above a lower one.
 
-### 第4層: 凍結層 (MarkdownStore)
-- Markdown + git + PR レビュー
-- GitHub Copilot Custom Instructions / Cursor Rules 互換フォーマット
+### Layer 3: Shared Memory (`SharedMemory`)
+- Letta-style **shared blocks**.
+- All agents read/write; `read_only` mode for policy content.
 
-### 第5層 (任意): Graph 層
-- 関係性が業務価値の中核な領域 (決定履歴 / 顧客360 / 障害因果) のみ
-- Zep / Graphiti を採用、それ以外は Vector + Entity Linking で十分
+### Layer 4: Frozen Layer (`MarkdownStore`)
+- Markdown + git + PR review.
+- Compatible with GitHub Copilot custom instructions / Cursor Rules formats.
 
-### 並走第6層: Skills レジストリ
-- 個人 → 組織 へ Skills 自体も昇格
-- Claude Skills / MCP / Cursor Skills 互換
+### Layer 5 (optional): Graph Layer
+- For relationship-heavy domains (decision histories, customer 360, incident causal chains).
+- Use Zep / Graphiti; otherwise vector + entity linking is sufficient.
 
-## Flow 実行モデル
+### Parallel Layer 6: Skills Registry
+- Personal skills get promoted to the org registry through the same mechanisms as memory.
+- Compatible with Claude Skills / MCP / Cursor Skills.
+
+## Flow Execution Model
 
 ```python
 flow = SalesAgentFlow()
 result = flow.run({"customer_name": "...", "product": "..."})
-# result.final_output     ← 最終出力
-# result.step_outputs     ← 各エージェントの中間出力
-# result.total_usage      ← トークン消費合計
+# result.final_output     ← final output
+# result.step_outputs     ← intermediate outputs from each agent
+# result.total_usage      ← total token usage
 ```
 
-各 `FlowStep` は前段の出力を `${step_name}` で参照可能。
+Each `FlowStep` can reference earlier outputs via `${step_name}` template substitution.
 
-## LLM プロバイダ抽象化
+## LLM Provider Abstraction
 
-LiteLLM をラップした薄い `LLM` クラス。文字列エイリアスで切り替え:
+Thin wrapper over LiteLLM. String aliases for one-line provider switching:
 
 ```python
 LLM("claude")        # → anthropic/claude-opus-4-7
@@ -76,25 +82,49 @@ LLM("chatgpt")       # → openai/gpt-4o
 LLM("gemini")        # → gemini/gemini-2.0-pro
 LLM("qwen")          # → dashscope/qwen-max
 LLM("qwen-local")    # → ollama/qwen2.5:14b
-LLM("openai/gpt-4o") # 任意の LiteLLM 形式
+LLM("openai/gpt-4o") # any LiteLLM-compatible model string
 ```
 
-## Phase 別ロードマップ
+## Auth, RBAC, and Audit
 
-| Phase | 内容 | 状態 |
-|-------|------|------|
-| 1 | 個人メモリ + 3 特化フロー + 6 業務スキル | 🚧 Alpha |
-| 2 | Sleep-time Consolidator + 統計昇格 | 📋 Planned |
-| 3 | Shared Blocks + Markdown 凍結層 | 📋 Planned |
-| 4 | Skills レジストリの個人→組織昇格 | 📋 Planned |
-| 5 | エンタープライズ拡張 (GUI / 監査 / SSO) | 💼 Commercial |
+All privileged actions flow through `praxia.auth`:
 
-## 設計決定の根拠
+```python
+from praxia.auth import AuthManager, Role
 
-| 決定 | 理由 |
-|------|------|
-| Mem0 OSS 推奨 | 自動抽出が成熟、entity linking 採用 (2026-04 graph 廃止) |
-| Graph 層を任意に降格 | 全領域 Graph は ROI が悪い (LinkedIn CMA / Mem0 自身が示唆) |
-| 3経路並走の昇格 | 単一経路依存を避ける (頻度+成果+自己評価) |
-| Markdown + git を凍結層に | PR レビュー・blame・履歴管理を既存ワークフローで利用 |
-| LiteLLM 採用 | 100+ プロバイダの統一抽象化を再発明しない |
+auth = AuthManager(storage_dir=".praxia/auth")
+user, api_key = auth.create_user("alice", role=Role.MEMBER)
+
+# Authentication
+user = auth.authenticate(api_key=api_key)
+
+# Authorization (raises PermissionError on denial)
+auth.require(user, "promote_skills", resource="skill:investment_analyst")
+
+# Audit log (every privileged action recorded)
+events = auth.audit.tail(limit=50)
+```
+
+Default roles: `admin` / `operator` / `member` / `viewer`.
+
+## Phase Roadmap
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 | Personal memory + 3 specialized flows + 6 business skills | ✅ Done |
+| 2 | Sleep-time consolidator + statistical promotion | ✅ Done |
+| 3 | Shared blocks + Markdown freeze workflow + CLI | ✅ Done |
+| 4 | Skill registry promotion (personal → org) | ✅ Done |
+| 5 | Auth, RBAC, audit log | ✅ Done |
+| 6 | Enterprise GUI / multi-tenant SaaS | 💼 Commercial |
+
+## Design Decisions and Rationale
+
+| Decision | Rationale |
+|----------|-----------|
+| Recommend Mem0 OSS as default LTM | Mature auto-extraction; entity-linking-based (after April 2026 graph removal) |
+| Demote graph layer to optional | All-domain graphs have poor ROI (LinkedIn CMA / Mem0 itself signal this) |
+| Three parallel promotion paths | Avoid single-mechanism dependence (frequency + outcome + self-eval) |
+| Markdown + git as frozen layer | Reuse PR review / blame / history workflows already in place |
+| LiteLLM | Don't reinvent the abstraction over 100+ providers |
+| API key + JWT auth | Lightweight, swap-out friendly with PyJWT in production |

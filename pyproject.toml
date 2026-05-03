@@ -3,14 +3,14 @@ requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentloom"
+name = "praxia"
 version = "0.1.0a0"
 description = "Specialized multi-agent orchestrator with cyclic personal/organizational memory and skills"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [
-    { name = "AgentLoom Contributors" },
+    { name = "Praxia Contributors" },
 ]
 keywords = [
     "agent",
@@ -68,20 +68,20 @@ dev = [
     "mypy>=1.11",
 ]
 all = [
-    "agentloom[ui,graph,qwen-local,dev]",
+    "praxia[ui,graph,qwen-local,dev]",
 ]
 
 [project.scripts]
-agentloom = "agentloom.cli.main:app"
-agentloom-ui = "agentloom.ui.launcher:main"
+praxia = "praxia.cli.main:app"
+praxia-ui = "praxia.ui.launcher:main"
 
 [project.urls]
-Homepage = "https://github.com/your-org/agentloom"
-Documentation = "https://github.com/your-org/agentloom/tree/main/docs"
-Issues = "https://github.com/your-org/agentloom/issues"
+Homepage = "https://github.com/your-org/praxia"
+Documentation = "https://github.com/your-org/praxia/tree/main/docs"
+Issues = "https://github.com/your-org/praxia/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["agentloom"]
+packages = ["praxia"]
 
 [tool.ruff]
 line-length = 100

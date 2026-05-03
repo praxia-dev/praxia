@@ -1,8 +1,8 @@
 """Logic-Checker-Flow demo — find contradictions in a sample document."""
 from __future__ import annotations
 
-from agentloom import AgentLoom
-from agentloom.flows import LogicCheckerFlow
+from praxia import Praxia
+from praxia.flows import LogicCheckerFlow
 
 SAMPLE = """
 # 新製品 A の市場戦略案
@@ -25,7 +25,7 @@ SAMPLE = """
 
 
 def main() -> None:
-    loom = AgentLoom(user_id="bob", default_model="auto")
+    loom = Praxia(user_id="bob", default_model="auto")
     result = loom.run(LogicCheckerFlow, inputs={"document": SAMPLE})
 
     print("\n=== Reader's verdict ===\n")

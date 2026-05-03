@@ -17,9 +17,9 @@ dist/
 .venv/
 venv/
 
-# AgentLoom local state (per-user memory & skills)
-.agentloom/
-*.agentloom-cache/
+# Praxia local state (per-user memory & skills)
+.praxia/
+*.praxia-cache/
 memory_store/
 skills_local/
 

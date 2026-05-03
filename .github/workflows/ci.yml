@@ -30,7 +30,7 @@ jobs:
         run: ruff check .
 
       - name: Type check
-        run: mypy agentloom
+        run: mypy praxia
 
       - name: Test
         run: pytest -q

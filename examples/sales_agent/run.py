@@ -7,19 +7,19 @@ set in the environment, OR Ollama is running locally with a Qwen model.
 """
 from __future__ import annotations
 
-from agentloom import AgentLoom
-from agentloom.flows import SalesAgentFlow
+from praxia import Praxia
+from praxia.flows import SalesAgentFlow
 
 
 def main() -> None:
-    loom = AgentLoom(user_id="alice", default_model="auto")
+    loom = Praxia(user_id="alice", default_model="auto")
     print(f"Using model: {loom.llm.model}")
 
     result = loom.run(
         SalesAgentFlow,
         inputs={
             "customer_name": "株式会社 Acme",
-            "product": "AgentLoom Cloud",
+            "product": "Praxia Cloud",
             "additional_context": "製造業向け SaaS。直近の中期経営計画でDX投資を300億円計上。",
         },
     )
