@@ -1,0 +1,101 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentloom"
+version = "0.1.0a0"
+description = "Specialized multi-agent orchestrator with cyclic personal/organizational memory and skills"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [
+    { name = "AgentLoom Contributors" },
+]
+keywords = [
+    "agent",
+    "multi-agent",
+    "orchestrator",
+    "memory",
+    "rag",
+    "llm",
+    "tacit-knowledge",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    # Multi-provider LLM abstraction (OpenAI / Anthropic / Gemini / Qwen / Ollama / etc.)
+    "litellm>=1.51.0",
+    # Personal memory layer
+    "mem0ai>=0.1.40",
+    # Embeddings / vector store
+    "chromadb>=0.5.0",
+    # Validation
+    "pydantic>=2.7",
+    # CLI
+    "typer>=0.12",
+    "rich>=13.7",
+    # Markdown frontmatter for the frozen layer
+    "python-frontmatter>=1.1",
+    # YAML for flow definitions
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+ui = [
+    "streamlit>=1.40",
+    "plotly>=5.24",
+]
+graph = [
+    # Optional: only when adopting the 5th layer (Graph)
+    "neo4j>=5.24",
+    "graphiti-core>=0.3",
+]
+qwen-local = [
+    # Run Qwen locally via Ollama (LiteLLM bridges automatically)
+    "ollama>=0.3",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+all = [
+    "agentloom[ui,graph,qwen-local,dev]",
+]
+
+[project.scripts]
+agentloom = "agentloom.cli.main:app"
+agentloom-ui = "agentloom.ui.launcher:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/agentloom"
+Documentation = "https://github.com/your-org/agentloom/tree/main/docs"
+Issues = "https://github.com/your-org/agentloom/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentloom"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "PL"]
+ignore = ["PLR0913"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
