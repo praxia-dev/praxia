@@ -95,6 +95,33 @@ Homepage = "https://github.com/your-org/praxia"
 Documentation = "https://github.com/your-org/praxia/tree/main/docs"
 Issues = "https://github.com/your-org/praxia/issues"
 
+# --- Plug-in extension points ------------------------------------------------
+# Third-party packages declare their own connectors / backends / skills / flows
+# under these entry-point groups. Praxia auto-discovers them at startup.
+#
+# Example consumer pyproject.toml:
+#
+#   [project.entry-points."praxia.connectors"]
+#   my_crm = "my_pkg.my_crm:MyCRMConnector"
+#
+#   [project.entry-points."praxia.memory_backends"]
+#   pinecone = "my_pkg.pinecone_backend:PineconeBackend"
+#
+#   [project.entry-points."praxia.skills"]
+#   hr_recruiting = "my_pkg.hr_recruiting:HRRecruitingSkill"
+#
+#   [project.entry-points."praxia.flows"]
+#   incident_response = "my_pkg.incident_response:IncidentResponseFlow"
+
+[project.entry-points."praxia.connectors"]
+# Built-ins — listed for symmetry. Third-party packages add their own here.
+
+[project.entry-points."praxia.memory_backends"]
+
+[project.entry-points."praxia.skills"]
+
+[project.entry-points."praxia.flows"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["praxia"]
 

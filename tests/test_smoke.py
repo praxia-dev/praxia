@@ -415,6 +415,114 @@ def test_admin_exporter_csv_and_json() -> None:
         assert mem_path.exists()
 
 
+def test_extension_registry_basics() -> None:
+    """Generic Registry — direct + lazy registration, get/list/has."""
+    from praxia.extensions import Registry, lazy
+
+    class Animal:
+        def speak(self) -> str:
+            return "generic"
+
+    class Dog(Animal):
+        def speak(self) -> str:
+            return "woof"
+
+    reg: Registry[Animal] = Registry(name="animal")
+    reg.register("dog", Dog)
+    assert reg.has("dog") is True
+    assert reg.get("dog") is Dog
+    assert reg.list() == ["dog"]
+
+    # Lazy — points at a real symbol so it can resolve
+    reg.register("dataclass_via_lazy", lazy("dataclasses:dataclass"))
+    cls = reg.get("dataclass_via_lazy")
+    import dataclasses
+    assert cls is dataclasses.dataclass
+
+    # Decorator form
+    @reg.register_decorator("cat")
+    class Cat(Animal):
+        pass
+
+    assert reg.has("cat") is True
+    assert reg.get("cat") is Cat
+
+
+# Sentinel class referenced by the lazy-import test above
+class _AnimalForTest:
+    pass
+
+
+def test_extension_registry_unknown_raises_keyerror() -> None:
+    from praxia.extensions import Registry
+
+    reg: Registry = Registry(name="thing")
+    try:
+        reg.get("nonexistent")
+    except KeyError as e:
+        assert "thing" in str(e).lower() or "nonexistent" in str(e)
+
+
+def test_connector_registry_uses_extension_system() -> None:
+    """Existing connectors are now registered via extensions.Registry."""
+    from praxia.connectors.registry import CONNECTORS, list_builtin
+
+    names = list_builtin()
+    assert set(names) >= {"box", "sharepoint", "dropbox", "gdrive", "kintone", "salesforce"}
+    # Registry is the same shared singleton
+    assert "box" in CONNECTORS.list()
+
+
+def test_memory_backend_registry_uses_extension_system() -> None:
+    from praxia.memory.backends import BACKENDS
+
+    names = BACKENDS.list()
+    assert set(names) >= {"json", "mem0", "langmem", "letta", "zep", "hindsight"}
+
+
+def test_skills_registry_includes_builtins() -> None:
+    """The 6 default business skills must register on import."""
+    from praxia.skills import SKILLS, BUSINESS_SKILLS
+
+    builtins = {cls.manifest.name for cls in BUSINESS_SKILLS}
+    registered = set(SKILLS.list())
+    assert builtins.issubset(registered)
+
+
+def test_flows_registry_includes_builtins() -> None:
+    from praxia.flows import FLOWS, get_flow
+
+    names = FLOWS.list()
+    assert "sales_agent_flow" in names
+    assert "logic_checker_flow" in names
+    assert "rag_optimization_flow" in names
+    # Lookup by name returns the class
+    cls = get_flow("sales_agent_flow")
+    assert cls.name == "sales_agent_flow"
+
+
+def test_third_party_skill_can_register_via_decorator() -> None:
+    """Demonstrate the third-party extension pattern."""
+    from praxia.skills import SKILLS
+    from praxia.skills.skill import Skill, SkillManifest
+
+    @SKILLS.register_decorator("hr_recruiting_test")
+    class HRRecruitingSkill(Skill):
+        manifest = SkillManifest(
+            name="hr_recruiting_test",
+            description="resume screening + interview qs",
+            domain="hr",
+        )
+        system_prompt = "You are a recruiter…"
+
+    assert SKILLS.has("hr_recruiting_test")
+    cls = SKILLS.get("hr_recruiting_test")
+    assert cls is HRRecruitingSkill
+
+    # Cleanup so the test is hermetic
+    SKILLS.unregister("hr_recruiting_test")
+
+
 def test_authmanager_has_policies_and_exports() -> None:
     """AuthManager exposes policies + exports as composed sub-services."""
     from praxia.auth import AuthManager

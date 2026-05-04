@@ -381,15 +381,35 @@ We may evolve toward an **open-core** model: enterprise GUI / advanced audit fea
 
 ## 🛠 Extending Praxia
 
-| What you want to add | How | Lines of code |
-|---|---|---|
-| New multi-agent flow | Subclass `Flow`, define steps with `${var}` templates | ~30 |
-| New business skill | Subclass `Skill` with `system_prompt` + `manifest` | ~20 |
-| New LTM backend | Implement 4-method `MemoryBackend` protocol | ~80 |
-| Industry recipe | Markdown in `docs/recipes/` | n/a |
-| MCP / Claude Skills export | `skill.to_skill_md()` | 1 line |
+Praxia uses a **single extensibility primitive** (`praxia.extensions.Registry`) for all four plugin types — connectors, memory backends, skills, flows. Adding a plugin **does not require editing any core file**.
 
-Code examples for each: see [docs/FEATURES.md#extending-praxia](docs/FEATURES.md#13-extending-praxia).
+| Plugin type | Base | Registry | Entry-point group | Lines |
+|---|---|---|---|---|
+| Connector | `Connector` protocol | `CONNECTORS` | `praxia.connectors` | ~50 |
+| Memory backend | `MemoryBackend` protocol | `BACKENDS` | `praxia.memory_backends` | ~80 |
+| Business skill | `Skill` | `SKILLS` | `praxia.skills` | ~20 |
+| Multi-agent flow | `Flow` | `FLOWS` | `praxia.flows` | ~30 |
+| Industry recipe | Markdown | n/a | — | n/a |
+
+**Two ways to register**:
+
+```python
+# (a) Decorator (in-tree contributions)
+from praxia.connectors.registry import CONNECTORS
+
+@CONNECTORS.register_decorator("notion")
+class NotionConnector: ...
+```
+
+```toml
+# (b) Entry-point (third-party packages — no fork needed)
+[project.entry-points."praxia.connectors"]
+notion = "praxia_connector_notion:NotionConnector"
+```
+
+After `pip install praxia-connector-notion`, the new connector shows up automatically in `praxia connector list`, the Streamlit UI, and the SDK — with **no edit to Praxia itself**.
+
+Full guide with examples for all 4 plugin types: **[docs/PLUGINS.md](docs/PLUGINS.md)**.
 
 ---
 
