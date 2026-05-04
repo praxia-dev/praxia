@@ -298,3 +298,137 @@ def test_connector_unknown_name_raises() -> None:
     except ValueError as e:
         msg = str(e).lower()
         assert "box" in msg and "salesforce" in msg
+
+
+def test_policy_add_evaluate_remove() -> None:
+    """Resource access policies allow/deny correctly."""
+    from praxia.auth import PolicyManager
+    from praxia.auth.audit import AuditLog
+
+    with tempfile.TemporaryDirectory() as d:
+        audit = AuditLog(storage_dir=d)
+        pm = PolicyManager(storage_dir=d, default_decision="allow", audit_log=audit)
+
+        # Default-allow when no policies exist
+        decision = pm.evaluate(
+            user_id="alice",
+            role="member",
+            resource_type="connector",
+            resource_id="box:/Public/specs",
+            action="read",
+        )
+        assert decision.allowed is True
+        assert decision.matched_policy_id is None
+
+        # Add a deny policy and verify it blocks the action
+        deny = pm.add(
+            effect="deny",
+            resource_type="connector",
+            resource_pattern="box:/Confidential/*",
+            actions=["read", "write"],
+            principals=["role:member", "role:viewer"],
+            description="Block confidential folder for non-operators",
+        )
+        d2 = pm.evaluate(
+            user_id="alice",
+            role="member",
+            resource_type="connector",
+            resource_id="box:/Confidential/q3-roadmap.pdf",
+            action="read",
+        )
+        assert d2.allowed is False
+        assert d2.matched_policy_id == deny.id
+
+        # Operators are not in the deny principals — they pass
+        d3 = pm.evaluate(
+            user_id="bob",
+            role="operator",
+            resource_type="connector",
+            resource_id="box:/Confidential/q3-roadmap.pdf",
+            action="read",
+        )
+        assert d3.allowed is True
+
+        # require() raises on denial
+        try:
+            pm.require(
+                user_id="alice",
+                role="member",
+                resource_type="connector",
+                resource_id="box:/Confidential/q3-roadmap.pdf",
+                action="read",
+            )
+        except PermissionError:
+            pass
+        else:
+            raise AssertionError("Should have raised PermissionError")
+
+        # Remove the policy
+        assert pm.remove(deny.id) is True
+        d4 = pm.evaluate(
+            user_id="alice",
+            role="member",
+            resource_type="connector",
+            resource_id="box:/Confidential/q3-roadmap.pdf",
+            action="read",
+        )
+        assert d4.allowed is True
+
+
+def test_admin_exporter_csv_and_json() -> None:
+    """AdminExporter produces audit log + users exports correctly."""
+    import csv as _csv
+    import json as _json
+    from praxia.auth import AdminExporter, AuthManager, Role
+
+    with tempfile.TemporaryDirectory() as d:
+        # Seed some auth state
+        auth = AuthManager(storage_dir=Path(d) / "auth", bootstrap_admin=None)
+        auth.create_user("alice", role=Role.MEMBER, email="alice@a.test")
+        auth.create_user("bob", role=Role.ADMIN)
+
+        exporter = AdminExporter(storage_dir=d, audit_log=auth.audit)
+
+        # Audit (CSV)
+        csv_path = exporter.export_audit(
+            output_path=Path(d) / "audit.csv", format="csv"
+        )
+        assert csv_path.exists()
+        rows = list(_csv.DictReader(csv_path.open("r", encoding="utf-8")))
+        assert len(rows) >= 2  # at least the two user.create events
+
+        # Users (JSON) — ensure secrets stripped
+        users_path = exporter.export_users(
+            output_path=Path(d) / "users.json", format="json"
+        )
+        assert users_path.exists()
+        users_data = _json.loads(users_path.read_text(encoding="utf-8"))
+        assert len(users_data) == 2
+        for u in users_data:
+            assert "api_key_hash" not in u
+            assert "password_hash" not in u
+
+        # Personal memory (jsonl) on a user with no memory yet → empty file
+        mem_path = exporter.export_personal_memory(
+            user_id="alice", output_path=Path(d) / "alice_mem.jsonl", format="jsonl"
+        )
+        assert mem_path.exists()
+
+
+def test_authmanager_has_policies_and_exports() -> None:
+    """AuthManager exposes policies + exports as composed sub-services."""
+    from praxia.auth import AuthManager
+
+    with tempfile.TemporaryDirectory() as d:
+        auth = AuthManager(storage_dir=d, bootstrap_admin=None)
+        assert auth.policies is not None
+        assert auth.exports is not None
+        # smoke: add a policy through the sub-service
+        p = auth.policies.add(
+            effect="deny",
+            resource_type="memory",
+            resource_pattern="memory:user/*",
+            actions=["write"],
+            principals=["role:viewer"],
+        )
+        assert p.id

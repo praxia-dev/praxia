@@ -17,7 +17,9 @@ Usage:
         ...
 """
 from praxia.auth.audit import AuditLog, AuditEvent
+from praxia.auth.exports import AdminExporter
 from praxia.auth.manager import AuthManager
+from praxia.auth.policies import PolicyDecision, PolicyManager, ResourcePolicy
 from praxia.auth.rbac import PERMISSIONS_BY_ROLE, Role
 from praxia.auth.sso import (
     OIDCProvider,
@@ -42,6 +44,10 @@ __all__ = [
     "Role",
     "User",
     "PERMISSIONS_BY_ROLE",
+    "PolicyManager",
+    "ResourcePolicy",
+    "PolicyDecision",
+    "AdminExporter",
     # SSO
     "SSOConfig",
     "SSOProvider",

@@ -67,7 +67,10 @@ loom = get_loom(user_id, org_id, model_choice)
 
 # --- Main: tabs -------------------------------------------------------------
 
-tab_run, tab_skill, tab_memory, tab_consolidate, tab_dashboard, tab_prompts, tab_users, tab_connectors, tab_about = st.tabs(
+(
+    tab_run, tab_skill, tab_memory, tab_consolidate, tab_dashboard,
+    tab_prompts, tab_users, tab_connectors, tab_policies, tab_admin, tab_about,
+) = st.tabs(
     [
         "🎬 Run Flow",
         "🛠 Skill",
@@ -77,6 +80,8 @@ tab_run, tab_skill, tab_memory, tab_consolidate, tab_dashboard, tab_prompts, tab
         "📝 Prompts",
         "👥 Users",
         "🔌 Connectors",
+        "🛡 Policies",
+        "💾 Admin",
         "ℹ About",
     ]
 )
@@ -427,7 +432,179 @@ with tab_connectors:
             except Exception as e:
                 st.error(str(e))
 
-# Tab 9: About -----------------------------------------------------------
+# Tab 9: Policies (admin / IS dept) -------------------------------------
+with tab_policies:
+    st.header("🛡 Resource Access Policies")
+    st.markdown(
+        "Control which users / roles can access connector paths, memory "
+        "namespaces, prompts, and skills. Designed for enterprise IS departments."
+    )
+    try:
+        from praxia.auth import AuthManager
+        auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
+    except Exception as e:
+        st.error(f"Auth not available: {e}")
+        auth = None
+
+    sub_list, sub_add, sub_test = st.tabs(["List", "Add", "Test"])
+
+    if auth:
+        with sub_list:
+            policies = auth.policies.list()
+            if policies:
+                st.table(
+                    [
+                        {
+                            "id": p.id[:8],
+                            "effect": p.effect,
+                            "type": p.resource_type,
+                            "pattern": p.resource_pattern,
+                            "actions": ",".join(p.actions),
+                            "principals": ",".join(p.principals),
+                            "description": p.description,
+                        }
+                        for p in policies
+                    ]
+                )
+                target_id = st.selectbox(
+                    "Remove policy by ID",
+                    options=[""] + [p.id for p in policies],
+                    format_func=lambda x: f"{x[:8]}…" if x else "(select)",
+                )
+                if target_id and st.button("🗑 Remove selected"):
+                    if auth.policies.remove(target_id):
+                        st.success(f"Removed {target_id[:8]}")
+                        st.rerun()
+            else:
+                st.info("No policies yet. Defaults to 'allow' when no policy matches.")
+
+        with sub_add:
+            with st.form("policy_add_form"):
+                pa_effect = st.selectbox("Effect", ["allow", "deny"])
+                pa_type = st.selectbox(
+                    "Resource type", ["connector", "memory", "prompt", "skill", "block", "*"]
+                )
+                pa_pattern = st.text_input(
+                    "Resource pattern (glob)",
+                    placeholder="box:/Confidential/*  or  kintone:42  or  salesforce:*",
+                )
+                pa_actions = st.multiselect("Actions", ["read", "write", "list", "*"], default=["*"])
+                pa_principals = st.text_input(
+                    "Principals (comma-separated user_ids and role:<name>)",
+                    value="*",
+                )
+                pa_description = st.text_input("Description")
+                if st.form_submit_button("Add policy") and pa_pattern:
+                    p = auth.policies.add(
+                        effect=pa_effect,
+                        resource_type=pa_type,
+                        resource_pattern=pa_pattern,
+                        actions=pa_actions or ["*"],
+                        principals=[s.strip() for s in pa_principals.split(",") if s.strip()],
+                        description=pa_description,
+                    )
+                    st.success(f"Added policy {p.id[:8]}")
+                    st.rerun()
+
+        with sub_test:
+            with st.form("policy_test_form"):
+                pt_user = st.text_input("user_id", value="alice")
+                pt_role = st.selectbox("role", ["admin", "operator", "member", "viewer"])
+                pt_type = st.selectbox(
+                    "resource_type", ["connector", "memory", "prompt", "skill", "block"]
+                )
+                pt_id = st.text_input(
+                    "resource_id", placeholder="box:/Praxia/specs"
+                )
+                pt_action = st.selectbox("action", ["read", "write", "list"])
+                if st.form_submit_button("Evaluate") and pt_id:
+                    decision = auth.policies.evaluate(
+                        user_id=pt_user, role=pt_role,
+                        resource_type=pt_type, resource_id=pt_id, action=pt_action,
+                    )
+                    if decision.allowed:
+                        st.success(f"✅ Allowed — {decision.reason}")
+                    else:
+                        st.error(f"🚫 Denied — {decision.reason}")
+
+# Tab 10: Admin downloads ----------------------------------------------
+with tab_admin:
+    st.header("💾 Admin Downloads")
+    st.markdown(
+        "Export audit logs, users, skill usage, memories, and policies for "
+        "compliance, SIEM ingestion, or backups. Every export action is logged."
+    )
+    try:
+        from praxia.auth import AuthManager
+        auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
+    except Exception as e:
+        st.error(f"Auth not available: {e}")
+        auth = None
+
+    if auth:
+        kind = st.selectbox(
+            "What to export",
+            [
+                "Audit log",
+                "Users",
+                "Skill usage",
+                "Personal memory (one user)",
+                "All personal memories",
+                "Shared memory blocks",
+                "Access policies",
+            ],
+        )
+        fmt = st.selectbox("Format", ["csv", "json", "jsonl"])
+        out_dir = Path(loom.config.memory_dir) / "exports"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        extra_input = None
+        if kind == "Personal memory (one user)":
+            extra_input = st.text_input("user_id", value="default-user")
+        elif kind == "Skill usage":
+            extra_input = st.text_input("Optional skill name filter")
+
+        if st.button("Export"):
+            ts = int(__import__("time").time())
+            path: Path | list[Path]
+            if kind == "Audit log":
+                path = auth.exports.export_audit(output_path=out_dir / f"audit_{ts}.{fmt}", format=fmt)
+            elif kind == "Users":
+                path = auth.exports.export_users(output_path=out_dir / f"users_{ts}.{fmt}", format=fmt)
+            elif kind == "Skill usage":
+                path = auth.exports.export_skill_usage(
+                    output_path=out_dir / f"skill_usage_{ts}.{fmt}",
+                    format=fmt,
+                    skill_name=extra_input or None,
+                )
+            elif kind == "Personal memory (one user)":
+                path = auth.exports.export_personal_memory(
+                    user_id=extra_input or "default-user",
+                    output_path=out_dir / f"memory_{extra_input}_{ts}.{fmt}",
+                    format=fmt,
+                )
+            elif kind == "All personal memories":
+                path = auth.exports.export_all_personal_memory(
+                    output_dir=out_dir / f"all_memory_{ts}", format=fmt
+                )
+            elif kind == "Shared memory blocks":
+                path = auth.exports.export_shared_memory(
+                    output_path=out_dir / f"shared_{ts}.{fmt}", format=fmt
+                )
+            else:  # Access policies
+                path = auth.exports.export_policies(
+                    output_path=out_dir / f"policies_{ts}.{fmt}", format=fmt
+                )
+            st.success(f"Exported → {path}")
+            if isinstance(path, Path) and path.exists():
+                st.download_button(
+                    "⬇️ Download",
+                    data=path.read_bytes(),
+                    file_name=path.name,
+                    mime="application/octet-stream",
+                )
+
+# Tab 11: About ---------------------------------------------------------
 with tab_about:
     st.header("ℹ Praxia について")
     st.markdown(

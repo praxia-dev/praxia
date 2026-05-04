@@ -689,9 +689,21 @@ def connector_pull(
     path: str = typer.Argument(..., help="Source path / folder ID / SOQL query / kintone app id"),
     limit: int = typer.Option(20),
     save_to: str = typer.Option("", help="Optional directory to save items"),
+    user_id: str = typer.Option("default-user"),
+    role: str = typer.Option("member"),
 ) -> None:
-    """Pull items from a connector."""
+    """Pull items from a connector. Subject to admin policies."""
+    from praxia.auth import AuthManager
     from praxia.connectors import get_connector
+
+    auth = AuthManager()
+    auth.policies.require(
+        user_id=user_id,
+        role=role,
+        resource_type="connector",
+        resource_id=f"{name}:{path}",
+        action="read",
+    )
 
     config = _load_connector_config(name)
     conn = get_connector(name, **config)
@@ -717,10 +729,22 @@ def connector_push(
     name: str = typer.Argument(...),
     path: str = typer.Argument(..., help="Destination folder/app ID / sObject API name"),
     file: str = typer.Argument(..., help="Local file or inline JSON"),
+    user_id: str = typer.Option("default-user"),
+    role: str = typer.Option("member"),
 ) -> None:
-    """Push a file or record to a connector."""
+    """Push a file or record to a connector. Subject to admin policies."""
+    from praxia.auth import AuthManager
     from praxia.connectors import get_connector
     from praxia.connectors.base import ConnectorItem
+
+    auth = AuthManager()
+    auth.policies.require(
+        user_id=user_id,
+        role=role,
+        resource_type="connector",
+        resource_id=f"{name}:{path}",
+        action="write",
+    )
 
     config = _load_connector_config(name)
     conn = get_connector(name, **config)
@@ -744,6 +768,221 @@ def _load_connector_config(name: str) -> dict[str, str]:
         for k, v in os.environ.items()
         if k.startswith(prefix)
     }
+
+
+# --- Admin: resource access policies (ACL) -----------------------------
+
+policy_app = typer.Typer(help="Resource access policies (admin / IS dept use)")
+app.add_typer(policy_app, name="policy")
+
+
+@policy_app.command("add")
+def policy_add(
+    effect: str = typer.Argument(..., help="allow | deny"),
+    resource_type: str = typer.Argument(..., help="connector|memory|prompt|skill|block|*"),
+    resource_pattern: str = typer.Argument(..., help='Glob, e.g. "box:/Confidential/*"'),
+    actions: str = typer.Option("*", help="Comma-separated actions: read,write,list,*"),
+    principals: str = typer.Option("*", help="Comma-separated user_ids and role:<name>"),
+    description: str = typer.Option(""),
+) -> None:
+    """Create a new access policy."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    p = auth.policies.add(
+        effect=effect,  # type: ignore[arg-type]
+        resource_type=resource_type,
+        resource_pattern=resource_pattern,
+        actions=[a.strip() for a in actions.split(",") if a.strip()],
+        principals=[a.strip() for a in principals.split(",") if a.strip()],
+        description=description,
+    )
+    console.print(f"✅ Added policy [bold]{p.id}[/bold] ({p.effect} {p.resource_type}:{p.resource_pattern})")
+
+
+@policy_app.command("list")
+def policy_list() -> None:
+    """List all access policies in evaluation order."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    table = Table(title="Access Policies (evaluated top → bottom)")
+    table.add_column("ID", style="dim")
+    table.add_column("Effect", style="cyan")
+    table.add_column("Type")
+    table.add_column("Pattern")
+    table.add_column("Actions")
+    table.add_column("Principals")
+    table.add_column("Description")
+    for p in auth.policies.list():
+        eff_style = "green" if p.effect == "allow" else "red"
+        table.add_row(
+            p.id[:8],
+            f"[{eff_style}]{p.effect}[/{eff_style}]",
+            p.resource_type,
+            p.resource_pattern,
+            ",".join(p.actions),
+            ",".join(p.principals),
+            p.description,
+        )
+    console.print(table)
+
+
+@policy_app.command("remove")
+def policy_remove(policy_id: str = typer.Argument(...)) -> None:
+    """Remove a policy by ID."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    if auth.policies.remove(policy_id):
+        console.print(f"🗑  Removed policy {policy_id}")
+    else:
+        console.print(f"[red]Policy not found: {policy_id}[/red]")
+        raise typer.Exit(1)
+
+
+@policy_app.command("test")
+def policy_test(
+    user_id: str = typer.Argument(...),
+    role: str = typer.Argument(...),
+    resource_type: str = typer.Argument(...),
+    resource_id: str = typer.Argument(...),
+    action: str = typer.Argument(...),
+) -> None:
+    """Dry-run policy evaluation (debug helper for IS dept)."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    decision = auth.policies.evaluate(
+        user_id=user_id,
+        role=role,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        action=action,
+    )
+    icon = "✅" if decision.allowed else "🚫"
+    console.print(
+        Panel.fit(
+            f"{icon} {'allowed' if decision.allowed else 'DENIED'}\n\n"
+            f"  user:     {user_id}\n"
+            f"  role:     {role}\n"
+            f"  resource: {resource_type}:{resource_id}\n"
+            f"  action:   {action}\n\n"
+            f"  reason:   {decision.reason}\n"
+            f"  policy:   {decision.matched_policy_id or '— (default)'}",
+            title="Policy decision",
+            border_style="green" if decision.allowed else "red",
+        )
+    )
+
+
+# --- Admin: data exports / downloads ----------------------------------
+
+admin_app = typer.Typer(help="Admin data exports for compliance / SIEM")
+app.add_typer(admin_app, name="admin")
+
+
+@admin_app.command("export-audit")
+def admin_export_audit(
+    output: str = typer.Argument(..., help="Output file path"),
+    format: str = typer.Option("csv", help="csv | json | jsonl"),
+    since_days: int = typer.Option(0, help="Limit to events from the last N days"),
+    actor: str = typer.Option(""),
+) -> None:
+    """Export the audit log."""
+    import time
+    from praxia.auth import AuthManager
+
+    since = (time.time() - since_days * 86400) if since_days > 0 else None
+    auth = AuthManager()
+    path = auth.exports.export_audit(
+        output_path=output,
+        format=format,  # type: ignore[arg-type]
+        since=since,
+        actor_id=actor or None,
+    )
+    console.print(f"💾 Exported audit log → [bold]{path}[/bold]")
+
+
+@admin_app.command("export-users")
+def admin_export_users(
+    output: str = typer.Argument(...),
+    format: str = typer.Option("csv"),
+) -> None:
+    """Export the user list (sensitive — admin only)."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    path = auth.exports.export_users(output_path=output, format=format)  # type: ignore[arg-type]
+    console.print(f"💾 Exported users → [bold]{path}[/bold]")
+
+
+@admin_app.command("export-usage")
+def admin_export_usage(
+    output: str = typer.Argument(...),
+    format: str = typer.Option("csv"),
+    skill: str = typer.Option("", help="Filter to one skill name"),
+) -> None:
+    """Export skill usage stats."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    path = auth.exports.export_skill_usage(
+        output_path=output, format=format, skill_name=skill or None  # type: ignore[arg-type]
+    )
+    console.print(f"💾 Exported skill usage → [bold]{path}[/bold]")
+
+
+@admin_app.command("export-memory")
+def admin_export_memory(
+    output: str = typer.Argument(..., help="Output path (for one user) or directory (for --all)"),
+    user: str = typer.Option("", help="user_id; required unless --all"),
+    all_users: bool = typer.Option(False, "--all", help="Export all personal memories"),
+    format: str = typer.Option("jsonl"),
+) -> None:
+    """Export personal memory dumps for one user or all users."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    if all_users:
+        paths = auth.exports.export_all_personal_memory(
+            output_dir=output, format=format  # type: ignore[arg-type]
+        )
+        console.print(f"💾 Exported {len(paths)} user(s) → [bold]{output}/[/bold]")
+    else:
+        if not user:
+            console.print("[red]Provide --user or --all[/red]")
+            raise typer.Exit(1)
+        path = auth.exports.export_personal_memory(
+            user_id=user, output_path=output, format=format  # type: ignore[arg-type]
+        )
+        console.print(f"💾 Exported {user}'s memory → [bold]{path}[/bold]")
+
+
+@admin_app.command("export-policies")
+def admin_export_policies(
+    output: str = typer.Argument(...),
+    format: str = typer.Option("json"),
+) -> None:
+    """Export the access policy list."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    path = auth.exports.export_policies(output_path=output, format=format)  # type: ignore[arg-type]
+    console.print(f"💾 Exported policies → [bold]{path}[/bold]")
+
+
+@admin_app.command("export-shared-memory")
+def admin_export_shared_memory(
+    output: str = typer.Argument(...),
+    format: str = typer.Option("jsonl"),
+) -> None:
+    """Export the shared memory blocks."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    path = auth.exports.export_shared_memory(output_path=output, format=format)  # type: ignore[arg-type]
+    console.print(f"💾 Exported shared memory → [bold]{path}[/bold]")
 
 
 if __name__ == "__main__":

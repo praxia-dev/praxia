@@ -48,6 +48,12 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 | Built-in evaluation | ✅ | Hallucination check + retrieval metrics |
 | Auth + RBAC + audit | ✅ | API key + JWT + 4 roles + append-only audit log |
 | SSO (OIDC + SAML skeleton) | ✅ | Google / Microsoft / Okta / GitHub / Keycloak / custom |
+| Resource access policies (ACL) | ✅ | Glob-pattern allow/deny rules per resource type, principal, action — built for IS depts |
+| Admin user CRUD | ✅ | Create / read / update / delete / deactivate / rotate keys |
+| Admin data exports | ✅ | CSV / JSON / JSONL exports of audit, users, usage, memory, policies |
+| External connectors (Pull + Push) | ✅ | Box, SharePoint, Dropbox, Google Drive, kintone, Salesforce |
+| Custom prompts (per-user + admin distribute) | ✅ | Personal / org / distributed scopes with role targeting |
+| Personal & organizational dashboards | ✅ | Flow/skill counts, success rate, top users, promoted blocks |
 | Default Streamlit UI | ✅ | 5-tab dashboard for non-technical users |
 | MCP / Claude Skills compatibility | ✅ | Skills serialize to standard `SKILL.md` format |
 | Outcome tracking | ✅ | `record_outcome()` for statistical promotion |

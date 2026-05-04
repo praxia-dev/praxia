@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from praxia.auth.audit import AuditLog
+from praxia.auth.exports import AdminExporter
+from praxia.auth.policies import PolicyManager
 from praxia.auth.rbac import Role, has_permission
 from praxia.auth.sso import SSOProvider, SSOUserInfo
 from praxia.auth.users import User, UserStore
@@ -36,6 +38,12 @@ class AuthManager:
     ) -> None:
         self.users = UserStore(storage_dir)
         self.audit = AuditLog(storage_dir)
+        self.policies = PolicyManager(storage_dir=storage_dir, audit_log=self.audit)
+        # AdminExporter expects the .praxia/ root, not the auth/ subdir
+        self.exports = AdminExporter(
+            storage_dir=Path(storage_dir).parent if Path(storage_dir).name == "auth" else storage_dir,
+            audit_log=self.audit,
+        )
         self._jwt_secret = jwt_secret or os.getenv("PRAXIA_JWT_SECRET", "praxia-dev-only")
         self._sso_providers: dict[str, SSOProvider] = {}
 
