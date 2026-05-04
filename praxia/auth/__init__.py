@@ -19,6 +19,20 @@ Usage:
 from praxia.auth.audit import AuditLog, AuditEvent
 from praxia.auth.manager import AuthManager
 from praxia.auth.rbac import PERMISSIONS_BY_ROLE, Role
+from praxia.auth.sso import (
+    OIDCProvider,
+    SAMLConfig,
+    SAMLProvider,
+    SSOConfig,
+    SSOProvider,
+    SSOUserInfo,
+    github_provider,
+    google_provider,
+    keycloak_provider,
+    microsoft_provider,
+    okta_provider,
+    provider_from_env,
+)
 from praxia.auth.users import User
 
 __all__ = [
@@ -28,4 +42,17 @@ __all__ = [
     "Role",
     "User",
     "PERMISSIONS_BY_ROLE",
+    # SSO
+    "SSOConfig",
+    "SSOProvider",
+    "SSOUserInfo",
+    "OIDCProvider",
+    "SAMLConfig",
+    "SAMLProvider",
+    "google_provider",
+    "microsoft_provider",
+    "okta_provider",
+    "github_provider",
+    "keycloak_provider",
+    "provider_from_env",
 ]

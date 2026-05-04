@@ -11,6 +11,7 @@ from typing import Any
 
 from praxia.auth.audit import AuditLog
 from praxia.auth.rbac import Role, has_permission
+from praxia.auth.sso import SSOProvider, SSOUserInfo
 from praxia.auth.users import User, UserStore
 
 
@@ -36,6 +37,7 @@ class AuthManager:
         self.users = UserStore(storage_dir)
         self.audit = AuditLog(storage_dir)
         self._jwt_secret = jwt_secret or os.getenv("PRAXIA_JWT_SECRET", "praxia-dev-only")
+        self._sso_providers: dict[str, SSOProvider] = {}
 
         if bootstrap_admin and not self.users.list_all():
             user, raw_key = self.users.create(
@@ -166,6 +168,75 @@ class AuthManager:
             metadata={"role": role_value},
         )
         return user, raw_key
+
+    # --- SSO integration ---------------------------------------------------
+
+    def attach_sso(self, provider: SSOProvider) -> None:
+        """Register an SSO provider. Multiple providers can coexist."""
+        self._sso_providers[provider.config.provider_name] = provider
+
+    def get_sso(self, provider_name: str) -> SSOProvider | None:
+        return self._sso_providers.get(provider_name)
+
+    def list_sso_providers(self) -> list[str]:
+        return list(self._sso_providers)
+
+    def upsert_sso_user(self, info: SSOUserInfo, *, provider_name: str = "") -> User:
+        """Create-or-update a user from SSO claims.
+
+        Looks up by email; if not found, creates a new user with role
+        derived from the IdP groups (via SSOConfig.role_mapping).
+        """
+        existing = next(
+            (u for u in self.users.list_all() if u.email and u.email.lower() == info.email.lower()),
+            None,
+        )
+        # Determine role
+        role_str = Role.MEMBER.value
+        if provider_name:
+            sso = self.get_sso(provider_name)
+            if sso:
+                for grp in info.groups:
+                    if grp in sso.config.role_mapping:
+                        role_str = sso.config.role_mapping[grp]
+                        break
+                else:
+                    role_str = sso.config.default_role
+
+        if existing:
+            existing.email = info.email
+            existing.role = role_str
+            existing.metadata["sso_sub"] = info.sub
+            existing.metadata["sso_provider"] = provider_name
+            self.users.update(existing)
+            self.audit.record(
+                actor_id=existing.id,
+                actor_role=existing.role,
+                action="sso.login",
+                resource=f"user:{existing.username}",
+                metadata={"provider": provider_name},
+            )
+            return existing
+
+        # Create new SSO user — username derived from email local part
+        username = info.email.split("@")[0]
+        # Avoid collisions
+        if self.users.get_by_username(username):
+            username = f"{username}_{info.sub[:6]}"
+        user, _raw_key = self.users.create(
+            username=username, role=role_str, email=info.email
+        )
+        user.metadata["sso_sub"] = info.sub
+        user.metadata["sso_provider"] = provider_name
+        self.users.update(user)
+        self.audit.record(
+            actor_id=user.id,
+            actor_role=user.role,
+            action="sso.signup",
+            resource=f"user:{user.username}",
+            metadata={"provider": provider_name},
+        )
+        return user
 
     def grant_role(self, username: str, role: Role | str) -> None:
         u = self.users.get_by_username(username)

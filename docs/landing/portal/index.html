@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Praxia Portal — Sign in</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪡%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a href="../index.html" class="brand">
+      <span class="brand-mark">▣</span>
+      <span class="brand-name">Praxia</span>
+      <span class="portal-tag">Portal</span>
+    </a>
+    <div class="nav-links">
+      <a href="../index.html">Landing</a>
+      <a href="https://github.com/your-org/praxia">GitHub →</a>
+    </div>
+  </nav>
+
+  <main class="portal-main">
+    <aside class="portal-side">
+      <div class="side-content">
+        <span class="kicker">Welcome back</span>
+        <h1>Sign in to Praxia.</h1>
+        <p>Manage your team's flows, skills, shared memory, and audit log — all in one place.</p>
+        <ul class="side-list">
+          <li>📊 Live dashboard of personal → org promotions</li>
+          <li>🧪 PoC scoreboard with Before/After numbers</li>
+          <li>👥 Team & role management</li>
+          <li>🔐 SSO, audit log, key rotation</li>
+        </ul>
+        <p class="side-cta">
+          New here? <a href="#signup">Create an account →</a>
+        </p>
+      </div>
+    </aside>
+
+    <section class="portal-form">
+      <div class="form-card">
+        <h2>Sign in</h2>
+
+        <!-- SSO providers -->
+        <div class="sso-buttons">
+          <button class="btn btn-ghost btn-block sso-btn" onclick="ssoLogin('google')">
+            <span class="sso-icon">G</span> Continue with Google
+          </button>
+          <button class="btn btn-ghost btn-block sso-btn" onclick="ssoLogin('microsoft')">
+            <span class="sso-icon">⊞</span> Continue with Microsoft
+          </button>
+          <button class="btn btn-ghost btn-block sso-btn" onclick="ssoLogin('github')">
+            <span class="sso-icon">⌥</span> Continue with GitHub
+          </button>
+          <button class="btn btn-ghost btn-block sso-btn" onclick="ssoLogin('okta')">
+            <span class="sso-icon">○</span> Continue with Okta / SAML
+          </button>
+        </div>
+
+        <div class="divider"><span>or</span></div>
+
+        <!-- Email/password fallback -->
+        <form id="signin-form" class="form" onsubmit="signin(event)">
+          <label>
+            <span>Email</span>
+            <input type="email" name="email" required placeholder="you@company.com" />
+          </label>
+          <label>
+            <span>Password or API key</span>
+            <input type="password" name="secret" required placeholder="••••••••" />
+          </label>
+          <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+        </form>
+
+        <p class="form-foot">
+          Don't have an account yet? <a href="#signup">Sign up</a><br />
+          Just want to try it locally? <a href="../index.html#install">Install via pip</a>
+        </p>
+      </div>
+
+      <!-- Sign up modal-style -->
+      <div id="signup" class="form-card form-signup">
+        <h2>Create your account</h2>
+        <form class="form" onsubmit="signup(event)">
+          <label>
+            <span>Work email</span>
+            <input type="email" name="email" required placeholder="you@company.com" />
+          </label>
+          <label>
+            <span>Organization</span>
+            <input type="text" name="org" required placeholder="Acme Corp" />
+          </label>
+          <label>
+            <span>Edition</span>
+            <select name="edition">
+              <option value="oss">Open Source — self-hosted (free)</option>
+              <option value="team">Team — hosted, ¥30k–100k/mo</option>
+              <option value="enterprise">Enterprise — talk to sales</option>
+            </select>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" required />
+            <span>I agree to the <a href="../index.html">Terms</a> and have read the <a href="https://github.com/your-org/praxia/blob/main/NOTICE.md">third-party licenses</a>.</span>
+          </label>
+          <button class="btn btn-primary btn-block" type="submit">Create account</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Stub handlers — wire up to your backend (FastAPI / Django / Next.js API).
+    // The backend is expected to expose:
+    //   GET  /auth/sso/{provider}/start  → redirect to IdP
+    //   POST /auth/signin                → email/password or API key
+    //   POST /auth/signup                → create account, send verification
+    function ssoLogin(provider) {
+      const next = encodeURIComponent(window.location.pathname);
+      window.location.href = `/auth/sso/${provider}/start?next=${next}`;
+    }
+    function signin(e) {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      console.log("signin", data);
+      alert("Connect this form to your /auth/signin endpoint.");
+    }
+    function signup(e) {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      console.log("signup", data);
+      alert("Connect this form to your /auth/signup endpoint.");
+    }
+  </script>
+</body>
+</html>

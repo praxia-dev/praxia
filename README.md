@@ -303,7 +303,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [Apache License 2.0](LICENSE) — commercial use, modification, and redistribution permitted.
 
-We may evolve toward an **open-core** model: enterprise GUI / SSO / advanced audit features under a separate license, while the framework remains Apache 2.0.
+Third-party dependencies retain their own licenses; see [NOTICE.md](NOTICE.md) for the full attribution list.
+
+We may evolve toward an **open-core** model: enterprise GUI / advanced audit features under a separate license, while the framework remains Apache 2.0.
 
 ---
 

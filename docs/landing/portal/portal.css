@@ -1,0 +1,188 @@
+/* Praxia Portal — sign-in / signup styling */
+
+.portal-tag {
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(201,164,86,0.1);
+  color: var(--accent);
+  border: 1px solid rgba(201,164,86,0.25);
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.portal-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: calc(100vh - 65px);
+}
+
+.portal-side {
+  background:
+    radial-gradient(ellipse 70% 60% at 30% 30%, rgba(201,164,86,0.18), transparent 70%),
+    var(--bg);
+  display: flex;
+  align-items: center;
+  padding: 4rem;
+}
+
+.side-content {
+  max-width: 420px;
+}
+
+.side-content h1 {
+  margin: 1.25rem 0 1rem;
+  font-size: 2.25rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.side-content p {
+  color: var(--text-soft);
+}
+
+.side-list {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  color: var(--text-soft);
+}
+
+.side-cta {
+  margin-top: 2rem;
+  font-size: 14.5px;
+}
+
+.portal-form {
+  background: var(--bg-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 2rem;
+}
+
+.form-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2.5rem;
+  box-shadow: var(--shadow);
+}
+
+.form-signup {
+  border-top: 2px solid var(--accent-deep);
+}
+
+.form-card h2 {
+  margin: 0 0 1.5rem;
+  font-size: 1.45rem;
+}
+
+.sso-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sso-btn {
+  justify-content: flex-start !important;
+  gap: 0.85rem;
+  font-size: 14px !important;
+}
+
+.sso-icon {
+  display: inline-flex;
+  width: 22px; height: 22px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 1.75rem 0 1.25rem;
+  color: var(--text-dim);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: var(--border);
+}
+.divider::before { left: 0; }
+.divider::after  { right: 0; }
+.divider span { padding: 0 0.85rem; background: var(--bg-card); position: relative; }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.form label span { font-weight: 500; }
+.form input,
+.form select {
+  padding: 0.7rem 0.9rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 120ms ease;
+}
+.form input:focus,
+.form select:focus {
+  outline: none;
+  border-color: var(--accent-deep);
+  box-shadow: 0 0 0 3px rgba(201,164,86,0.1);
+}
+
+.checkbox {
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: 0.6rem;
+  color: var(--text-soft);
+}
+.checkbox input { margin-top: 0.25rem; }
+
+.form-foot {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  line-height: 1.8;
+}
+
+@media (max-width: 880px) {
+  .portal-main { grid-template-columns: 1fr; }
+  .portal-side { display: none; }
+  .portal-form { padding: 2.5rem 1rem; }
+}
