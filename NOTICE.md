@@ -131,3 +131,59 @@ For Apache 2.0 dependencies, see the upstream LICENSE files at the URLs above.
 
 If you spot a missing or incorrect attribution, please open an issue at
 https://github.com/your-org/praxia/issues with the `license` label.
+
+---
+
+## Trademark notice
+
+The following are trademarks or registered trademarks of their respective owners. Praxia uses these names solely for **descriptive (nominative) reference** to identify compatible products and integrations — Praxia is not affiliated with, sponsored by, or endorsed by any of these companies.
+
+### LLM providers
+- **Claude™**, **Anthropic™** — trademarks of Anthropic, PBC
+- **ChatGPT®**, **GPT-4o**, **OpenAI®** — trademarks of OpenAI, Inc.
+- **Gemini™**, **Google®**, **Google Drive™** — trademarks of Google LLC
+- **Qwen™**, **DashScope™**, **Alibaba®** — trademarks of Alibaba Group Holding Ltd.
+- **Llama** — trademark of Meta Platforms, Inc.
+
+### Integrations and storage
+- **Box®** — trademark of Box, Inc.
+- **Microsoft®**, **SharePoint®**, **Azure®**, **Entra ID™**, **Microsoft 365™** — trademarks of Microsoft Corporation
+- **Dropbox®** — trademark of Dropbox, Inc.
+- **kintone®**, **Cybozu®** — trademarks of Cybozu, Inc.
+- **Salesforce®** — trademark of Salesforce, Inc.
+- **Notion®** — trademark of Notion Labs, Inc.
+- **Slack®** — trademark of Slack Technologies, LLC
+- **GitHub®** — trademark of GitHub, Inc.
+- **Cursor™** — trademark of Anysphere Inc.
+
+### Memory / agent infrastructure
+- **Mem0** — used as an open-source project name for nominative reference
+- **Letta**, **MemGPT** — used as open-source project names for nominative reference
+- **LangChain®**, **LangMem™**, **LangGraph™** — trademarks of LangChain, Inc.
+- **CrewAI™** — trademark of CrewAI Inc.
+- **AutoGen** — open-source project from Microsoft Research
+- **HindSight** — open-source project from Vectorize
+- **Glean™** — trademark of Glean Technologies, Inc.
+
+### Other
+- **Hugging Face®** — trademark of Hugging Face, Inc.
+- **Apache®** — trademark of The Apache Software Foundation
+- **Python®** — trademark of the Python Software Foundation
+- **PyPI™** — trademark of the Python Software Foundation
+- **Streamlit®** — trademark of Streamlit Inc. (Snowflake)
+- **Ollama** — open-source project from Ollama Inc.
+
+### Nominative-fair-use disclaimer
+
+References in Praxia documentation to the above products and companies are limited to:
+1. Identifying interoperability and compatibility (e.g., "Praxia supports Box pulls and pushes").
+2. Providing factual comparison context (e.g., "Praxia is licensed under Apache 2.0; Glean is commercial").
+3. Indicating which third-party SDKs an optional Praxia connector requires.
+
+Praxia does not claim sponsorship by, endorsement from, or affiliation with any of these companies. We do not use third-party logos. Any examples involving real-sounding company names (e.g., "Acme Manufacturing") are fictional and used for documentation purposes only.
+
+If you are a trademark owner and believe Praxia documentation uses your mark in a way that exceeds nominative fair use, please open a GitHub issue with the `trademark` label or email the maintainer. We will promptly review and adjust.
+
+### Demo data disclaimer
+
+Code examples involving company names, financial figures, or business scenarios are **illustrative and fictional** unless explicitly cited with a public source. Investment / legal / patent / purchasing demos must not be construed as professional advice for actual entities — see each skill's built-in guardrails (e.g., InvestmentSkill always notes "final decision is the investor's").

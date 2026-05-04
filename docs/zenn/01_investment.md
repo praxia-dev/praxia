@@ -9,6 +9,8 @@ published: false
 > **このシリーズについて**: [Praxia](https://github.com/your-org/praxia) は業務特化型マルチエージェント・オーケストレーター + 個人→組織メモリ自動循環機構 を持つ OSS です。本記事は投資業務での具体的な活用例にフォーカスします。
 > 全体紹介は [こちら](#)。
 
+![Praxia Skill UI](https://raw.githubusercontent.com/your-org/praxia/main/docs/images/ui-skills.svg)
+
 ## 前提となる現場の課題
 
 VC のジュニア・アソシエイトの業務:
@@ -64,8 +66,9 @@ from praxia.skills import InvestmentSkill
 
 skill = InvestmentSkill()
 holdings = [
-    {"ticker": "7203.T", "name": "Toyota", "weight": 8.5},
-    {"ticker": "9984.T", "name": "SoftBank", "weight": 6.2},
+    # 注: 以下は架空のダミーデータです (商標・株式言及を避けるため)
+    {"ticker": "0000.T", "name": "AcmeAuto Inc.", "weight": 8.5},
+    {"ticker": "1111.T", "name": "BlueWave Mobile", "weight": 6.2},
     # ... 30 銘柄
 ]
 
@@ -211,7 +214,7 @@ class ESGInvestmentFlow(Flow):
 # 利用
 from praxia import Praxia
 p = Praxia(user_id="esg_analyst")
-result = p.run(ESGInvestmentFlow, inputs={"company": "Toyota Motor"})
+result = p.run(ESGInvestmentFlow, inputs={"company": "AcmeAuto Inc. (fictional issuer)"})
 ```
 
 ## 外部システム連携 — Salesforce / SharePoint / Box から Pull

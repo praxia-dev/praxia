@@ -59,9 +59,9 @@ praxia run rag --question "Praxia はどのライセンスですか?"
 ## 5. 単一スキル実行
 
 ```bash
-praxia skill investment "ソニーグループ株の中期投資判断を教えて"
-praxia skill legal "業務委託契約書 template.txt のリスクを教えて"
-praxia skill patent "発電効率を高める新型太陽電池の先行技術調査を実施"
+praxia skill run investment "中堅電機メーカー (架空) の中期投資判断を教えて"
+praxia skill run legal "業務委託契約書 template.txt のリスクを教えて"
+praxia skill run patent "発電効率を高める新型太陽電池の先行技術調査を実施"
 ```
 
 ## 6. UI 起動

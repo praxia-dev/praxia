@@ -9,6 +9,8 @@ published: false
 > **このシリーズについて**: [Praxia](https://github.com/your-org/praxia) は業務特化型マルチエージェント・オーケストレーター + 個人→組織メモリ自動循環機構 を持つ OSS。本記事は法務業務 (契約書レビュー・コンプライアンス・M&A デューデリ) での具体的な活用例にフォーカスします。
 > 全体紹介は [こちら](#)。
 
+![Skill UI (法務契約書レビュー)](https://raw.githubusercontent.com/your-org/praxia/main/docs/images/ui-skills.svg)
+
 ## 前提となる現場の課題
 
 中堅企業の法務部の典型的な業務:

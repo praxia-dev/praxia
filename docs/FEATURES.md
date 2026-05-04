@@ -1,5 +1,7 @@
 # Praxia — Complete Feature Reference
 
+![Praxia architecture](images/architecture.svg)
+
 Everything Praxia ships, organized for evaluators, integrators, and adopters.
 
 > Looking for a quick overview? Start with [README.md](../README.md).
@@ -131,12 +133,12 @@ Each skill ships with a battle-tested system prompt **plus guardrails**
 Built-in framework: 5-step (Profile → Quant → Qual → Risk → Decision).
 
 ```bash
-praxia skill run investment "Mid-term thesis on Sony Group stock"
+praxia skill run investment "Mid-term thesis on a hypothetical mid-cap electronics issuer"
 ```
 
 ```python
 from praxia.skills import InvestmentSkill
-print(InvestmentSkill().run("3-year investment thesis on Toyota"))
+print(InvestmentSkill().run("3-year thesis on Acme Mfg (TYO:0000) — fictional issuer"))
 ```
 
 Guardrails: includes "final decision is yours" disclaimer, NISA tax notes,
@@ -202,6 +204,9 @@ revisions.
 ---
 
 ## 4. Memory layers (5+1)
+
+![Memory cycle](images/memory-cycle.svg)
+
 
 | Layer | Class | Persistence | Lifecycle |
 |---|---|---|---|
@@ -726,6 +731,8 @@ backend's native format. You can leave at any time.
 
 ## 17. Admin user management
 
+![Admin user management UI](images/ui-users.svg)
+
 ```bash
 praxia user create alice --role member
 praxia user list
@@ -751,6 +758,9 @@ All operations are recorded in the audit log with `actor_id="system"`,
 ---
 
 ## 18. Custom prompts
+
+![Custom prompts UI](images/ui-prompts.svg)
+
 
 Three scopes: **personal** / **org** / **distributed**. Personal prompts
 override distributed; distributed override org. Admins can fan-out a

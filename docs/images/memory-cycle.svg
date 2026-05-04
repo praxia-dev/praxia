@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif">
+  <defs>
+    <marker id="arrM" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#c9a456"/>
+    </marker>
+    <linearGradient id="layerG" x1="0" x2="1">
+      <stop offset="0" stop-color="#c9a456" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#c9a456" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="600" fill="#0a0a0f"/>
+
+  <text x="600" y="36" fill="#ecedf0" font-size="20" font-weight="700" text-anchor="middle">Personal-to-Organizational Memory Cycle</text>
+  <text x="600" y="60" fill="#a8acb8" font-size="13" text-anchor="middle">3 promotion paths run in parallel — never depending on a single signal</text>
+
+  <!-- Step 1: User uses normally -->
+  <rect x="60" y="100" width="200" height="120" rx="12" fill="#15171f" stroke="#23262f"/>
+  <text x="160" y="128" fill="#c9a456" font-size="12" font-weight="700" text-anchor="middle">1. JUST WORK</text>
+  <text x="160" y="152" fill="#ecedf0" font-size="13" font-weight="600" text-anchor="middle">User</text>
+  <text x="76" y="178" fill="#a8acb8" font-size="11">Run flows / skills via</text>
+  <text x="76" y="194" fill="#a8acb8" font-size="11">CLI / SDK / UI.</text>
+  <text x="76" y="210" fill="#a8acb8" font-size="11">No save() needed.</text>
+
+  <!-- Step 2: Auto-extract -->
+  <rect x="320" y="100" width="220" height="120" rx="12" fill="url(#layerG)" stroke="#c9a456"/>
+  <text x="430" y="128" fill="#c9a456" font-size="12" font-weight="700" text-anchor="middle">2. AUTO-EXTRACT (Layer 1)</text>
+  <text x="430" y="152" fill="#ecedf0" font-size="13" font-weight="600" text-anchor="middle">Personal Memory</text>
+  <text x="338" y="178" fill="#a8acb8" font-size="11">Episodes · facts · preferences</text>
+  <text x="338" y="194" fill="#a8acb8" font-size="11">Outcomes (success/fail/score)</text>
+  <text x="338" y="210" fill="#a8acb8" font-size="11">Mem0 / LangMem / HindSight</text>
+
+  <!-- Step 3: Sleep-time consolidation -->
+  <rect x="600" y="100" width="240" height="120" rx="12" fill="url(#layerG)" stroke="#c9a456"/>
+  <text x="720" y="128" fill="#c9a456" font-size="12" font-weight="700" text-anchor="middle">3. CONSOLIDATE (Layer 2)</text>
+  <text x="720" y="152" fill="#ecedf0" font-size="13" font-weight="600" text-anchor="middle">3-path Promotion Engine</text>
+  <text x="618" y="178" fill="#a8acb8" font-size="11">① Frequency (across N+ users)</text>
+  <text x="618" y="194" fill="#a8acb8" font-size="11">② Outcome correlation</text>
+  <text x="618" y="210" fill="#a8acb8" font-size="11">③ LLM self-eval (0..1)</text>
+
+  <!-- Step 4: Shared blocks -->
+  <rect x="900" y="100" width="240" height="120" rx="12" fill="url(#layerG)" stroke="#c9a456"/>
+  <text x="1020" y="128" fill="#c9a456" font-size="12" font-weight="700" text-anchor="middle">4. PROMOTE (Layer 3)</text>
+  <text x="1020" y="152" fill="#ecedf0" font-size="13" font-weight="600" text-anchor="middle">Shared Memory Blocks</text>
+  <text x="918" y="178" fill="#a8acb8" font-size="11">Living organizational</text>
+  <text x="918" y="194" fill="#a8acb8" font-size="11">knowledge.</text>
+  <text x="918" y="210" fill="#a8acb8" font-size="11">All agents read/write.</text>
+
+  <!-- Arrows row 1 -->
+  <line x1="270" y1="160" x2="316" y2="160" stroke="#c9a456" stroke-width="1.5" marker-end="url(#arrM)"/>
+  <line x1="550" y1="160" x2="596" y2="160" stroke="#c9a456" stroke-width="1.5" marker-end="url(#arrM)"/>
+  <line x1="850" y1="160" x2="896" y2="160" stroke="#c9a456" stroke-width="1.5" marker-end="url(#arrM)"/>
+
+  <!-- Step 5: Markdown frozen -->
+  <rect x="320" y="280" width="240" height="120" rx="12" fill="url(#layerG)" stroke="#c9a456" stroke-dasharray="4 4"/>
+  <text x="440" y="308" fill="#c9a456" font-size="12" font-weight="700" text-anchor="middle">5. FREEZE (Layer 4)</text>
+  <text x="440" y="332" fill="#ecedf0" font-size="13" font-weight="600" text-anchor="middle">Markdown + git</text>
+  <text x="338" y="358" fill="#a8acb8" font-size="11">PR-reviewed, immutable.</text>
+  <text x="338" y="374" fill="#a8acb8" font-size="11">GitHub Copilot / Cursor</text>
+  <text x="338" y="390" fill="#a8acb8" font-size="11">Rules-compatible format.</text>
+
+  <!-- Step 6: Back to user -->
+  <rect x="60" y="280" width="200" height="120" rx="12" fill="#15171f" stroke="#28c941"/>
+  <text x="160" y="308" fill="#28c941" font-size="12" font-weight="700" text-anchor="middle">6. PAY IT FORWARD</text>
+  <text x="160" y="332" fill="#ecedf0" font-size="13" font-weight="600" text-anchor="middle">Other Users</text>
+  <text x="76" y="358" fill="#a8acb8" font-size="11">New hires get veteran's</text>
+  <text x="76" y="374" fill="#a8acb8" font-size="11">best-practices on day one.</text>
+  <text x="76" y="390" fill="#a8acb8" font-size="11">Ramp time 6mo → 2mo.</text>
+
+  <!-- Diagonal arrow shared → frozen -->
+  <line x1="900" y1="220" x2="600" y2="280" stroke="#c9a456" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrM)"/>
+  <text x="800" y="248" fill="#a8acb8" font-size="11">PR review</text>
+
+  <!-- Arrow frozen → other users -->
+  <line x1="320" y1="340" x2="270" y2="340" stroke="#28c941" stroke-width="1.5" marker-end="url(#arrM)"/>
+
+  <!-- Arrow shared → other users (loop closure) -->
+  <path d="M 900 200 Q 400 240 160 280" stroke="#28c941" fill="none" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrM)"/>
+  <text x="540" y="252" fill="#28c941" font-size="11" font-weight="600">Cycle closes</text>
+
+  <!-- Bottom timeline / impact -->
+  <rect x="60" y="450" width="1080" height="100" rx="12" fill="#0e1018" stroke="#23262f"/>
+  <text x="600" y="478" fill="#ecedf0" font-size="14" font-weight="600" text-anchor="middle">Compounding effect</text>
+
+  <g font-size="12">
+    <text x="120" y="510" fill="#a8acb8">Year 1</text>
+    <text x="120" y="528" fill="#ecedf0">↓ 35% time on routine</text>
+
+    <text x="380" y="510" fill="#a8acb8">Year 2</text>
+    <text x="380" y="528" fill="#ecedf0">↓ 60% (org memory compounds)</text>
+
+    <text x="700" y="510" fill="#a8acb8">Year 3</text>
+    <text x="700" y="528" fill="#e9c378" font-weight="600">New-hire ramp 6mo → 2-3mo</text>
+
+    <text x="1030" y="510" fill="#a8acb8" text-anchor="end">Veteran knowledge loss</text>
+    <text x="1030" y="528" fill="#28c941" text-anchor="end" font-weight="600">→ zero</text>
+  </g>
+</svg>

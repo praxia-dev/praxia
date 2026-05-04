@@ -80,7 +80,7 @@
 
 **戦術**:
 - 「5 分で動かす Praxia」シリーズ (各業務で 1 本ずつ = 6 本)
-- 「LangChain との比較」「CrewAI との比較」「Glean を OSS で代替する」など比較系
+- 「LangChain との比較」「CrewAI との比較」「Glean ライクな機能を OSS で構築する選択肢」など比較系
 - 月 2〜4 本ペース
 
 ### C. ソーシャルメディア (実時間拡散)
@@ -157,15 +157,15 @@
 | **Anthropic Builder Grant** | 助成金 + アンプリフィケーション | 最重要 |
 | **AWS Activate / GCP for Startups / Azure for Startups** | クラウド・クレジット | インフラ無料化 + メディア |
 | **Hugging Face** | Spaces にデモ掲載 | デモ ROI 高 |
-| **Mem0 / Letta** | 公式 integrations partner | 相互送客 |
-| **Cursor / Warp** | Skill 連携 | 開発者リーチ |
-| **Notion / Slack** | 公式 integration | 大手 BD |
+| **Mem0 / Letta** | コミュニティ連携 (相互言及) | 相互送客 |
+| **Cursor / Warp** | Skill フォーマット互換 | 開発者リーチ |
+| **Notion / Slack** | 認定インテグレーション申請 | 大手 BD |
 | **国内 SIer (NTT データ / 富士通 / NEC)** | 実装パートナー | 大企業案件 |
 
 **戦術**:
 - Anthropic Builder Grant に申請 (毎月締切)
 - Hugging Face Space で「3 分で試す」デモを公開
-- Mem0 公式 README にバックエンドとして掲載してもらう
+- Mem0 コミュニティに backend adapter としての言及をリクエスト
 
 ### H. 教育・ハンズオン・認証
 

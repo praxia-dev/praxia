@@ -9,6 +9,8 @@ published: false
 > **このシリーズについて**: [Praxia](https://github.com/your-org/praxia) は業務特化型マルチエージェント・オーケストレーター + 個人→組織メモリ自動循環機構 を持つ OSS。本記事は設計業務 (システム設計・要件定義・アーキテクチャ評価) での具体的な活用例にフォーカスします。
 > 全体紹介は [こちら](#)。
 
+![Connectors UI](https://raw.githubusercontent.com/your-org/praxia/main/docs/images/ui-connectors.svg)
+
 ## 前提となる現場の課題
 
 SIer のシニア・アーキトの典型的な 1 週間:

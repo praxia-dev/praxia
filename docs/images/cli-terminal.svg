@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 720" font-family="JetBrains Mono, 'SF Mono', Menlo, Consolas, monospace">
+  <!-- Terminal window -->
+  <rect width="1100" height="720" fill="#0a0a0f"/>
+
+  <!-- Title bar -->
+  <rect x="0" y="0" width="1100" height="32" fill="#161821"/>
+  <circle cx="20" cy="16" r="6" fill="#ff6058"/>
+  <circle cx="40" cy="16" r="6" fill="#febc3a"/>
+  <circle cx="60" cy="16" r="6" fill="#28c941"/>
+  <text x="550" y="20" fill="#a8acb8" font-size="11" text-anchor="middle">~/projects/praxia — bash</text>
+
+  <!-- Terminal body -->
+  <g font-size="13">
+    <text x="20" y="62" fill="#5cf07c">alice@acme</text>
+    <text x="124" y="62" fill="#a8acb8">:</text>
+    <text x="132" y="62" fill="#8cc8ff">~</text>
+    <text x="146" y="62" fill="#a8acb8">$ </text>
+    <text x="170" y="62" fill="#ecedf0">praxia init</text>
+
+    <text x="20" y="88" fill="#28c941">✅ Praxia initialized</text>
+    <text x="60" y="106" fill="#a8acb8">user_id:</text>
+    <text x="170" y="106" fill="#e9c378">alice</text>
+    <text x="60" y="124" fill="#a8acb8">org_id:</text>
+    <text x="170" y="124" fill="#e9c378">acme-corp</text>
+    <text x="60" y="142" fill="#a8acb8">backend:</text>
+    <text x="170" y="142" fill="#e9c378">json</text>
+    <text x="60" y="160" fill="#a8acb8">model:</text>
+    <text x="170" y="160" fill="#e9c378">anthropic/claude-opus-4-7</text>
+    <text x="60" y="178" fill="#a8acb8">storage:</text>
+    <text x="170" y="178" fill="#ecedf0">.praxia/</text>
+    <text x="20" y="200" fill="#a8acb8">Registered 6 business skills in the org registry.</text>
+
+    <!-- Run flow -->
+    <text x="20" y="232" fill="#5cf07c">alice@acme</text>
+    <text x="124" y="232" fill="#a8acb8">:</text>
+    <text x="132" y="232" fill="#8cc8ff">~</text>
+    <text x="146" y="232" fill="#a8acb8">$ </text>
+    <text x="170" y="232" fill="#ecedf0">praxia run sales --customer-name </text>
+    <text x="510" y="232" fill="#ffce5c">"Acme Manufacturing"</text>
+    <text x="725" y="232" fill="#ecedf0">\</text>
+
+    <text x="170" y="252" fill="#ecedf0">--product </text>
+    <text x="265" y="252" fill="#ffce5c">"BizFlow"</text>
+    <text x="20" y="278" fill="#a8acb8">▶ Running </text>
+    <text x="116" y="278" fill="#e9c378">sales_agent_flow</text>
+    <text x="280" y="278" fill="#a8acb8">with model </text>
+    <text x="380" y="278" fill="#e9c378">anthropic/claude-opus-4-7</text>
+    <text x="612" y="278" fill="#a8acb8">…</text>
+
+    <text x="20" y="298" fill="#a8acb8">  ✓ research      (6.2s, 2,140 tokens)</text>
+    <text x="20" y="316" fill="#a8acb8">  ✓ hypothesis    (3.8s, 1,580 tokens)</text>
+    <text x="20" y="334" fill="#a8acb8">  ✓ proposal      (4.9s, 1,920 tokens)</text>
+
+    <!-- Final output box -->
+    <rect x="20" y="354" width="1060" height="118" rx="6" fill="rgba(40,201,65,0.05)" stroke="#28c941"/>
+    <text x="36" y="376" fill="#28c941" font-size="11" font-weight="700">┌─ Final Output ──────────────────────────────────────────────────────────────────┐</text>
+    <text x="36" y="396" fill="#ecedf0">## エグゼクティブサマリ</text>
+    <text x="36" y="414" fill="#a8acb8">- 中期経営計画で発表された DX 投資 300 億円のうち、120 億円が電子部品関連と推測</text>
+    <text x="36" y="432" fill="#a8acb8">- 工場 IoT / 異常検知への投資意欲が公開資料から読み取れる</text>
+    <text x="36" y="450" fill="#a8acb8">- 推奨アプローチ: 工場間データ連携 + ベテラン技能伝承 + 提案チームスキル標準化</text>
+    <text x="36" y="466" fill="#28c941" font-size="11" font-weight="700">└──────────────────────────────────────────────────────────────────────────────────┘</text>
+
+    <text x="20" y="494" fill="#6f7382">usage: in=4,852 out=2,140 total=6,992 tokens · 14.9s</text>
+
+    <!-- Policy CLI -->
+    <text x="20" y="528" fill="#5cf07c">alice@acme</text>
+    <text x="124" y="528" fill="#a8acb8">:</text>
+    <text x="132" y="528" fill="#8cc8ff">~</text>
+    <text x="146" y="528" fill="#a8acb8">$ </text>
+    <text x="170" y="528" fill="#ecedf0">praxia policy test alice member connector </text>
+    <text x="565" y="528" fill="#ffce5c">box:/Confidential/q3.pdf</text>
+    <text x="822" y="528" fill="#ffce5c"> read</text>
+
+    <!-- Policy decision panel -->
+    <rect x="20" y="546" width="780" height="120" rx="6" fill="rgba(255,96,88,0.05)" stroke="#ff6058"/>
+    <text x="36" y="572" fill="#ff8b80" font-size="13" font-weight="700">🚫 DENIED</text>
+    <text x="36" y="598" fill="#a8acb8">  user:     alice</text>
+    <text x="36" y="614" fill="#a8acb8">  role:     member</text>
+    <text x="36" y="630" fill="#a8acb8">  resource: connector:box:/Confidential/q3.pdf</text>
+    <text x="36" y="646" fill="#a8acb8">  reason:   matched policy a3f8c2 (deny: 機密フォルダはオペレーター以上のみ)</text>
+    <text x="36" y="660" fill="#6f7382">  audit logged as action="policy.eval.read", outcome="denied"</text>
+
+    <!-- Cursor -->
+    <text x="20" y="690" fill="#5cf07c">alice@acme</text>
+    <text x="124" y="690" fill="#a8acb8">:</text>
+    <text x="132" y="690" fill="#8cc8ff">~</text>
+    <text x="146" y="690" fill="#a8acb8">$ </text>
+    <rect x="170" y="678" width="9" height="14" fill="#e9c378">
+      <animate attributeName="opacity" values="1;0;1" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+</svg>

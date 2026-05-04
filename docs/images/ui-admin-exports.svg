@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif">
+  <rect width="1200" height="720" fill="#0a0a0f"/>
+  <rect x="0" y="0" width="1200" height="34" fill="#161821"/>
+  <circle cx="20" cy="17" r="6" fill="#ff6058"/><circle cx="40" cy="17" r="6" fill="#febc3a"/><circle cx="60" cy="17" r="6" fill="#28c941"/>
+  <text x="135" y="22" fill="#a8acb8" font-size="11">🔒 http://localhost:8501  —  Praxia / Admin Downloads</text>
+
+  <rect x="0" y="34" width="240" height="686" fill="#0e1018"/>
+  <text x="20" y="62" fill="#ecedf0" font-size="16" font-weight="700">🪡 Praxia</text>
+  <text x="20" y="86" fill="#a8acb8" font-size="11">Logged in as</text>
+  <text x="20" y="106" fill="#e9c378" font-size="13" font-weight="600">admin@acme</text>
+  <text x="20" y="124" fill="#28c941" font-size="11">● Role: admin</text>
+
+  <!-- Tabs (highlight Admin) -->
+  <g font-size="12" fill="#a8acb8">
+    <text x="290" y="65">🎬</text><text x="320" y="65">🛠</text><text x="350" y="65">🧠</text>
+    <text x="385" y="65">🌙</text><text x="425" y="65">📊</text><text x="465" y="65">📝</text>
+    <text x="500" y="65">👥</text><text x="540" y="65">🔌</text><text x="580" y="65">🛡</text>
+    <rect x="615" y="48" width="92" height="26" rx="13" fill="rgba(201,164,86,0.12)" stroke="#8b6f30"/>
+    <text x="661" y="65" fill="#e9c378" font-weight="600" text-anchor="middle">💾 Admin</text>
+    <text x="725" y="65">ℹ</text>
+  </g>
+
+  <text x="280" y="116" fill="#ecedf0" font-size="22" font-weight="700">💾 Admin Downloads</text>
+  <text x="280" y="140" fill="#a8acb8" font-size="13">監査ログ・ユーザ・スキル使用・メモリ・ポリシーをエクスポート (CSV / JSON / JSONL)</text>
+  <text x="280" y="160" fill="#a8acb8" font-size="12">⚠️ すべての export 操作自体も監査ログに記録されます (チェーン・オブ・カスタディ)</text>
+
+  <!-- Export type selector -->
+  <text x="280" y="200" fill="#a8acb8" font-size="11">What to export</text>
+  <rect x="280" y="206" width="500" height="32" rx="6" fill="#15171f" stroke="#c9a456"/>
+  <text x="296" y="226" fill="#e9c378" font-size="13" font-weight="600">Audit log</text>
+  <text x="760" y="226" fill="#a8acb8" font-size="14" text-anchor="end">▾</text>
+
+  <!-- Format radio -->
+  <text x="280" y="262" fill="#a8acb8" font-size="11">Format</text>
+  <g font-size="12">
+    <rect x="280" y="270" width="60" height="28" rx="14" fill="rgba(201,164,86,0.12)" stroke="#8b6f30"/>
+    <text x="310" y="288" fill="#e9c378" font-weight="600" text-anchor="middle">csv</text>
+    <text x="365" y="288" fill="#a8acb8">json</text>
+    <text x="410" y="288" fill="#a8acb8">jsonl</text>
+  </g>
+
+  <!-- Filter -->
+  <text x="280" y="324" fill="#a8acb8" font-size="11">Limit to events from the last N days</text>
+  <rect x="280" y="332" width="80" height="28" rx="6" fill="#15171f" stroke="#23262f"/>
+  <text x="320" y="351" fill="#ecedf0" font-size="13" text-anchor="middle">30</text>
+
+  <text x="380" y="324" fill="#a8acb8" font-size="11">Filter by actor (optional)</text>
+  <rect x="380" y="332" width="200" height="28" rx="6" fill="#15171f" stroke="#23262f"/>
+  <text x="396" y="351" fill="#ecedf0" font-size="13">alice@acme</text>
+
+  <!-- Export button -->
+  <rect x="280" y="380" width="120" height="36" rx="18" fill="url(#gex)"/>
+  <text x="340" y="403" fill="#1a1408" font-size="13" font-weight="700" text-anchor="middle">Export</text>
+
+  <!-- Result panel -->
+  <rect x="280" y="438" width="820" height="240" rx="10" fill="#15171f" stroke="#28c941"/>
+  <text x="296" y="462" fill="#28c941" font-size="13" font-weight="700">✓ Exported audit log → .praxia/exports/audit_1735892345.csv</text>
+  <text x="296" y="485" fill="#a8acb8" font-size="12">3,872 records · 482 KB · 30 days · actor=alice@acme</text>
+
+  <line x1="296" y1="500" x2="1084" y2="500" stroke="#23262f"/>
+
+  <!-- Audit table preview -->
+  <text x="296" y="520" fill="#ecedf0" font-size="12" font-weight="600">Preview (first 5 rows):</text>
+  <g font-size="11" font-family="JetBrains Mono, Consolas, monospace">
+    <text x="296" y="544" fill="#a8acb8">timestamp,actor_id,actor_role,action,resource,outcome</text>
+    <text x="296" y="562" fill="#ecedf0">1735892100,alice@acme,operator,policy.eval.read,connector:box:/Q3,success</text>
+    <text x="296" y="580" fill="#ecedf0">1735892080,alice@acme,operator,skill.run,skill:investment_analyst,success</text>
+    <text x="296" y="598" fill="#ecedf0">1735892050,alice@acme,operator,memory.write,memory:user/alice,success</text>
+    <text x="296" y="616" fill="#ff8b80">1735891950,alice@acme,operator,policy.eval.read,connector:box:/Conf...,denied</text>
+    <text x="296" y="634" fill="#ecedf0">1735891900,alice@acme,operator,flow.run,flow:sales_agent_flow,success</text>
+  </g>
+
+  <!-- Download button -->
+  <rect x="296" y="654" width="160" height="32" rx="16" fill="rgba(40,201,65,0.15)" stroke="#28c941"/>
+  <text x="376" y="674" fill="#5cf07c" font-size="12" font-weight="700" text-anchor="middle">⬇️ Download CSV</text>
+
+  <text x="476" y="675" fill="#a8acb8" font-size="11">SHA256: a3f8c2b1e9...c5d4 (verified)</text>
+
+  <defs>
+    <linearGradient id="gex" x1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e9c378"/>
+      <stop offset="1" stop-color="#8b6f30"/>
+    </linearGradient>
+  </defs>
+</svg>

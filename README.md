@@ -1,5 +1,7 @@
 # Praxia
 
+![Praxia hero](docs/images/hero-banner.svg)
+
 > **Specialized Multi-Agent Orchestrator with Cyclic Personal/Organizational Memory**
 >
 > A workflow-specific multi-agent orchestrator that **automatically promotes** individual tacit knowledge into organizational know-how. Built on a 5-layer memory stack with three independent promotion paths.
@@ -31,6 +33,10 @@ Praxia turns "one expert's drawer" into "everyone's best practices."
 ---
 
 ## 🏗 Architecture — 5-Layer Memory Stack
+
+![Architecture diagram](docs/images/architecture.svg)
+
+The same picture as ASCII art:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -178,6 +184,27 @@ Pull data into agent flows; push agent outputs back to your system of record. Al
 
 ---
 
+## 🖼 UI Tour
+
+The bundled Streamlit UI gives non-technical users access to flows, skills, memory, dashboards, prompts, user / policy management, and connectors.
+
+| Tab | Screenshot |
+|---|---|
+| 🎬 Run Flow | ![Run Flow](docs/images/ui-run-flow.svg) |
+| 🛠 Skill | ![Business Skill](docs/images/ui-skills.svg) |
+| 📊 Dashboard | ![Dashboard](docs/images/ui-dashboard.svg) |
+| 📝 Prompts | ![Custom Prompts](docs/images/ui-prompts.svg) |
+| 👥 Users | ![User management](docs/images/ui-users.svg) |
+| 🔌 Connectors | ![External connectors](docs/images/ui-connectors.svg) |
+| 🛡 Policies | ![Resource access policies](docs/images/ui-policies.svg) |
+| 💾 Admin Downloads | ![Admin downloads](docs/images/ui-admin-exports.svg) |
+
+CLI users get the same functionality with rich-formatted output:
+
+![CLI terminal](docs/images/cli-terminal.svg)
+
+---
+
 ## 🚀 Quickstart
 
 ```bash
@@ -195,7 +222,7 @@ praxia run logic --document path/to/doc.md
 praxia run rag --question "What license is Praxia released under?"
 
 # Run a business skill
-praxia skill run investment "Mid-term investment thesis on Sony Group stock"
+praxia skill run investment "Mid-term thesis on a hypothetical mid-cap electronics issuer"
 praxia skill run legal "Review the risk in this services agreement"
 
 # Launch the UI (11 tabs incl. Dashboard / Policies / Admin / Connectors)
@@ -261,7 +288,7 @@ result = m.run(SalesAgentFlow, inputs={
 })
 
 # Run a single business skill
-print(InvestmentSkill().run("3-year investment thesis on Toyota"))
+print(InvestmentSkill().run("3-year investment thesis on Acme Mfg (TYO:0000)"))
 
 # Personal memory accumulates automatically — no explicit save needed.
 # The nightly consolidator promotes effective patterns to org memory.
@@ -374,6 +401,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 **Copyright holder**: GENARCH (sole proprietor: Genki Watanabe) and Praxia Contributors.
 
 Third-party dependencies retain their own licenses; see [NOTICE.md](NOTICE.md) for the full attribution list.
+
+**Trademarks**: All product and company names referenced in Praxia documentation (Claude, ChatGPT, Gemini, Qwen, Box, SharePoint, Dropbox, Google Drive, kintone, Salesforce, Mem0, Letta, LangChain, CrewAI, Glean, etc.) are trademarks or registered trademarks of their respective owners. Praxia is not affiliated with, sponsored by, or endorsed by any of these companies — references are descriptive (nominative fair use) only. See [NOTICE.md § Trademark notice](NOTICE.md#trademark-notice) for the full list.
+
+**Demo data**: Company names in code examples (e.g., "Acme Manufacturing", "AcmeAuto Inc.") are **fictional** and for illustration only. Built-in skills include guardrails reminding users that final professional advice (investment, legal, patent, etc.) requires a qualified professional.
 
 We may evolve toward an **open-core** model: enterprise GUI / advanced audit features under a separate license, while the framework remains Apache 2.0.
 

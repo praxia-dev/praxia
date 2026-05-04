@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif">
+  <defs>
+    <linearGradient id="orchG" x1="0" x2="1">
+      <stop offset="0" stop-color="#c9a456" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#c9a456" stop-opacity="0.04"/>
+    </linearGradient>
+    <linearGradient id="goldG" x1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9c378"/>
+      <stop offset="1" stop-color="#8b6f30"/>
+    </linearGradient>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#c9a456"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="760" fill="#0a0a0f"/>
+
+  <!-- Title -->
+  <text x="600" y="38" fill="#ecedf0" font-size="22" font-weight="700" text-anchor="middle">Praxia — 5-Layer Memory Stack + Skills Registry + Auth/ACL</text>
+  <text x="600" y="62" fill="#a8acb8" font-size="13" text-anchor="middle">Personal-to-organizational knowledge cycling, with policy-controlled external integrations</text>
+
+  <!-- App layer -->
+  <rect x="40" y="90" width="1120" height="44" rx="10" fill="#15171f" stroke="#23262f"/>
+  <text x="600" y="118" fill="#ecedf0" font-size="14" font-weight="600" text-anchor="middle">UI · CLI · SDK · Streamlit Dashboard (11 tabs)</text>
+
+  <!-- Orchestrator -->
+  <rect x="280" y="160" width="640" height="60" rx="12" fill="url(#orchG)" stroke="#c9a456" stroke-width="1.5"/>
+  <text x="600" y="184" fill="#e9c378" font-size="13" font-weight="700" letter-spacing="0.05em" text-anchor="middle">ORCHESTRATOR</text>
+  <text x="600" y="207" fill="#ecedf0" font-size="13" text-anchor="middle">Flows · Skills · Memory · LLM · Auth (one Praxia instance)</text>
+
+  <!-- Layer 1 -->
+  <rect x="40" y="248" width="1120" height="58" rx="10" fill="#15171f" stroke="#23262f"/>
+  <text x="60" y="272" fill="#c9a456" font-size="11" font-weight="700" letter-spacing="0.07em">LAYER 1</text>
+  <text x="60" y="292" fill="#ecedf0" font-size="14" font-weight="600">Personal memory (auto-extracted, per-user namespace)</text>
+  <text x="1140" y="285" fill="#a8acb8" font-size="12" text-anchor="end">json · mem0 · langmem · letta · zep · hindsight</text>
+
+  <!-- Arrow -->
+  <line x1="600" y1="312" x2="600" y2="332" stroke="#c9a456" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="610" y="328" fill="#a8acb8" font-size="11">Sleep-time consolidation</text>
+
+  <!-- Layer 2 -->
+  <rect x="40" y="346" width="1120" height="58" rx="10" fill="#15171f" stroke="#23262f"/>
+  <text x="60" y="370" fill="#c9a456" font-size="11" font-weight="700" letter-spacing="0.07em">LAYER 2</text>
+  <text x="60" y="390" fill="#ecedf0" font-size="14" font-weight="600">Distillation + Promotion engine — 3 paths in parallel</text>
+  <text x="1140" y="383" fill="#a8acb8" font-size="12" text-anchor="end">frequency · outcome correlation · LLM self-eval</text>
+
+  <line x1="600" y1="410" x2="600" y2="430" stroke="#c9a456" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="610" y="426" fill="#a8acb8" font-size="11">Auto-promote above threshold; review queue otherwise</text>
+
+  <!-- Layer 3 -->
+  <rect x="40" y="444" width="1120" height="58" rx="10" fill="#15171f" stroke="#23262f"/>
+  <text x="60" y="468" fill="#c9a456" font-size="11" font-weight="700" letter-spacing="0.07em">LAYER 3</text>
+  <text x="60" y="488" fill="#ecedf0" font-size="14" font-weight="600">Shared memory blocks (living organizational knowledge)</text>
+  <text x="1140" y="481" fill="#a8acb8" font-size="12" text-anchor="end">read/write by all agents · read_only policies</text>
+
+  <line x1="600" y1="508" x2="600" y2="528" stroke="#c9a456" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="610" y="524" fill="#a8acb8" font-size="11">PR review for high-impact items</text>
+
+  <!-- Layer 4 -->
+  <rect x="40" y="542" width="1120" height="58" rx="10" fill="#15171f" stroke="#23262f"/>
+  <text x="60" y="566" fill="#c9a456" font-size="11" font-weight="700" letter-spacing="0.07em">LAYER 4</text>
+  <text x="60" y="586" fill="#ecedf0" font-size="14" font-weight="600">Frozen layer (Markdown + git, PR-reviewed)</text>
+  <text x="1140" y="579" fill="#a8acb8" font-size="12" text-anchor="end">Copilot / Cursor Rules compatible</text>
+
+  <!-- Layer 5 (optional, dashed) -->
+  <rect x="40" y="618" width="730" height="44" rx="10" fill="#15171f" stroke="#23262f" stroke-dasharray="4 4" opacity="0.85"/>
+  <text x="60" y="640" fill="#c9a456" font-size="11" font-weight="700" letter-spacing="0.07em">LAYER 5 (optional)</text>
+  <text x="60" y="657" fill="#a8acb8" font-size="13">Graph layer — relationship-heavy domains only (Zep / Graphiti)</text>
+
+  <!-- Layer 6 (parallel) -->
+  <rect x="785" y="618" width="375" height="44" rx="10" fill="#15171f" stroke="#c9a456" opacity="0.95"/>
+  <text x="805" y="640" fill="#c9a456" font-size="11" font-weight="700" letter-spacing="0.07em">LAYER 6 (parallel)</text>
+  <text x="805" y="657" fill="#a8acb8" font-size="13">Skills registry — also promotion-aware</text>
+
+  <!-- Auth strip -->
+  <rect x="40" y="678" width="1120" height="44" rx="10" fill="#0e1018" stroke="#3b80b0"/>
+  <text x="600" y="704" fill="#8cc8ff" font-size="13" font-weight="600" text-anchor="middle">Auth · RBAC · SSO (OIDC) · Resource ACL · Audit · Admin Exports</text>
+</svg>

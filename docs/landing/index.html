@@ -312,7 +312,7 @@ praxia init
 
 <span class="comment"># Run flows + skills</span>
 praxia run sales --customer-name <span class="str">"Acme"</span>
-praxia skill run investment <span class="str">"3-year thesis on Toyota"</span>
+praxia skill run investment <span class="str">"3-year thesis on Acme Mfg (fictional)"</span>
 
 <span class="comment"># Launch the UI (11 tabs incl. Dashboard / Policies / Admin / Connectors)</span>
 praxia ui --port 8501
@@ -381,10 +381,10 @@ praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account
             </div>
             <pre><code><span class="comment"># CLI</span>
 praxia skill run investment <span class="str">"\
-Mid-term investment thesis on Sony Group:
+Mid-term thesis on a hypothetical issuer:
+- sector: consumer electronics, mid-cap JP
 - horizon: 3 years
-- ticker: 6758.T
-- compare with Hitachi, Panasonic
+- compare with two anonymized peers
 "</span></code></pre>
           </div>
         </div>

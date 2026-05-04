@@ -9,6 +9,8 @@ published: false
 > **このシリーズについて**: [Praxia](https://github.com/your-org/praxia) は業務特化型マルチエージェント・オーケストレーター + 個人→組織メモリ自動循環機構 を持つ OSS。本記事は購買業務 (サプライヤー評価・RFQ・BCP) での具体的な活用例にフォーカスします。
 > 全体紹介は [こちら](#)。
 
+![Dashboard UI](https://raw.githubusercontent.com/your-org/praxia/main/docs/images/ui-dashboard.svg)
+
 ## 前提となる現場の課題
 
 製造業の購買部門の典型的な失敗:
