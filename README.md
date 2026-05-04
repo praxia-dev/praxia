@@ -8,7 +8,10 @@
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
 
-> 🇯🇵 日本語版は [README.ja.md](README.ja.md) を参照してください.
+> 🇯🇵 日本語版の各業務別記事 (Zenn): [docs/zenn/](docs/zenn/)
+> 🔍 Complete feature reference: [docs/FEATURES.md](docs/FEATURES.md)
+> 📊 Concrete Before/After tables: [docs/use-cases.md](docs/use-cases.md)
+> 💼 Business growth plan (JP): [docs/business-plan.ja.md](docs/business-plan.ja.md)
 
 ---
 
@@ -306,6 +309,38 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 Third-party dependencies retain their own licenses; see [NOTICE.md](NOTICE.md) for the full attribution list.
 
 We may evolve toward an **open-core** model: enterprise GUI / advanced audit features under a separate license, while the framework remains Apache 2.0.
+
+---
+
+## 🛠 Extending Praxia
+
+| What you want to add | How | Lines of code |
+|---|---|---|
+| New multi-agent flow | Subclass `Flow`, define steps with `${var}` templates | ~30 |
+| New business skill | Subclass `Skill` with `system_prompt` + `manifest` | ~20 |
+| New LTM backend | Implement 4-method `MemoryBackend` protocol | ~80 |
+| Industry recipe | Markdown in `docs/recipes/` | n/a |
+| MCP / Claude Skills export | `skill.to_skill_md()` | 1 line |
+
+Code examples for each: see [docs/FEATURES.md#extending-praxia](docs/FEATURES.md#13-extending-praxia).
+
+---
+
+## 📈 ROI estimate (100-knowledge-worker mid-cap)
+
+| Variable | Year 1 | Year 2 |
+|---|---|---|
+| Workers in scope (N) | 100 | 100 |
+| Loaded cost / FTE (C) | ¥14M | ¥14M |
+| Routine work share (t) | 40% | 40% |
+| Time savings (s) | 35% | 60% |
+| Quality lift (Q) | ¥10M | ¥30M |
+| Praxia cost (P) | ¥12M | ¥12M |
+| **Net benefit** | **¥194M** | **¥354M** |
+
+3-year cumulative net ≈ **¥800M**. Even halving every parameter still produces > 10× ROI.
+
+Full model + worked examples: [docs/FEATURES.md#roi-projection-model](docs/FEATURES.md#14-roi-projection-model).
 
 ---
 

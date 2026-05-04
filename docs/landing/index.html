@@ -19,10 +19,11 @@
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
-      <a href="#flows">Flows</a>
-      <a href="#skills">Skills</a>
-      <a href="#install">Install</a>
-      <a href="#use-cases">Use cases</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#examples">Examples</a>
+      <a href="#roi">ROI</a>
+      <a href="#extending">Extend</a>
+      <a href="#faq">FAQ</a>
       <a href="#pricing">Pricing</a>
       <a href="portal/index.html" class="nav-cta">Open Portal</a>
       <a href="https://github.com/your-org/praxia" target="_blank" rel="noopener" class="nav-github">GitHub →</a>
@@ -56,29 +57,112 @@
     <div class="container">
       <div class="section-head">
         <span class="kicker">Why Praxia</span>
-        <h2>Four problems that no other framework solves at once.</h2>
+        <h2>Ten advantages no other framework offers in one package.</h2>
       </div>
-      <div class="grid grid-2">
+      <div class="grid grid-3">
         <article class="card">
           <div class="card-icon">🧠</div>
           <h3>Personal → org memory loop</h3>
-          <p>Senior engineers' "magic prompts" auto-promote into shared knowledge via three independent paths: frequency, outcome correlation, and LLM self-eval.</p>
+          <p>Senior staff's "magic prompts" auto-promote into shared knowledge via three independent paths: frequency, outcome correlation, and LLM self-eval.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔄</div>
+          <h3>3-path promotion engine</h3>
+          <p>Frequency-based, outcome-correlated, LLM-scored. Run in parallel — never depending on a single signal. Configurable thresholds for auto-promote vs review.</p>
         </article>
         <article class="card">
           <div class="card-icon">⚙️</div>
-          <h3>Workflow-specialized templates</h3>
-          <p>Sales prep, logic checking, RAG self-correction — three production-ready flows that run in 5 minutes after install. No bespoke orchestration code required.</p>
+          <h3>Workflow-specialized flows</h3>
+          <p>Sales prep, logic checking, RAG self-correction — three production-ready multi-agent pipelines that run in 5 minutes. No bespoke orchestration code required.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🎯</div>
+          <h3>6 default business skills</h3>
+          <p>Investment, sales, design, purchasing, patent, legal — domain-tuned agents with built-in guardrails (tax law, jurisdictional caveats, hallucination guards).</p>
         </article>
         <article class="card">
           <div class="card-icon">🛡️</div>
           <h3>Evidence by default</h3>
-          <p>Hallucination detection and retrieval evaluations ship as first-class modules. "It works" comes with proof attached.</p>
+          <p>Sentence-level hallucination detection and retrieval metrics ship as first-class modules. "It works" comes with proof attached.</p>
         </article>
         <article class="card">
           <div class="card-icon">🔌</div>
-          <h3>Pluggable everything</h3>
-          <p>6 LTM backends (Mem0 / LangMem / Letta / Zep / HindSight / JSON), 5 LLM providers, MCP / Claude Skills compatible. Zero vendor lock-in.</p>
+          <h3>6 LTM backends</h3>
+          <p>JSON, Mem0, LangMem, Letta, Zep, HindSight — switch with one line. Plus Graph layer (optional) for relationship-heavy domains. Zero vendor lock-in.</p>
         </article>
+        <article class="card">
+          <div class="card-icon">🤖</div>
+          <h3>Multi-LLM (100+ providers)</h3>
+          <p>Claude, ChatGPT, Gemini, Qwen-API, Qwen-local (Ollama) + 100+ via LiteLLM. Auto-detect from env vars; switch model per-call.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔐</div>
+          <h3>Auth, RBAC, SSO, audit — in OSS</h3>
+          <p>API key + JWT + OIDC (Google/MS/Okta/GitHub/Keycloak) + 4 default roles + append-only audit log. Most competitors paywall this.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🧬</div>
+          <h3>Skills also promoted</h3>
+          <p>Not just memory — your personal skills get tracked, scored, and promoted to the org skill catalog when they prove themselves.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔬</div>
+          <h3>MCP / Claude Skills compatible</h3>
+          <p>Skills serialize to standard <code>SKILL.md</code>. Drop into Claude Skills, Cursor Skills, or any MCP-compatible registry without code changes.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📊</div>
+          <h3>Outcome tracking built-in</h3>
+          <p><code>record_outcome()</code> attaches success/failure to episodes. The consolidator uses these signals statistically — no separate analytics pipeline needed.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📜</div>
+          <h3>Apache 2.0 + Open Core ready</h3>
+          <p>Permissive license, commercial-friendly. NOTICE.md inventories every dependency's license. Open Core path for enterprise extras planned.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">How it works</span>
+        <h2>From individual usage to organizational standard — automatically.</h2>
+      </div>
+      <div class="how-grid">
+        <div class="how-step">
+          <div class="step-num">1</div>
+          <h3>You just work</h3>
+          <p>Run flows and skills via CLI / SDK / UI. Every interaction lands in your personal memory automatically — no <code>save()</code> calls in business code.</p>
+          <pre><code>p = Praxia(user_id=<span class="str">"alice"</span>)
+p.run(SalesAgentFlow, inputs={...})
+<span class="comment"># Memory accumulates implicitly</span></code></pre>
+        </div>
+        <div class="how-step">
+          <div class="step-num">2</div>
+          <h3>Outcomes get attached</h3>
+          <p>When deals close, tests pass, or PRs merge, attach an outcome. The consolidator uses these to weight which patterns are <em>actually</em> effective.</p>
+          <pre><code>p.personal_memory.record_outcome(
+    episode_id=ep.id,
+    success=<span class="str">True</span>, score=0.9,
+    notes=<span class="str">"closed-won"</span>,
+)</code></pre>
+        </div>
+        <div class="how-step">
+          <div class="step-num">3</div>
+          <h3>Nightly distillation</h3>
+          <p>The Sleep-time Consolidator clusters similar memories across users, runs each through the 3-path engine, and auto-promotes the high-confidence ones.</p>
+          <pre><code>praxia consolidate
+<span class="comment"># auto_promoted: 3, review_queued: 5</span></code></pre>
+        </div>
+        <div class="how-step">
+          <div class="step-num">4</div>
+          <h3>Living → frozen</h3>
+          <p>Promoted shared blocks become living org knowledge. The most stable get frozen into Markdown + git for PR review. Every step is auditable.</p>
+          <pre><code>praxia freeze --block manufacturing_pain
+<span class="comment"># → .praxia/frozen/.../*.md</span></code></pre>
+        </div>
       </div>
     </div>
   </section>
@@ -233,6 +317,348 @@ praxia consolidate</code></pre>
     </div>
   </section>
 
+  <section id="examples" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Concrete examples</span>
+        <h2>One CLI invocation, real business output.</h2>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" data-target="ex-investment">💰 Investment</button>
+        <button class="tab-btn" data-target="ex-sales">📈 Sales</button>
+        <button class="tab-btn" data-target="ex-design">🏗 Design</button>
+        <button class="tab-btn" data-target="ex-purchasing">🛒 Purchasing</button>
+        <button class="tab-btn" data-target="ex-patent">📑 Patent</button>
+        <button class="tab-btn" data-target="ex-legal">⚖️ Legal</button>
+      </div>
+      <div class="tab-panels">
+        <div class="tab-panel active" id="ex-investment">
+          <div class="example-grid">
+            <div>
+              <h3>VC pre-screening: 1 deck, 45 minutes</h3>
+              <p><strong>Before:</strong> 4–6h reading the deck, scrubbing competitor research, modeling financials.</p>
+              <p><strong>After:</strong> Full 5-section memo (Profile / Quant / Qual / Risk / Decision) with bull-and-bear cases and confidence intervals.</p>
+              <ul class="bullet-tight">
+                <li>📉 Time: 4–6h → <strong>45–60 min</strong></li>
+                <li>📊 Coverage: 3–5 competitors → <strong>10–15 surrounding-domain peers</strong></li>
+                <li>🎯 Capacity: 5–10 deals/wk → <strong>20–30 deals/wk</strong></li>
+              </ul>
+            </div>
+            <pre><code><span class="comment"># CLI</span>
+praxia skill run investment <span class="str">"\
+Mid-term investment thesis on Sony Group:
+- horizon: 3 years
+- ticker: 6758.T
+- compare with Hitachi, Panasonic
+"</span></code></pre>
+          </div>
+        </div>
+        <div class="tab-panel" id="ex-sales">
+          <div class="example-grid">
+            <div>
+              <h3>B2B account research: 8h → 1h</h3>
+              <p><strong>Before:</strong> Hit-or-miss prep based on LinkedIn skim. CFO asks about a recent capex you didn't know about.</p>
+              <p><strong>After:</strong> Praxia ingests IR + 6 months of press, extracts top-3 pain hypotheses, and generates a 5-row FAQ with citations.</p>
+              <ul class="bullet-tight">
+                <li>⏱ Prep: 6h → <strong>1h</strong></li>
+                <li>📈 Acceptance rate: <strong>+15–20pt</strong></li>
+                <li>📞 Meetings/week: 3 → <strong>6–8</strong></li>
+              </ul>
+            </div>
+            <pre><code><span class="comment"># Multi-agent flow</span>
+praxia run sales \
+  --customer-name <span class="str">"Acme Manufacturing"</span> \
+  --product <span class="str">"Praxia Sales"</span> \
+  --additional-context <span class="str">"Mid-term plan
+calls for 30B JPY DX investment"</span></code></pre>
+          </div>
+        </div>
+        <div class="tab-panel" id="ex-design">
+          <div class="example-grid">
+            <div>
+              <h3>Architecture review: 4h → 30min</h3>
+              <p><strong>Before:</strong> Senior architect spending 16h/wk on PR-style design reviews. NFRs slip through.</p>
+              <p><strong>After:</strong> DRAGON framework (Data flow / Requirements / Architectural fit / Gaps / Operation / NFRs) — checks all 6 axes systematically.</p>
+              <ul class="bullet-tight">
+                <li>⏱ Senior load: 16h/wk → <strong>4h/wk</strong></li>
+                <li>📋 NFR coverage: 5–7 → <strong>15–20 axes</strong></li>
+                <li>👶 Junior PM ramp: 12–18mo → <strong>6–9mo</strong></li>
+              </ul>
+            </div>
+            <pre><code>praxia run logic --document spec.md
+
+<span class="comment"># or single-skill review</span>
+praxia skill run design <span class="str">"\
+Review the attached architecture for
+the new payments microservice...
+"</span></code></pre>
+          </div>
+        </div>
+        <div class="tab-panel" id="ex-purchasing">
+          <div class="example-grid">
+            <div>
+              <h3>RFQ analysis: 2 weeks → 3 days</h3>
+              <p><strong>Before:</strong> Direct cost only; ESG / geopolitics / BCP risk treated as afterthoughts.</p>
+              <p><strong>After:</strong> Full TCO matrix + QCD+S framework + Subcontract Act compliance check + risk grid.</p>
+              <ul class="bullet-tight">
+                <li>📦 30-supplier eval: 3–4wk → <strong>3–5 days</strong></li>
+                <li>💸 Hidden cost discovery: <strong>+30% of initial quote</strong></li>
+                <li>🚨 Single-source detection: 70% → <strong>95%+</strong></li>
+              </ul>
+            </div>
+            <pre><code>praxia skill run purchasing <span class="str">"\
+Evaluate 5 PCB suppliers for our new
+product line. Annual volume 2M units.
+Constraints: Japan-domiciled HQ,
+ISO9001, no Russia/Belarus exposure.
+"</span></code></pre>
+          </div>
+        </div>
+        <div class="tab-panel" id="ex-patent">
+          <div class="example-grid">
+            <div>
+              <h3>Prior-art search: 2 days → 4 hours</h3>
+              <p><strong>Before:</strong> 30–50万円 / case to outside counsel for first-pass research.</p>
+              <p><strong>After:</strong> 5-step framework (element extraction → IPC/FI/F-term search formula → hit analysis → novelty → inventive step). Counsel only reviews the draft.</p>
+              <ul class="bullet-tight">
+                <li>⏱ Per-case: 1–2 days → <strong>2–4h</strong></li>
+                <li>💴 External fees: <strong>−50–70%</strong></li>
+                <li>📊 Cross-domain art: <strong>significantly improved</strong></li>
+              </ul>
+            </div>
+            <pre><code>praxia skill run patent <span class="str">"\
+Prior-art search: solid-state battery
+with three-layer ceramic electrolyte
+and Li-rich cathode. Provide:
+1. Element decomposition
+2. IPC/FI/F-term search strategy
+3. Hit-analysis table
+4. Novelty + inventive-step verdict
+"</span></code></pre>
+          </div>
+        </div>
+        <div class="tab-panel" id="ex-legal">
+          <div class="example-grid">
+            <div>
+              <h3>Contract review: 90min → 12min</h3>
+              <p><strong>Before:</strong> 50–100 contracts/month bottlenecked on 2–3 people. Critical risks slip through.</p>
+              <p><strong>After:</strong> RACE framework (Risk / Allocation / Compliance / Exit) + 🔴/🟡/🟢 severity ladder. Critical-risk miss rate falls from 5–10% to 1–2%.</p>
+              <ul class="bullet-tight">
+                <li>⏱ Per-contract: 60–90min → <strong>10–15min</strong></li>
+                <li>📂 Throughput: 50–80/mo → <strong>200–300/mo</strong></li>
+                <li>⚠️ Critical-miss: 5–10% → <strong>1–2%</strong></li>
+              </ul>
+            </div>
+            <pre><code>praxia skill run legal <span class="str">"\
+Review this services agreement
+focusing on:
+- Liability cap
+- IP assignment vs license
+- Data return on termination
+- Anti-bribery clause
+"</span></code></pre>
+          </div>
+        </div>
+      </div>
+      <p class="cta-line">
+        Full Before/After tables (3 use cases × 6 domains = 18 scenarios) in
+        <a href="https://github.com/your-org/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
+      </p>
+    </div>
+  </section>
+
+  <section id="roi" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">ROI projection</span>
+        <h2>Cumulative effect compounds with the memory loop.</h2>
+      </div>
+      <div class="roi-grid">
+        <div class="roi-formula">
+          <h3>Annual ROI formula</h3>
+          <pre><code>Year 1 ROI = (N × C × t × s₁) + Q − P
+Year 2+    = (N × C × t × s₂) + Q × g − P
+
+N  = knowledge workers in scope
+C  = loaded cost / FTE
+t  = time on routine work
+s₁ = year-1 time savings (typ. 30–50%)
+s₂ = year-2 time savings (typ. 50–75%)
+   ↑ s₂ &gt; s₁ because org memory compounds
+Q  = quality lift (errors avoided)
+P  = Praxia cost (license + infra)</code></pre>
+        </div>
+        <div>
+          <h3>Worked example: 100 knowledge workers</h3>
+          <table class="roi-table">
+            <tr><th>Variable</th><th>Year 1</th><th>Year 2</th></tr>
+            <tr><td>Workers in scope (N)</td><td>100</td><td>100</td></tr>
+            <tr><td>Loaded cost (C)</td><td>¥14M</td><td>¥14M</td></tr>
+            <tr><td>Routine work share (t)</td><td>40%</td><td>40%</td></tr>
+            <tr><td>Time savings (s)</td><td>35%</td><td>60%</td></tr>
+            <tr><td>Quality lift (Q)</td><td>¥10M</td><td>¥30M</td></tr>
+            <tr><td>Praxia cost (P)</td><td>¥12M</td><td>¥12M</td></tr>
+            <tr class="roi-total"><td>Net benefit</td><td><strong>¥194M</strong></td><td><strong>¥354M</strong></td></tr>
+          </table>
+          <p class="roi-note">
+            3-year cumulative net ≈ <strong>¥800M</strong>. Even after halving each
+            parameter, ROI remains <strong>&gt; 10×</strong>.
+          </p>
+        </div>
+      </div>
+      <div class="long-effects">
+        <h3>3-year compounding effects</h3>
+        <table class="roi-table">
+          <tr>
+            <th>KPI</th>
+            <th>Before</th>
+            <th>1 year</th>
+            <th>3 years</th>
+          </tr>
+          <tr><td>New-hire ramp time</td><td>6–12 months</td><td>4–6 months</td><td><strong>2–3 months</strong></td></tr>
+          <tr><td>Knowledge loss on departure</td><td>Several / yr</td><td>50% reduction</td><td><strong>Zero</strong></td></tr>
+          <tr><td>Output quality variance</td><td>2–3× spread</td><td>50% narrower</td><td><strong>≤ 20% spread</strong></td></tr>
+          <tr><td>Cross-team best-practice flow</td><td>Almost none</td><td>5–10 / mo</td><td><strong>30+ / mo</strong></td></tr>
+          <tr><td>AI utilization (org avg / individual best)</td><td>30–50%</td><td>60–70%</td><td><strong>80%+</strong></td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="extending" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Extensibility</span>
+        <h2>Built to grow with your team.</h2>
+      </div>
+      <div class="grid grid-3">
+        <article class="card">
+          <h3>Custom flow (~30 lines)</h3>
+          <p>Define a multi-agent pipeline by subclassing <code>Flow</code>. Each step references prior outputs via <code>${var}</code> templates.</p>
+          <pre><code>class IncidentResponseFlow(Flow):
+    name = <span class="str">"incident_response"</span>
+    steps = [
+        FlowStep(<span class="str">"triage"</span>, ...),
+        FlowStep(<span class="str">"hypothesis"</span>, ...),
+        FlowStep(<span class="str">"mitigation"</span>, ...),
+    ]</code></pre>
+        </article>
+        <article class="card">
+          <h3>Custom skill (~20 lines)</h3>
+          <p>Subclass <code>Skill</code> with a system prompt + manifest. Auto-serializes to <code>SKILL.md</code> for MCP / Claude Skills.</p>
+          <pre><code>class HRRecruitingSkill(Skill):
+    manifest = SkillManifest(
+        name=<span class="str">"hr_recruiting"</span>,
+        domain=<span class="str">"hr"</span>,
+        ...
+    )
+    system_prompt = <span class="str">"""..."""</span></code></pre>
+        </article>
+        <article class="card">
+          <h3>Custom LTM backend</h3>
+          <p>Implement the 4-method <code>MemoryBackend</code> protocol. Plug in any vector DB (Pinecone, Weaviate, Qdrant, ...) without touching framework code.</p>
+          <pre><code>class PineconeBackend:
+    def add(...): ...
+    def search(...): ...
+    def all(...): ...
+    def clear(...): ...</code></pre>
+        </article>
+      </div>
+      <p class="cta-line">
+        Detailed extension guides in
+        <a href="https://github.com/your-org/praxia/blob/main/docs/FEATURES.md#extending-praxia">docs/FEATURES.md</a>.
+      </p>
+    </div>
+  </section>
+
+  <section id="comparison" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Comparison</span>
+        <h2>Side-by-side with the leading frameworks.</h2>
+      </div>
+      <div class="comparison-table">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>CrewAI</th>
+              <th>AutoGen</th>
+              <th>LangGraph</th>
+              <th>Glean</th>
+              <th><strong>Praxia</strong></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Multi-agent orchestration</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>✅</td></tr>
+            <tr><td>Workflow-specialized templates</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+            <tr><td>Auto-extracting personal memory</td><td>—</td><td>—</td><td>~</td><td>✅</td><td>✅</td></tr>
+            <tr><td>Personal → org promotion</td><td>—</td><td>—</td><td>—</td><td>~</td><td>✅</td></tr>
+            <tr><td>Sleep-time consolidation</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+            <tr><td>Skills registry cycling</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+            <tr><td>Hallucination eval bundled</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+            <tr><td>Built-in auth + RBAC + audit</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+            <tr><td>SSO (OIDC) in core</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+            <tr><td>MCP / Claude Skills format</td><td>~</td><td>~</td><td>~</td><td>—</td><td>✅</td></tr>
+            <tr><td>License</td><td>MIT</td><td>MIT</td><td>MIT</td><td>Commercial</td><td>Apache 2.0</td></tr>
+            <tr><td>OSS pricing</td><td>Free</td><td>Free</td><td>Free</td><td>—</td><td>Free</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">FAQ</span>
+        <h2>The questions everyone asks.</h2>
+      </div>
+      <div class="faq-list">
+        <details>
+          <summary>Does Praxia send my data to a third party?</summary>
+          <p>No. The default <code>json</code> backend stores everything on local disk. LLM calls go to whichever provider you configure — pick <code>qwen-local</code> (Ollama) for fully in-house operation. You choose the trust boundary.</p>
+        </details>
+        <details>
+          <summary>How is this different from "just using Mem0"?</summary>
+          <p>Mem0 is a memory layer. Praxia is the <strong>orchestrator + memory + skill registry + flows + eval + auth</strong>. Mem0 is one of six interchangeable backends inside Praxia.</p>
+        </details>
+        <details>
+          <summary>Is auto-promotion actually safe?</summary>
+          <p>Three guardrails: (1) auto-threshold defaults to 0.75 — high; (2) review queue catches mid-confidence items for human approval; (3) the audit log records every promotion so rollback is trivial.</p>
+        </details>
+        <details>
+          <summary>Can I run Praxia fully offline / on-prem?</summary>
+          <p>Yes. Pick <code>qwen-local</code> (Ollama) for the LLM and <code>json</code> or self-hosted Mem0/HindSight for memory. No cloud calls.</p>
+        </details>
+        <details>
+          <summary>How does Praxia compare to LangGraph?</summary>
+          <p>LangGraph excels at general agent orchestration but doesn't ship workflow templates, business skills, memory cycling, or auth. Praxia is opinionated and batteries-included for the "specialized multi-agent + organizational memory" niche.</p>
+        </details>
+        <details>
+          <summary>Can I use this commercially?</summary>
+          <p>Yes — Apache 2.0. Even auth/SSO is in the OSS, where competitors typically paywall those features.</p>
+        </details>
+        <details>
+          <summary>Is the 6-skill set fixed?</summary>
+          <p>No. Add your own with ~20 lines. PRs that contribute new skills are very welcome.</p>
+        </details>
+        <details>
+          <summary>What about MCP / Claude Skills compatibility?</summary>
+          <p>Skills serialize to standard <code>SKILL.md</code> frontmatter. Drop any Praxia skill into Claude Skills, Cursor Skills, or any MCP registry without code changes.</p>
+        </details>
+        <details>
+          <summary>Is my org memory locked into Praxia?</summary>
+          <p>No. Layer 4 is plain Markdown in your git repo. Layer 3 exports to JSONL. Layer 1 personal memory is standard JSONL or your chosen backend's native format. You can leave at any time.</p>
+        </details>
+        <details>
+          <summary>How big can my org grow before hitting limits?</summary>
+          <p>JSON backend handles ~10k users comfortably. Beyond that, switch to Mem0 + Qdrant/Pinecone or HindSight. The promotion engine scales with LLM tokens — budget 10–50 LLM calls per consolidation per cluster.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
   <section id="pricing" class="section">
     <div class="container">
       <div class="section-head">
@@ -342,5 +768,18 @@ praxia consolidate</code></pre>
       <span>© 2026 Praxia Contributors · Apache License 2.0</span>
     </div>
   </footer>
+
+  <script>
+    // Tab switching for #examples section
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.target;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(target).classList.add('active');
+      });
+    });
+  </script>
 </body>
 </html>

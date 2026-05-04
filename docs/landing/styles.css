@@ -556,6 +556,272 @@ pre .str     { color: var(--accent-bright); }
 
 /* ------------------------------------------------------------------ RESPONSIVE */
 
+/* ------------------------------------------------------------------ HOW IT WORKS */
+
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+.how-step {
+  position: relative;
+  padding: 1.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.how-step h3 {
+  margin: 0.5rem 0 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.how-step p {
+  color: var(--text-soft);
+  font-size: 14.5px;
+  margin: 0 0 1rem;
+}
+.how-step pre {
+  margin: 0;
+  font-size: 12.5px;
+}
+.step-num {
+  display: inline-flex;
+  width: 32px; height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: #1a1408;
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ TABS */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+.tab-btn {
+  padding: 0.6rem 1.1rem;
+  background: var(--bg-card);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 120ms ease;
+}
+.tab-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, rgba(201,164,86,0.15), rgba(201,164,86,0.05));
+  color: var(--accent-bright);
+  border-color: var(--accent-deep);
+}
+
+.tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
+  animation: fade-in 200ms ease;
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.example-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+}
+.example-grid h3 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+}
+.example-grid p {
+  color: var(--text-soft);
+  font-size: 14.5px;
+  margin: 0 0 0.75rem;
+}
+.example-grid pre {
+  margin: 0;
+  font-size: 13px;
+}
+.bullet-tight {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------------ ROI */
+
+.roi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 2.5rem;
+  align-items: start;
+  margin-bottom: 3rem;
+}
+.roi-grid h3 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+}
+.roi-formula pre {
+  font-size: 13px;
+}
+.roi-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.roi-table th,
+.roi-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-soft);
+  border-bottom: 1px solid var(--border);
+}
+.roi-table th {
+  background: rgba(201,164,86,0.05);
+  color: var(--text);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+.roi-table tr:last-child td { border-bottom: none; }
+.roi-total td { color: var(--accent-bright) !important; font-size: 15px; }
+.roi-note {
+  margin-top: 1rem;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.long-effects {
+  margin-top: 3rem;
+}
+.long-effects h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+}
+.long-effects td:last-child,
+.long-effects th:last-child { color: var(--accent-bright); }
+
+/* ------------------------------------------------------------------ COMPARISON */
+
+.comparison-table {
+  overflow-x: auto;
+}
+.cmp {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 14px;
+}
+.cmp th,
+.cmp td {
+  padding: 0.7rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.cmp th {
+  background: rgba(201,164,86,0.05);
+  color: var(--text);
+  font-weight: 600;
+}
+.cmp th:first-child,
+.cmp td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+.cmp tr:last-child td { border-bottom: none; }
+.cmp td:nth-child(6),
+.cmp th:nth-child(6) {
+  background: rgba(201,164,86,0.1);
+  color: var(--accent-bright);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ FAQ */
+
+.faq-list {
+  max-width: 820px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.faq-list details {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.5rem;
+  transition: border-color 120ms ease;
+}
+.faq-list details[open] {
+  border-color: var(--accent-deep);
+}
+.faq-list summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  list-style: none;
+  position: relative;
+  padding-right: 1.5rem;
+}
+.faq-list summary::-webkit-details-marker { display: none; }
+.faq-list summary::after {
+  content: "+";
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 400;
+  transition: transform 150ms ease;
+}
+.faq-list details[open] summary::after {
+  content: "−";
+}
+.faq-list details p {
+  margin: 0.85rem 0 0;
+  color: var(--text-soft);
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+/* ------------------------------------------------------------------ RESPONSIVE */
+
 @media (max-width: 768px) {
   .nav { padding: 0.85rem 1rem; }
   .nav-links { gap: 0.85rem; flex-wrap: wrap; }
@@ -567,4 +833,8 @@ pre .str     { color: var(--accent-bright); }
   .uc-row { grid-template-columns: 1fr; gap: 0.4rem; padding: 1rem; }
   .uc-row > div::before { content: attr(data-label); display: block; color: var(--text-dim); font-size: 11px; text-transform: uppercase; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .example-grid { grid-template-columns: 1fr; }
+  .roi-grid { grid-template-columns: 1fr; }
+  .cmp { font-size: 12px; }
+  .cmp th, .cmp td { padding: 0.5rem 0.5rem; }
 }
