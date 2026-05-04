@@ -27,7 +27,7 @@
   </g>
 
   <text x="280" y="116" fill="#ecedf0" font-size="22" font-weight="700">🔌 External connectors</text>
-  <text x="280" y="140" fill="#a8acb8" font-size="13">Pull data into agent flows · Push agent outputs back · ACL-enforced</text>
+  <text x="280" y="140" fill="#a8acb8" font-size="13">Pull data into agent flows · Push agent outputs back · subject to admin ACL policies</text>
 
   <!-- Connector tiles -->
   <g>

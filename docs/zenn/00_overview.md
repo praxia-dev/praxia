@@ -447,7 +447,7 @@ class PineconeBackend:
 | エンタープライズ GUI / マルチテナント / 専任サポート | 有償 | エンタープライズ版 (将来) |
 | 業界別の高精度プロンプト・データ | 有償 | コンサル / Vertical SaaS |
 
-OSS で技術力と信頼を獲得しつつ、企業導入時に必要となる **付帯機能** で収益化する戦略です。詳細は [docs/business-plan.ja.md](https://github.com/your-org/praxia/blob/main/docs/business-plan.ja.md) を参照。
+OSS で技術力と信頼を獲得しつつ、企業導入時に必要となる **付帯機能** で収益化する戦略です。
 
 ## 想定 ROI (100 名規模の中堅企業の例)
 

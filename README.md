@@ -13,7 +13,6 @@
 > 🇯🇵 日本語版の各業務別記事 (Zenn): [docs/zenn/](docs/zenn/)
 > 🔍 Complete feature reference: [docs/FEATURES.md](docs/FEATURES.md)
 > 📊 Concrete Before/After tables: [docs/use-cases.md](docs/use-cases.md)
-> 💼 Business growth plan (JP): [docs/business-plan.ja.md](docs/business-plan.ja.md)
 
 ---
 
@@ -398,7 +397,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [Apache License 2.0](LICENSE) — commercial use, modification, and redistribution permitted.
 
-**Copyright holder**: GENARCH (sole proprietor: Genki Watanabe) and Praxia Contributors.
+**Copyright holder**: GenArch and Praxia Contributors.
 
 Third-party dependencies retain their own licenses; see [NOTICE.md](NOTICE.md) for the full attribution list.
 

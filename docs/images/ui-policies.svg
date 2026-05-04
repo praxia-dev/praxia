@@ -29,7 +29,7 @@
 
   <!-- Heading -->
   <text x="280" y="116" fill="#ecedf0" font-size="22" font-weight="700">🛡 Resource Access Policies</text>
-  <text x="280" y="140" fill="#a8acb8" font-size="13">Glob ベースの allow/deny ルールで、コネクタ/メモリ/プロンプト/スキルへのアクセスを制御。情報システム部向け。</text>
+  <text x="280" y="140" fill="#a8acb8" font-size="13">Glob-pattern allow/deny rules for connectors, memory, prompts, skills. Designed for enterprise IS departments.</text>
 
   <!-- Sub-tab bar -->
   <g font-size="12">
@@ -135,7 +135,7 @@
   <!-- Decision result -->
   <rect x="296" y="592" width="858" height="44" rx="8" fill="rgba(255,96,88,0.08)" stroke="#ff6058"/>
   <text x="316" y="618" fill="#ff8b80" font-size="14" font-weight="700">🚫 Denied</text>
-  <text x="408" y="618" fill="#ecedf0" font-size="12">— matched policy a3f8c2 (deny: 機密フォルダはオペレーター以上のみ)</text>
+  <text x="408" y="618" fill="#ecedf0" font-size="12">— matched policy a3f8c2 (deny: Confidential folder restricted to operators+)</text>
 
   <defs>
     <linearGradient id="g3" x1="0" x2="1" y2="1">

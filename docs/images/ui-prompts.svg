@@ -32,7 +32,7 @@
     <text x="577" y="164" fill="#a8acb8" text-anchor="middle">Admin: distribute</text>
   </g>
 
-  <text x="280" y="200" fill="#a8acb8" font-size="13">Effective view: Personal &gt; Distributed &gt; Org</text>
+  <text x="280" y="200" fill="#a8acb8" font-size="13">Effective merge: Personal &gt; Distributed &gt; Org</text>
 
   <!-- Prompt rows -->
   <g>
@@ -41,38 +41,38 @@
     <rect x="296" y="232" width="80" height="22" rx="11" fill="rgba(201,164,86,0.18)"/>
     <text x="336" y="247" fill="#e9c378" font-size="11" font-weight="600" text-anchor="middle">personal</text>
     <text x="392" y="247" fill="#ecedf0" font-size="14" font-weight="600">📄 my_b2b_qualifier</text>
-    <text x="296" y="272" fill="#a8acb8" font-size="11">B2B 商談前の課題仮説生成 (個人カスタマイズ)</text>
+    <text x="296" y="272" fill="#a8acb8" font-size="11">Pre-meeting pain-point hypothesizer (personally tuned)</text>
     <text x="296" y="290" fill="#6f7382" font-size="11">tags: sales, b2b · owner: alice@acme · updated: 2 days ago</text>
 
     <!-- Distributed -->
     <rect x="280" y="306" width="900" height="80" rx="10" fill="#15171f" stroke="#3b80b0"/>
     <rect x="296" y="322" width="100" height="22" rx="11" fill="rgba(140,200,255,0.18)"/>
     <text x="346" y="337" fill="#8cc8ff" font-size="11" font-weight="600" text-anchor="middle">distributed</text>
-    <text x="412" y="337" fill="#ecedf0" font-size="14" font-weight="600">📄 critical_clauses_japan</text>
-    <text x="296" y="362" fill="#a8acb8" font-size="11">国内契約で要交渉となる Critical 条項パターン</text>
-    <text x="296" y="380" fill="#6f7382" font-size="11">tags: legal, jp · owner: admin · target: role:member · updated: 3 days ago</text>
+    <text x="412" y="337" fill="#ecedf0" font-size="14" font-weight="600">📄 critical_clauses_template</text>
+    <text x="296" y="362" fill="#a8acb8" font-size="11">Critical-clause patterns that must be negotiated in vendor contracts</text>
+    <text x="296" y="380" fill="#6f7382" font-size="11">tags: legal · owner: admin · target: role:member · updated: 3 days ago</text>
 
     <!-- Org -->
     <rect x="280" y="396" width="900" height="80" rx="10" fill="#15171f" stroke="#23262f"/>
     <rect x="296" y="412" width="50" height="22" rx="11" fill="rgba(160,160,160,0.18)"/>
     <text x="321" y="427" fill="#a8acb8" font-size="11" font-weight="600" text-anchor="middle">org</text>
     <text x="362" y="427" fill="#ecedf0" font-size="14" font-weight="600">📄 saas_burn_multiple_eval</text>
-    <text x="296" y="452" fill="#a8acb8" font-size="11">SaaS の Burn Multiple 評価フレーム (山田 GP の 5 年実績)</text>
-    <text x="296" y="470" fill="#6f7382" font-size="11">tags: investment, saas · owner: admin · promoted from: senior_gp_yamada</text>
+    <text x="296" y="452" fill="#a8acb8" font-size="11">SaaS Burn Multiple evaluation framework (5 years of evidence)</text>
+    <text x="296" y="470" fill="#6f7382" font-size="11">tags: investment, saas · owner: admin · promoted from: senior_gp_alice</text>
 
     <!-- Org 2 -->
     <rect x="280" y="486" width="900" height="80" rx="10" fill="#15171f" stroke="#23262f"/>
     <rect x="296" y="502" width="50" height="22" rx="11" fill="rgba(160,160,160,0.18)"/>
     <text x="321" y="517" fill="#a8acb8" font-size="11" font-weight="600" text-anchor="middle">org</text>
     <text x="362" y="517" fill="#ecedf0" font-size="14" font-weight="600">📄 manufacturing_pain_hypotheses</text>
-    <text x="296" y="542" fill="#a8acb8" font-size="11">製造業向け課題抽出のベスプラ (受注率 +20pt の実証付き)</text>
+    <text x="296" y="542" fill="#a8acb8" font-size="11">Manufacturing-sector pain extraction best practice (+20pt acceptance evidence)</text>
     <text x="296" y="560" fill="#6f7382" font-size="11">tags: sales, manufacturing · owner: admin · updated: 1 week ago</text>
   </g>
 
   <!-- Note -->
   <rect x="280" y="586" width="900" height="100" rx="10" fill="rgba(140,200,255,0.04)" stroke="rgba(140,200,255,0.25)"/>
   <text x="296" y="612" fill="#8cc8ff" font-size="13" font-weight="600">ℹ Sleep-time consolidation</text>
-  <text x="296" y="636" fill="#a8acb8" font-size="11">あなたが普通に使うだけで、効果のあるプロンプトが個人メモリに蓄積されます。</text>
-  <text x="296" y="654" fill="#a8acb8" font-size="11">夜間バッチで複数ユーザに共通するパターンを検出 → 自動的に組織共有候補へ。</text>
-  <text x="296" y="672" fill="#a8acb8" font-size="11">管理者承認後、組織標準プロンプトに昇格します (3 経路: 頻度 / 成果連動 / LLM 自己評価)</text>
+  <text x="296" y="636" fill="#a8acb8" font-size="11">As you work normally, effective prompts accumulate in your personal memory.</text>
+  <text x="296" y="654" fill="#a8acb8" font-size="11">A nightly batch detects patterns shared across users → flags candidates for org promotion.</text>
+  <text x="296" y="672" fill="#a8acb8" font-size="11">After admin review, the prompt is promoted (3 paths: frequency / outcome correlation / LLM self-eval)</text>
 </svg>

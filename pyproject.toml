@@ -10,7 +10,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [
-    { name = "GENARCH" },
+    { name = "GenArch" },
     { name = "Praxia Contributors" },
 ]
 keywords = [

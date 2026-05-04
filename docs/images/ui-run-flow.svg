@@ -52,27 +52,27 @@
   </g>
 
   <!-- Main heading -->
-  <text x="280" y="124" fill="#ecedf0" font-size="22" font-weight="700">🎬 Multi-Agent Flow を実行</text>
+  <text x="280" y="124" fill="#ecedf0" font-size="22" font-weight="700">🎬 Run a multi-agent flow</text>
 
   <!-- Flow selector -->
-  <text x="280" y="160" fill="#a8acb8" font-size="11">Flow を選択</text>
+  <text x="280" y="160" fill="#a8acb8" font-size="11">Select flow</text>
   <rect x="280" y="166" width="280" height="34" rx="6" fill="#15171f" stroke="#c9a456"/>
   <text x="296" y="188" fill="#e9c378" font-size="13" font-weight="600">sales-agent</text>
   <text x="540" y="188" fill="#a8acb8" font-size="14" text-anchor="end">▾</text>
 
   <!-- Inputs -->
-  <text x="280" y="226" fill="#a8acb8" font-size="11">顧客名</text>
+  <text x="280" y="226" fill="#a8acb8" font-size="11">Customer name</text>
   <rect x="280" y="232" width="600" height="32" rx="6" fill="#15171f" stroke="#23262f"/>
-  <text x="296" y="252" fill="#ecedf0" font-size="13">株式会社 Acme Manufacturing</text>
+  <text x="296" y="252" fill="#ecedf0" font-size="13">Acme Manufacturing Inc. (fictional)</text>
 
-  <text x="280" y="280" fill="#a8acb8" font-size="11">自社製品</text>
+  <text x="280" y="280" fill="#a8acb8" font-size="11">Our product</text>
   <rect x="280" y="286" width="600" height="32" rx="6" fill="#15171f" stroke="#23262f"/>
   <text x="296" y="306" fill="#ecedf0" font-size="13">Praxia Sales</text>
 
-  <text x="280" y="334" fill="#a8acb8" font-size="11">追加コンテキスト</text>
+  <text x="280" y="334" fill="#a8acb8" font-size="11">Additional context</text>
   <rect x="280" y="340" width="600" height="58" rx="6" fill="#15171f" stroke="#23262f"/>
-  <text x="296" y="360" fill="#ecedf0" font-size="12">中期経営計画でDX投資300億円を計上</text>
-  <text x="296" y="378" fill="#ecedf0" font-size="12">うち電子部品関連 120 億円(推測)</text>
+  <text x="296" y="360" fill="#ecedf0" font-size="12">Mid-term plan calls for ~30B JPY DX investment</text>
+  <text x="296" y="378" fill="#ecedf0" font-size="12">~12B JPY estimated for electronic-component initiatives</text>
 
   <!-- Run button -->
   <rect x="280" y="420" width="120" height="36" rx="18" fill="url(#g1)"/>
@@ -82,17 +82,17 @@
       <stop offset="1" stop-color="#8b6f30"/>
     </linearGradient>
   </defs>
-  <text x="340" y="443" fill="#1a1408" font-size="13" font-weight="700" text-anchor="middle">▶ 実行</text>
+  <text x="340" y="443" fill="#1a1408" font-size="13" font-weight="700" text-anchor="middle">▶ Run</text>
 
   <!-- Output panel -->
   <rect x="280" y="478" width="900" height="220" rx="10" fill="#15171f" stroke="#28c941"/>
   <text x="296" y="502" fill="#28c941" font-size="11" font-weight="700">✓ FINAL OUTPUT</text>
-  <text x="296" y="528" fill="#ecedf0" font-size="13" font-weight="600">## エグゼクティブサマリ</text>
-  <text x="296" y="552" fill="#a8acb8" font-size="12">- 直近 6 ヶ月で発表した DX 投資 300 億円のうち、120 億円が電子部品関連</text>
-  <text x="296" y="572" fill="#a8acb8" font-size="12">- 工場 IoT / 異常検知への投資意欲が IR 資料から読み取れる</text>
-  <text x="296" y="600" fill="#ecedf0" font-size="13" font-weight="600">## 仮説課題 TOP3</text>
-  <text x="296" y="622" fill="#a8acb8" font-size="12">1. 工場間データ連携の遅延 → Praxia Sales でルートマップ</text>
-  <text x="296" y="642" fill="#a8acb8" font-size="12">2. ベテラン技能伝承 → 個人 → 組織メモリ循環でカバー</text>
-  <text x="296" y="662" fill="#a8acb8" font-size="12">3. 提案チームのスキルばらつき → スキルレジストリで標準化</text>
+  <text x="296" y="528" fill="#ecedf0" font-size="13" font-weight="600">## Executive Summary</text>
+  <text x="296" y="552" fill="#a8acb8" font-size="12">- ~12B JPY of recent DX investment is in electronic-component initiatives</text>
+  <text x="296" y="572" fill="#a8acb8" font-size="12">- IR materials show appetite for factory IoT / anomaly-detection projects</text>
+  <text x="296" y="600" fill="#ecedf0" font-size="13" font-weight="600">## Top-3 pain hypotheses</text>
+  <text x="296" y="622" fill="#a8acb8" font-size="12">1. Cross-factory data lag → Praxia Sales gives a clear roadmap</text>
+  <text x="296" y="642" fill="#a8acb8" font-size="12">2. Veteran know-how transfer → covered by personal-to-org memory cycle</text>
+  <text x="296" y="662" fill="#a8acb8" font-size="12">3. Skill variance across proposal teams → standardize via skill registry</text>
   <text x="296" y="688" fill="#6f7382" font-size="11">usage: in=4,852 out=2,140 tokens · model: anthropic/claude-opus-4-7</text>
 </svg>

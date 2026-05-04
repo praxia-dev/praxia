@@ -21,8 +21,8 @@
   </g>
 
   <text x="280" y="116" fill="#ecedf0" font-size="22" font-weight="700">💾 Admin Downloads</text>
-  <text x="280" y="140" fill="#a8acb8" font-size="13">監査ログ・ユーザ・スキル使用・メモリ・ポリシーをエクスポート (CSV / JSON / JSONL)</text>
-  <text x="280" y="160" fill="#a8acb8" font-size="12">⚠️ すべての export 操作自体も監査ログに記録されます (チェーン・オブ・カスタディ)</text>
+  <text x="280" y="140" fill="#a8acb8" font-size="13">Export audit log, users, skill usage, memory, policies as CSV / JSON / JSONL</text>
+  <text x="280" y="160" fill="#a8acb8" font-size="12">⚠️ Every export action is itself recorded in the audit log (chain of custody)</text>
 
   <!-- Export type selector -->
   <text x="280" y="200" fill="#a8acb8" font-size="11">What to export</text>
