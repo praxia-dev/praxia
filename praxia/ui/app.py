@@ -101,9 +101,44 @@ with tab_run:
         flow_inputs["customer_name"] = st.text_input("顧客名", placeholder="株式会社サンプル")
         flow_inputs["product"] = st.text_input("自社製品", placeholder="BizFlow")
         flow_inputs["additional_context"] = st.text_area("追加コンテキスト (任意)", height=100)
+        # Local file upload for additional context
+        sales_files = st.file_uploader(
+            "📎 補助資料 (任意): IR / プレス / 議事録 などをアップロード",
+            type=["txt", "md", "pdf", "csv", "json"],
+            accept_multiple_files=True,
+            key="sales_files",
+        )
+        if sales_files:
+            extra_text = []
+            for f in sales_files:
+                try:
+                    content = f.read().decode("utf-8", errors="replace")
+                except Exception:
+                    content = f"[binary {f.name}, {f.size} bytes — provide a text/PDF parser]"
+                extra_text.append(f"## File: {f.name}\n{content[:8000]}")
+            flow_inputs["additional_context"] += "\n\n" + "\n\n".join(extra_text)
+            st.success(f"📎 Attached {len(sales_files)} file(s)")
         flow_cls: Any = SalesAgentFlow
     elif flow_name == "logic-checker":
-        flow_inputs["document"] = st.text_area("レビュー対象の文書", height=300)
+        # Allow either text paste OR file upload
+        upload_mode = st.radio("入力方法", ["テキスト貼り付け", "ファイルアップロード"], horizontal=True)
+        if upload_mode == "ファイルアップロード":
+            uploaded = st.file_uploader(
+                "📎 レビュー対象ファイル (.md / .txt / .py / その他テキスト)",
+                type=["md", "txt", "py", "ts", "js", "rst", "html", "json", "yaml", "yml"],
+                key="logic_file",
+            )
+            if uploaded:
+                try:
+                    flow_inputs["document"] = uploaded.read().decode("utf-8", errors="replace")
+                    st.caption(f"📄 {uploaded.name} · {len(flow_inputs['document']):,} chars")
+                except Exception as e:
+                    st.error(f"Failed to read file: {e}")
+                    flow_inputs["document"] = ""
+            else:
+                flow_inputs["document"] = ""
+        else:
+            flow_inputs["document"] = st.text_area("レビュー対象の文書", height=300)
         flow_cls = LogicCheckerFlow
     else:  # rag-optimizer
         flow_inputs["question"] = st.text_input("質問")
@@ -144,6 +179,24 @@ with tab_skill:
 
     st.caption(skill_cls.manifest.description)
     user_input = st.text_area("入力", height=200, placeholder="エージェントへの依頼内容を記入")
+
+    # Optional file attachment(s)
+    skill_files = st.file_uploader(
+        "📎 ファイル添付 (任意): 契約書・仕様書・財務資料などを添付すると入力に追記されます",
+        type=["txt", "md", "pdf", "csv", "json", "yaml", "yml", "html"],
+        accept_multiple_files=True,
+        key="skill_files",
+    )
+    if skill_files:
+        attached_text: list[str] = []
+        for f in skill_files:
+            try:
+                body = f.read().decode("utf-8", errors="replace")
+            except Exception:
+                body = f"[binary {f.name}, {f.size} bytes]"
+            attached_text.append(f"## Attached file: {f.name}\n{body[:8000]}")
+        user_input = (user_input or "") + "\n\n" + "\n\n".join(attached_text)
+        st.caption(f"📎 {len(skill_files)} file(s) attached, total {sum(len(t) for t in attached_text):,} chars")
 
     if st.button("▶ 実行", key="skill_run", type="primary", disabled=not user_input):
         llm = LLM(model_choice)

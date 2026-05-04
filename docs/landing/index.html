@@ -43,9 +43,11 @@
     <div class="nav-links">
       <a href="#features">Features</a>
       <a href="#how-it-works">How it works</a>
+      <a href="#ui-tour">UI</a>
       <a href="#examples">Examples</a>
       <a href="#roi">ROI</a>
       <a href="#extending">Extend</a>
+      <a href="#where-it-fits">Where it fits</a>
       <a href="#faq">FAQ</a>
       <a href="#pricing">Pricing</a>
       <a id="mirror-link" href="#" target="_blank" rel="noopener" class="nav-mirror" title="Switch to the other mirror">
@@ -386,6 +388,46 @@ praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account
     </div>
   </section>
 
+  <section id="ui-tour" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">UI tour</span>
+        <h2>The Streamlit dashboard at a glance.</h2>
+      </div>
+      <div class="ui-tour-grid">
+        <figure class="ui-shot">
+          <img src="images/ui-run-flow.svg" alt="Run Flow tab — execute a multi-agent flow with file upload" loading="lazy" />
+          <figcaption>🎬 <strong>Run Flow</strong> — pick a flow, fill inputs (or attach files), watch each agent step run</figcaption>
+        </figure>
+        <figure class="ui-shot">
+          <img src="images/ui-skills.svg" alt="Business Skill tab — invoke a domain-tuned agent like legal_reviewer" loading="lazy" />
+          <figcaption>🛠 <strong>Business Skill</strong> — one of six domain-tuned agents (here: legal contract review)</figcaption>
+        </figure>
+        <figure class="ui-shot">
+          <img src="images/ui-dashboard.svg" alt="Dashboard tab — personal and organizational usage metrics" loading="lazy" />
+          <figcaption>📊 <strong>Dashboard</strong> — flow / skill counts, success rates, top users, top skills</figcaption>
+        </figure>
+        <figure class="ui-shot">
+          <img src="images/ui-policies.svg" alt="Policies tab — resource access control list management" loading="lazy" />
+          <figcaption>🛡 <strong>Policies</strong> — glob-pattern allow/deny ACL for IS departments</figcaption>
+        </figure>
+        <figure class="ui-shot">
+          <img src="images/ui-connectors.svg" alt="Connectors tab — pull and push data between Praxia and external systems" loading="lazy" />
+          <figcaption>🔌 <strong>Connectors</strong> — Pull / Push to Box · SharePoint · Dropbox · Drive · kintone · Salesforce</figcaption>
+        </figure>
+        <figure class="ui-shot">
+          <img src="images/ui-admin-exports.svg" alt="Admin Downloads tab — export audit log and other data" loading="lazy" />
+          <figcaption>💾 <strong>Admin Downloads</strong> — CSV / JSON / JSONL export with chain-of-custody audit logs</figcaption>
+        </figure>
+      </div>
+      <p class="cta-line">
+        Plus <strong>👥 Users</strong>, <strong>📝 Prompts</strong>, <strong>🧠 Memory</strong>,
+        <strong>🌙 Consolidate</strong>, <strong>ℹ About</strong> tabs (11 in total).
+        Local file upload supported throughout.
+      </p>
+    </div>
+  </section>
+
   <section id="examples" class="section">
     <div class="container">
       <div class="section-head">
@@ -640,44 +682,45 @@ P  = Praxia cost (license + infra)</code></pre>
     </div>
   </section>
 
-  <section id="comparison" class="section section-dark">
+  <section id="where-it-fits" class="section section-dark">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Comparison</span>
-        <h2>Side-by-side with the leading frameworks.</h2>
+        <span class="kicker">Where it fits</span>
+        <h2>What Praxia is best at — without putting others down.</h2>
       </div>
-      <div class="comparison-table">
-        <table class="cmp">
-          <thead>
-            <tr>
-              <th>Capability</th>
-              <th>CrewAI</th>
-              <th>AutoGen</th>
-              <th>LangGraph</th>
-              <th>Glean</th>
-              <th><strong>Praxia</strong></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Multi-agent orchestration</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>✅</td></tr>
-            <tr><td>Workflow-specialized templates</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
-            <tr><td>Auto-extracting personal memory</td><td>—</td><td>—</td><td>~</td><td>✅</td><td>✅</td></tr>
-            <tr><td>Personal → org promotion</td><td>—</td><td>—</td><td>—</td><td>~</td><td>✅</td></tr>
-            <tr><td>Sleep-time consolidation</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
-            <tr><td>Skills + prompt distribution</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
-            <tr><td>Hallucination eval bundled</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
-            <tr><td>Built-in auth + RBAC + audit</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
-            <tr><td>SSO (OIDC) in core</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
-            <tr><td>Resource access policies (ACL)</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
-            <tr><td>Admin data exports</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
-            <tr><td>Personal &amp; org dashboards</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
-            <tr><td>Storage / SaaS connectors (Pull + Push)</td><td>—</td><td>—</td><td>~</td><td>~</td><td>✅ ×6</td></tr>
-            <tr><td>MCP / Claude Skills format</td><td>~</td><td>~</td><td>~</td><td>—</td><td>✅</td></tr>
-            <tr><td>License</td><td>MIT</td><td>MIT</td><td>MIT</td><td>Commercial</td><td>Apache 2.0</td></tr>
-            <tr><td>OSS pricing</td><td>Free</td><td>Free</td><td>Free</td><td>—</td><td>Free</td></tr>
-          </tbody>
-        </table>
+      <div class="grid grid-3">
+        <article class="card">
+          <h3>Best for…</h3>
+          <ul class="bullet-tight">
+            <li>Teams where senior staff's tacit knowledge needs to compound</li>
+            <li>Workflows in sales / legal / patent / design / purchasing / investment</li>
+            <li>Enterprises that need RBAC + ACL + audit out of the box</li>
+            <li>Self-hosted / on-prem deployments (LLM + memory both)</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Less ideal when…</h3>
+          <ul class="bullet-tight">
+            <li>You need a fully generic agent graph builder — try LangGraph</li>
+            <li>You want a hosted-only knowledge platform — try a SaaS</li>
+            <li>You're building a single-shot chatbot — Praxia is overkill</li>
+            <li>Your team is a single user with no organizational learning need</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Plays well with…</h3>
+          <ul class="bullet-tight">
+            <li>Mem0 / LangMem / Letta / Zep / HindSight — Praxia uses them as backends</li>
+            <li>Claude / ChatGPT / Gemini / Qwen via LiteLLM</li>
+            <li>Box / SharePoint / Dropbox / Drive / kintone / Salesforce connectors</li>
+            <li>MCP / Claude Skills / Cursor Skills (skill format compatible)</li>
+          </ul>
+        </article>
       </div>
+      <p class="cta-line">
+        Detailed feature inventory and integration matrix in
+        <a href="https://github.com/genarch/praxia/blob/main/docs/FEATURES.md">docs/FEATURES.md</a>.
+      </p>
     </div>
   </section>
 
@@ -757,17 +800,22 @@ P  = Praxia cost (license + infra)</code></pre>
         <article class="card price-card price-featured">
           <div class="price-head">
             <h3>Team</h3>
-            <p class="price">¥30k–100k <span>/mo</span></p>
-            <p class="price-sub">5–30 seats</p>
+            <p class="price">From ¥30k <span>/mo</span></p>
+            <p class="price-sub">5–30 seats · contact for quote</p>
           </div>
           <ul class="price-list">
             <li>Everything in OSS</li>
             <li>Shared team blocks UI</li>
             <li>Basic monitoring dashboard</li>
-            <li>Email support (24h SLA)</li>
+            <li>Email support (best-effort)</li>
             <li>Hosted or self-hosted</li>
           </ul>
-          <a href="portal/index.html" class="btn btn-primary btn-block">Start free trial</a>
+          <p class="price-disclaimer">
+            <strong>Currently in alpha</strong> — onboarding handled
+            individually via direct invoicing (bank transfer, JP) or Stripe
+            (international). Self-serve sign-up coming in Phase 2.
+          </p>
+          <a href="#contact" class="btn btn-primary btn-block">Contact us</a>
         </article>
         <article class="card price-card">
           <div class="price-head">
@@ -779,9 +827,15 @@ P  = Praxia cost (license + infra)</code></pre>
             <li>SSO (OIDC + SAML)</li>
             <li>Granular RBAC + audit export</li>
             <li>On-prem / VPC deployment</li>
-            <li>SOC2 / ISO27001 compliance</li>
-            <li>Dedicated CSM + 4h SLA</li>
+            <li>Compliance-ready architecture (audit prep on request)</li>
+            <li>Dedicated CSM + custom SLA</li>
           </ul>
+          <p class="price-disclaimer">
+            Compliance certifications (e.g., SOC2 Type II, ISO 27001) are
+            <strong>not yet obtained</strong>. We provide architecture and
+            documentation suitable for your auditors; engagement-specific
+            compliance roadmaps are negotiated per contract.
+          </p>
           <a href="#contact" class="btn btn-ghost btn-block">Contact sales</a>
         </article>
       </div>

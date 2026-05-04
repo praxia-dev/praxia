@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif">
+  <rect width="1200" height="720" fill="#0a0a0f"/>
+  <rect x="0" y="0" width="1200" height="34" fill="#161821"/>
+  <circle cx="20" cy="17" r="6" fill="#ff6058"/><circle cx="40" cy="17" r="6" fill="#febc3a"/><circle cx="60" cy="17" r="6" fill="#28c941"/>
+  <text x="135" y="22" fill="#a8acb8" font-size="11">🔒 http://localhost:8501  —  Praxia / Prompts</text>
+
+  <rect x="0" y="34" width="240" height="686" fill="#0e1018"/>
+  <text x="20" y="62" fill="#ecedf0" font-size="16" font-weight="700">🪡 Praxia</text>
+  <text x="20" y="92" fill="#e9c378" font-size="13" font-weight="600">alice@acme</text>
+  <text x="20" y="110" fill="#28c941" font-size="11">● Role: operator</text>
+
+  <!-- Tabs -->
+  <g font-size="12" fill="#a8acb8">
+    <text x="290" y="65">🎬</text><text x="320" y="65">🛠</text><text x="355" y="65">🧠</text>
+    <text x="385" y="65">🌙</text><text x="425" y="65">📊</text>
+    <rect x="455" y="48" width="92" height="26" rx="13" fill="rgba(201,164,86,0.12)" stroke="#8b6f30"/>
+    <text x="501" y="65" fill="#e9c378" font-weight="600" text-anchor="middle">📝 Prompts</text>
+    <text x="565" y="65">👥</text><text x="600" y="65">🔌</text><text x="640" y="65">🛡</text><text x="685" y="65">💾</text>
+  </g>
+
+  <text x="280" y="116" fill="#ecedf0" font-size="22" font-weight="700">📝 Custom Prompts</text>
+
+  <!-- Sub-tabs -->
+  <g font-size="12">
+    <rect x="280" y="146" width="120" height="28" rx="14" fill="#15171f" stroke="#23262f"/>
+    <text x="340" y="164" fill="#a8acb8" text-anchor="middle">Create / edit</text>
+
+    <rect x="406" y="146" width="80" height="28" rx="14" fill="rgba(201,164,86,0.12)" stroke="#8b6f30"/>
+    <text x="446" y="164" fill="#e9c378" font-weight="600" text-anchor="middle">Browse</text>
+
+    <rect x="492" y="146" width="170" height="28" rx="14" fill="#15171f" stroke="#23262f"/>
+    <text x="577" y="164" fill="#a8acb8" text-anchor="middle">Admin: distribute</text>
+  </g>
+
+  <text x="280" y="200" fill="#a8acb8" font-size="13">Effective merge: Personal &gt; Distributed &gt; Org</text>
+
+  <!-- Prompt rows -->
+  <g>
+    <!-- Personal -->
+    <rect x="280" y="216" width="900" height="80" rx="10" fill="#15171f" stroke="#c9a456"/>
+    <rect x="296" y="232" width="80" height="22" rx="11" fill="rgba(201,164,86,0.18)"/>
+    <text x="336" y="247" fill="#e9c378" font-size="11" font-weight="600" text-anchor="middle">personal</text>
+    <text x="392" y="247" fill="#ecedf0" font-size="14" font-weight="600">📄 my_b2b_qualifier</text>
+    <text x="296" y="272" fill="#a8acb8" font-size="11">Pre-meeting pain-point hypothesizer (personally tuned)</text>
+    <text x="296" y="290" fill="#6f7382" font-size="11">tags: sales, b2b · owner: alice@acme · updated: 2 days ago</text>
+
+    <!-- Distributed -->
+    <rect x="280" y="306" width="900" height="80" rx="10" fill="#15171f" stroke="#3b80b0"/>
+    <rect x="296" y="322" width="100" height="22" rx="11" fill="rgba(140,200,255,0.18)"/>
+    <text x="346" y="337" fill="#8cc8ff" font-size="11" font-weight="600" text-anchor="middle">distributed</text>
+    <text x="412" y="337" fill="#ecedf0" font-size="14" font-weight="600">📄 critical_clauses_template</text>
+    <text x="296" y="362" fill="#a8acb8" font-size="11">Critical-clause patterns that must be negotiated in vendor contracts</text>
+    <text x="296" y="380" fill="#6f7382" font-size="11">tags: legal · owner: admin · target: role:member · updated: 3 days ago</text>
+
+    <!-- Org -->
+    <rect x="280" y="396" width="900" height="80" rx="10" fill="#15171f" stroke="#23262f"/>
+    <rect x="296" y="412" width="50" height="22" rx="11" fill="rgba(160,160,160,0.18)"/>
+    <text x="321" y="427" fill="#a8acb8" font-size="11" font-weight="600" text-anchor="middle">org</text>
+    <text x="362" y="427" fill="#ecedf0" font-size="14" font-weight="600">📄 saas_burn_multiple_eval</text>
+    <text x="296" y="452" fill="#a8acb8" font-size="11">SaaS Burn Multiple evaluation framework (5 years of evidence)</text>
+    <text x="296" y="470" fill="#6f7382" font-size="11">tags: investment, saas · owner: admin · promoted from: senior_gp_alice</text>
+
+    <!-- Org 2 -->
+    <rect x="280" y="486" width="900" height="80" rx="10" fill="#15171f" stroke="#23262f"/>
+    <rect x="296" y="502" width="50" height="22" rx="11" fill="rgba(160,160,160,0.18)"/>
+    <text x="321" y="517" fill="#a8acb8" font-size="11" font-weight="600" text-anchor="middle">org</text>
+    <text x="362" y="517" fill="#ecedf0" font-size="14" font-weight="600">📄 manufacturing_pain_hypotheses</text>
+    <text x="296" y="542" fill="#a8acb8" font-size="11">Manufacturing-sector pain extraction best practice (+20pt acceptance evidence)</text>
+    <text x="296" y="560" fill="#6f7382" font-size="11">tags: sales, manufacturing · owner: admin · updated: 1 week ago</text>
+  </g>
+
+  <!-- Note -->
+  <rect x="280" y="586" width="900" height="100" rx="10" fill="rgba(140,200,255,0.04)" stroke="rgba(140,200,255,0.25)"/>
+  <text x="296" y="612" fill="#8cc8ff" font-size="13" font-weight="600">ℹ Sleep-time consolidation</text>
+  <text x="296" y="636" fill="#a8acb8" font-size="11">As you work normally, effective prompts accumulate in your personal memory.</text>
+  <text x="296" y="654" fill="#a8acb8" font-size="11">A nightly batch detects patterns shared across users → flags candidates for org promotion.</text>
+  <text x="296" y="672" fill="#a8acb8" font-size="11">After admin review, the prompt is promoted (3 paths: frequency / outcome correlation / LLM self-eval)</text>
+</svg>

@@ -577,6 +577,66 @@ pre .str     { color: var(--accent-bright); }
   margin-right: 0.4rem;
 }
 
+.price-disclaimer {
+  margin-top: 1rem;
+  padding: 0.75rem 0.85rem;
+  background: rgba(255, 206, 92, 0.05);
+  border-left: 3px solid #ffce5c;
+  border-radius: 4px;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.price-disclaimer strong { color: #ffce5c; }
+
+/* ------------------------------------------------------------------ UI tour */
+
+.ui-tour-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.5rem;
+}
+
+.ui-shot {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.ui-shot:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-deep);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.ui-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #0a0a0f;
+}
+
+.ui-shot figcaption {
+  padding: 0.85rem 1.1rem;
+  font-size: 13.5px;
+  color: var(--text-soft);
+  border-top: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+
+.ui-shot figcaption strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .ui-tour-grid { grid-template-columns: 1fr; }
+}
+
 /* ------------------------------------------------------------------ CTA */
 
 .cta {
