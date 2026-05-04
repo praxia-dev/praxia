@@ -49,6 +49,8 @@
         <span>🧠 6 LTM backends</span>
         <span>🤖 Claude · ChatGPT · Gemini · Qwen</span>
         <span>🔐 SSO + RBAC + audit</span>
+        <span>🛡 Resource ACL</span>
+        <span>🔌 6 connectors (Pull + Push)</span>
       </div>
     </div>
   </header>
@@ -57,7 +59,7 @@
     <div class="container">
       <div class="section-head">
         <span class="kicker">Why Praxia</span>
-        <h2>Ten advantages no other framework offers in one package.</h2>
+        <h2>18 advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
@@ -119,6 +121,36 @@
           <div class="card-icon">📜</div>
           <h3>Apache 2.0 + Open Core ready</h3>
           <p>Permissive license, commercial-friendly. NOTICE.md inventories every dependency's license. Open Core path for enterprise extras planned.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🛡</div>
+          <h3>Resource access policies (ACL)</h3>
+          <p>Glob-pattern allow / deny rules per resource type (connector, memory, prompt, skill). Built for enterprise IS departments. Every decision audit-logged.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">💾</div>
+          <h3>Admin data exports</h3>
+          <p>CSV / JSON / JSONL exports of audit log, users, usage, memory, policies — for compliance, SIEM, backups. Each export action self-audited.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📂</div>
+          <h3>6 storage / SaaS connectors</h3>
+          <p>Box, SharePoint, Dropbox, Google Drive, kintone, Salesforce — bidirectional Pull + Push. ACL-enforced before any external call.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📊</div>
+          <h3>Personal & org dashboards</h3>
+          <p>Flow / skill counts, success rate, top users, promoted blocks, frozen files, distributed skills — out of the box, with no separate analytics pipeline.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📝</div>
+          <h3>Custom prompt distribution</h3>
+          <p>Users save personal prompts. Admins promote them to org or push to specific roles / users. Three scopes with merge precedence.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">👥</div>
+          <h3>Full admin user CRUD</h3>
+          <p>Create / update / delete / deactivate / rotate keys / change roles — all via CLI, UI, or SDK. All operations audited.</p>
         </article>
       </div>
     </div>
@@ -272,23 +304,26 @@ p.run(SalesAgentFlow, inputs={...})
         <span class="kicker">5-minute Quickstart</span>
         <h2>From <code>pip install</code> to live agent in under 5 minutes.</h2>
       </div>
-      <pre class="install-block"><code><span class="comment"># Install</span>
-pip install <span class="str">"praxia[ui]"</span>
+      <pre class="install-block"><code><span class="comment"># Install (with UI + connectors)</span>
+pip install <span class="str">"praxia[ui,connectors]"</span>
 
-<span class="comment"># Initialize (creates personal memory + skill registry + admin user)</span>
+<span class="comment"># Initialize</span>
 praxia init
 
-<span class="comment"># Run a flow</span>
-praxia run sales --customer-name <span class="str">"Acme"</span> --product <span class="str">"BizFlow"</span>
-
-<span class="comment"># Run a single business skill</span>
+<span class="comment"># Run flows + skills</span>
+praxia run sales --customer-name <span class="str">"Acme"</span>
 praxia skill run investment <span class="str">"3-year thesis on Toyota"</span>
 
-<span class="comment"># Launch the UI</span>
+<span class="comment"># Launch the UI (11 tabs incl. Dashboard / Policies / Admin / Connectors)</span>
 praxia ui --port 8501
 
-<span class="comment"># Distill personal → org memory (nightly batch)</span>
-praxia consolidate</code></pre>
+<span class="comment"># Personal → org memory distillation</span>
+praxia consolidate
+
+<span class="comment"># Enterprise: resource policies, audit exports, connectors</span>
+praxia policy add deny connector <span class="str">"box:/Confidential/*"</span> --principals <span class="str">"role:member"</span>
+praxia admin export-audit audit.csv --since-days 30
+praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account"</span></code></pre>
       <p class="install-note">Bring your own LLM key — Anthropic, OpenAI, Google, Alibaba (Qwen), or run Qwen locally via Ollama.</p>
     </div>
   </section>
@@ -595,10 +630,14 @@ P  = Praxia cost (license + infra)</code></pre>
             <tr><td>Auto-extracting personal memory</td><td>—</td><td>—</td><td>~</td><td>✅</td><td>✅</td></tr>
             <tr><td>Personal → org promotion</td><td>—</td><td>—</td><td>—</td><td>~</td><td>✅</td></tr>
             <tr><td>Sleep-time consolidation</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
-            <tr><td>Skills registry cycling</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+            <tr><td>Skills + prompt distribution</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
             <tr><td>Hallucination eval bundled</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
             <tr><td>Built-in auth + RBAC + audit</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
             <tr><td>SSO (OIDC) in core</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+            <tr><td>Resource access policies (ACL)</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+            <tr><td>Admin data exports</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+            <tr><td>Personal &amp; org dashboards</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+            <tr><td>Storage / SaaS connectors (Pull + Push)</td><td>—</td><td>—</td><td>~</td><td>~</td><td>✅ ×6</td></tr>
             <tr><td>MCP / Claude Skills format</td><td>~</td><td>~</td><td>~</td><td>—</td><td>✅</td></tr>
             <tr><td>License</td><td>MIT</td><td>MIT</td><td>MIT</td><td>Commercial</td><td>Apache 2.0</td></tr>
             <tr><td>OSS pricing</td><td>Free</td><td>Free</td><td>Free</td><td>—</td><td>Free</td></tr>

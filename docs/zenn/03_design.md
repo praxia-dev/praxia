@@ -243,6 +243,47 @@ print(result.final_output)
 "
 ```
 
+## 外部システム連携 — Confluence の代わりに SharePoint / GDrive 直接
+
+設計レビューで参照する仕様書は SharePoint / GDrive にあるケースが多いはず:
+
+```python
+from praxia.connectors import get_connector
+from praxia.skills import DesignSkill
+
+gd = get_connector("gdrive", service_account_file="sa.json")
+specs = gd.pull("0AbCdEfGhIjKl", limit=50)  # 設計仕様書のフォルダ
+
+skill = DesignSkill()
+for spec in specs:
+    if spec.mime_type == "text/plain" or spec.name.endswith(".md"):
+        review = skill.run(f"レビュー対象: {spec.name}\n\n{spec.content.decode()}")
+        # 同じ場所にレビュー結果を Push
+        gd.push("0AbCdEfGhIjKl", {"name": f"REVIEW_{spec.name}", "body": review})
+```
+
+## ACL — 機密設計仕様の隔離
+
+知財的に機密な設計仕様書 (新規製品の特許出願前のもの等) は member ロールから完全隔離:
+
+```bash
+praxia policy add deny connector "gdrive:0AbCdEfPATENT*" \
+    --principals "role:member,role:viewer" \
+    --description "特許出願前の設計仕様は知財部 (operator+) のみ"
+```
+
+## アーキテクチャ判断パターンの組織配信
+
+過去 10 年で痛い思いをしたパターンを「やってはいけない」プロンプトとして配信:
+
+```bash
+praxia prompt distribute architecture_anti_patterns anti.md \
+    --target-roles operator,member \
+    --description "過去案件の失敗事例を踏まえた回避すべきパターン"
+```
+
+新人アーキトの最初の design review で、自動的にこの観点が組み込まれます。
+
 ## まとめ
 
 Praxia の設計業務での価値:

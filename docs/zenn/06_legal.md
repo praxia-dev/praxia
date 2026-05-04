@@ -283,6 +283,105 @@ class GDPRComplianceSkill(Skill):
     """
 ```
 
+## 外部システム連携 — Box / SharePoint / Dropbox の契約書を一括レビュー
+
+法務部門の契約書は SharePoint / Box / Dropbox に格納されています。Praxia なら直接取り込み可能:
+
+```python
+from praxia.connectors import get_connector
+from praxia.skills import LegalSkill
+
+box = get_connector("box", access_token=os.environ["BOX_TOKEN"])
+contracts = box.pull("/Legal/PendingReview/2026Q4", limit=50)
+
+skill = LegalSkill()
+for contract in contracts:
+    review = skill.run(f"""
+    契約書レビュー: {contract.name}
+
+    {contract.content.decode() if isinstance(contract.content, bytes) else contract.content}
+
+    RACE フレームで Critical/Major/Minor 判定。
+    """)
+
+    # M&A デューデリレポートとしてプッシュバック
+    box.push("/Legal/Reviewed/", {"name": f"REVIEW_{contract.name}.md", "body": review})
+```
+
+## ACL — 法務情報の最高機密管理
+
+```bash
+# 法務情報は viewer ロールでも個人メモリ参照禁止
+praxia policy add deny memory "memory:legal_*" \
+    --principals "role:viewer" \
+    --description "法務情報は viewer もアクセス不可"
+
+# M&A 関連 SharePoint フォルダは法務部 + 経営企画のみ
+praxia policy add deny connector "sharepoint:*MA_Project*" \
+    --principals "role:member,role:viewer" \
+    --description "M&A 案件は法務部 (operator) のみ"
+
+# 評価結果が何らかの自動アクション (Push) を起こす際は admin のみ
+praxia policy add deny connector "salesforce:Contract" \
+    --principals "role:member,role:operator" \
+    --actions "write" \
+    --description "Salesforce 上の契約レコード書き換えは admin のみ"
+```
+
+## 監査ログ + データダウンロード — コンプラ対応に必須
+
+法務部門は何が誰によって、いつ、どのデータを使ったかを完全に追跡可能:
+
+```bash
+# 過去 90 日の監査ログを CSV エクスポート (GDPR Subject Access Request 対応など)
+praxia admin export-audit audit_90days.csv --since-days 90
+
+# 特定ユーザの個人メモリをエクスポート (退職時の引き継ぎなど)
+praxia admin export-memory taro_memory.jsonl --user retired_taro
+
+# 全ユーザの利用ログ
+praxia admin export-usage usage_full.csv
+
+# ポリシー一覧を JSON で出力 (内部監査用)
+praxia admin export-policies policies_audit.json
+```
+
+これらの export 操作自体も `action="export.audit"`, `action="export.memory"` 等で監査ログに記録されます。
+
+## ベテラン法務担当のノウハウを配信
+
+```bash
+praxia prompt distribute critical_clauses_japan body.md \
+    --target-roles member \
+    --description "国内契約で要交渉となる Critical 条項パターン"
+
+praxia skill distribute legal_reviewer --target-roles member,operator
+```
+
+## SSO で社内 ID 管理と統合
+
+機密性が極めて高い法務業務には SSO 統合がほぼ必須:
+
+```python
+from praxia.auth import AuthManager, microsoft_provider
+
+auth = AuthManager()
+auth.attach_sso(microsoft_provider(
+    tenant_id=os.environ["AZURE_TENANT_ID"],
+    client_id=os.environ["AZURE_CLIENT_ID"],
+    client_secret=os.environ["AZURE_CLIENT_SECRET"],
+    redirect_uri="https://praxia.example.com/cb",
+))
+
+# Azure AD グループでロールマッピング
+auth.get_sso("microsoft").config.role_mapping = {
+    "praxia-legal-admins": "admin",
+    "praxia-legal-counsel": "operator",
+    "praxia-legal-paralegal": "member",
+    "praxia-readonly": "viewer",
+}
+```
+
 ## まとめ
 
 Praxia の法務業務での価値:

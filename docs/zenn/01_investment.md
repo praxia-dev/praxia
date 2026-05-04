@@ -214,6 +214,58 @@ p = Praxia(user_id="esg_analyst")
 result = p.run(ESGInvestmentFlow, inputs={"company": "Toyota Motor"})
 ```
 
+## 外部システム連携 — Salesforce / SharePoint / Box から Pull
+
+DD 案件の素材は CRM や共有ストレージに散在することが多いはず。Praxia の 6 つのコネクタで一括取り込み:
+
+```python
+from praxia.connectors import get_connector
+from praxia.skills import InvestmentSkill
+
+# Salesforce: 投資先候補のアカウント情報
+sf = get_connector("salesforce", username="...", password="...", security_token="...")
+prospects = sf.pull(
+    "SELECT Id, Name, Industry, AnnualRevenue, NumberOfEmployees "
+    "FROM Account WHERE Type = 'Prospect'",
+    limit=50,
+)
+
+# Box: ピッチデッキを格納したフォルダ
+box = get_connector("box", access_token=os.environ["BOX_TOKEN"])
+decks = box.pull("/Praxia/PitchDecks/2026Q4", limit=20)
+
+# 投資判断に統合
+skill = InvestmentSkill()
+for deck in decks:
+    analysis = skill.run(f"判定対象: {deck.name}\n\n{deck.content[:5000]}")
+    # 結果を Salesforce にメモとして書き戻す
+    sf.push("Note", json.dumps({"Title": f"Praxia DD: {deck.name}", "Body": analysis, "ParentId": "..."}))
+```
+
+ACL で「アナリストは特定フォルダしか読めない」設定も可能:
+
+```bash
+praxia policy add deny connector "box:/PostInvestment/*" \
+    --principals "role:member" \
+    --description "投資後資料はパートナーのみ"
+```
+
+## 管理者による「効くプロンプト」の組織配信
+
+ベテラン GP のプロンプトが評価データで実証されたら、組織配信:
+
+```bash
+# プロンプト配信 (member ロール全員に届く)
+praxia prompt distribute saas_burn_multiple_eval saas_eval.md \
+    --target-roles member \
+    --description "SaaS の Burn Multiple 評価フレーム (実績付き)"
+
+# スキル配信
+praxia skill distribute investment_analyst --target-roles member,operator
+```
+
+新人アソシエイトの UI / CLI に自動的に出現します。
+
 ## まとめ
 
 Praxia の投資業務での価値:

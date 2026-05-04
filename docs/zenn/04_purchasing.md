@@ -235,6 +235,69 @@ class IFRS16LeaseSkill(Skill):
     """
 ```
 
+## 外部システム連携 — kintone のサプライヤー DB と双方向
+
+購買部門で多用される kintone のサプライヤー管理アプリと連携:
+
+```python
+from praxia.connectors import get_connector
+from praxia.skills import PurchasingSkill
+
+kt = get_connector("kintone", subdomain="acme", api_token=os.environ["KINTONE_API_TOKEN"])
+
+# サプライヤー DB (アプリ ID = 100) から、評価未実施のレコードを Pull
+unevaluated = kt.pull("100?evaluation_status='pending'", limit=50)
+
+skill = PurchasingSkill()
+for supplier_record in unevaluated:
+    rec_data = json.loads(supplier_record.content)
+    evaluation = skill.run(f"""
+    サプライヤー評価:
+    社名: {rec_data['company_name']['value']}
+    所在地: {rec_data['country']['value']}
+    年間取引額: {rec_data['annual_volume']['value']}
+    QCD+S 全観点で評価。
+    """)
+
+    # 評価結果を kintone に書き戻す
+    kt.push("100", json.dumps({
+        "$id": {"value": rec_data["$id"]["value"]},
+        "evaluation_status": {"value": "completed"},
+        "praxia_evaluation": {"value": evaluation},
+    }))
+```
+
+## SharePoint 上の RFQ 回答書を Pull
+
+```python
+sp = get_connector("sharepoint", tenant_id="...", client_id="...", client_secret="...")
+rfqs = sp.pull("<drive_id>:/Procurement/RFQ_2026Q4", limit=10)
+
+# 全 RFQ を一気に TCO 比較
+rfq_texts = "\n\n".join(f"## {r.name}\n\n{r.content[:3000]}" for r in rfqs)
+tco_analysis = skill.run(f"以下の RFQ 結果について TCO 比較\n\n{rfq_texts}")
+```
+
+## ACL — 戦略的サプライヤー情報の保護
+
+```bash
+praxia policy add deny connector "kintone:100?supplier_tier='strategic'*" \
+    --principals "role:member" \
+    --description "戦略的サプライヤー情報は購買部長 (operator) のみ"
+```
+
+## ベテラン購買マネージャーのノウハウを配信
+
+退職前のベテランが磨いたサプライヤー評価フレームを全社員に配信:
+
+```bash
+praxia prompt distribute electronics_supplier_eval frame.md \
+    --target-roles operator,member \
+    --description "電子部品サプライヤー評価 (山田部長 30 年の経験)"
+
+praxia skill distribute purchasing_analyst --target-roles member
+```
+
 ## まとめ
 
 Praxia の購買業務での価値:

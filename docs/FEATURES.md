@@ -26,6 +26,12 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 14. [ROI projection model](#14-roi-projection-model)
 15. [Roadmap & extensibility](#15-roadmap--extensibility)
 16. [FAQ](#16-faq)
+17. [Admin user management](#17-admin-user-management)
+18. [Custom prompts (per-user + admin distribution)](#18-custom-prompts)
+19. [Resource access policies (ACL)](#19-resource-access-policies-acl)
+20. [Admin data exports](#20-admin-data-exports)
+21. [External connectors (Pull + Push)](#21-external-connectors)
+22. [Personal & organizational dashboards](#22-dashboards)
 
 ---
 
@@ -715,3 +721,197 @@ LLM tokens; budget 10–50 LLM calls per consolidation run per cluster.
 No. Layer 4 is plain Markdown in your git repo. Layer 3 (shared blocks)
 exports to JSONL. Layer 1 personal memory is standard JSONL or your chosen
 backend's native format. You can leave at any time.
+
+---
+
+## 17. Admin user management
+
+```bash
+praxia user create alice --role member
+praxia user list
+praxia user update alice --role operator --email alice@a.test
+praxia user activate / --deactivate
+praxia user rotate-key alice
+praxia user delete alice --yes
+praxia user audit --limit 100
+```
+
+```python
+from praxia.auth import AuthManager, Role
+auth = AuthManager()
+auth.update_user("alice", role=Role.OPERATOR, email="alice@a.test")
+auth.deactivate_user("alice")
+auth.delete_user("alice")
+```
+
+All operations are recorded in the audit log with `actor_id="system"`,
+`actor_role="admin"`, and an `action` of `user.create` / `user.update` /
+`user.deactivate` / `user.delete` / `user.grant_role`.
+
+---
+
+## 18. Custom prompts
+
+Three scopes: **personal** / **org** / **distributed**. Personal prompts
+override distributed; distributed override org. Admins can fan-out a
+curated prompt to specific users or roles.
+
+```bash
+# User: save and use personal prompts
+praxia prompt create my_qualifier prompt.txt
+praxia prompt list
+
+# Admin: distribute a curated prompt
+praxia prompt distribute curated_pricing prompt.md \
+    --target-roles member,operator
+```
+
+```python
+from praxia.skills.prompts import PromptStore
+store = PromptStore()
+store.save_personal("alice", name="my_prompt", body="...", tags=["sales"])
+store.distribute(name="curated", body="...", target_roles=["member"])
+
+# Effective view: merges personal > distributed > org
+visible = store.list_for_user(user_id="bob", role="member")
+```
+
+---
+
+## 19. Resource access policies (ACL)
+
+For enterprise IS departments. Glob-pattern allow / deny rules, evaluated
+top-to-bottom, first-match-wins. Default is configurable (`allow` or `deny`).
+
+```bash
+# Block confidential Box folder for everyone except operators+
+praxia policy add deny connector "box:/Confidential/*" \
+    --principals "role:member,role:viewer" \
+    --description "Confidential off-limits to non-operators"
+
+# List in evaluation order
+praxia policy list
+
+# Dry-run a decision
+praxia policy test alice member connector box:/Confidential/q3.pdf read
+```
+
+```python
+from praxia.auth import AuthManager
+auth = AuthManager()
+decision = auth.policies.evaluate(
+    user_id="alice", role="member",
+    resource_type="connector", resource_id="box:/Confidential/q3.pdf",
+    action="read",
+)
+print(decision.allowed, decision.reason)
+
+# require() raises PermissionError on denial:
+auth.policies.require(
+    user_id="alice", role="member",
+    resource_type="memory", resource_id="memory:user/bob",
+    action="write",
+)
+```
+
+**Resource types**: `connector` / `memory` / `prompt` / `skill` / `block` / `*`
+**Pattern**: glob (e.g. `box:/Confidential/*`, `salesforce:Lead.*`)
+**Actions**: `read` / `write` / `list` / `*`
+**Principals**: `<user_id>` or `role:<name>` or `*`
+
+Every policy decision is recorded in the audit log as
+`action="policy.eval.<action>"` with `outcome="success"` or `"denied"`.
+
+---
+
+## 20. Admin data exports
+
+CSV / JSON / JSONL exports for compliance, SIEM ingestion, and backups.
+**Every export action is itself audit-logged** (chain of custody).
+
+```bash
+praxia admin export-audit audit.csv --since-days 30 --actor alice
+praxia admin export-users users.json --format json
+praxia admin export-usage usage.csv --skill investment_analyst
+praxia admin export-memory ./memory_backup --all     # all users
+praxia admin export-memory alice_memory.jsonl --user alice
+praxia admin export-shared-memory shared.jsonl
+praxia admin export-policies policies.json
+```
+
+```python
+from praxia.auth import AuthManager
+auth = AuthManager()
+auth.exports.export_audit(output_path="audit.csv", format="csv", since_days=30)
+auth.exports.export_users(output_path="users.json", format="json")
+# Sensitive fields (api_key_hash, password_hash) are stripped automatically
+```
+
+Streamlit UI provides one-click downloads for each export type.
+
+---
+
+## 21. External connectors
+
+Six built-in connectors with bi-directional **Pull** + **Push**:
+
+| Connector | Pull | Push | Auth method | Install extra |
+|---|---|---|---|---|
+| **Box** | folder ID → files | upload to folder | OAuth2 / JWT | `praxia[box]` |
+| **SharePoint / M365** | drive folder → files | upload to folder | Microsoft Entra ID app | `praxia[sharepoint]` |
+| **Dropbox** | folder → files | upload to folder | OAuth2 access token | `praxia[dropbox]` |
+| **Google Drive** | parent folder → files | upload to folder | Service account / OAuth | `praxia[gdrive]` |
+| **kintone** | app + query → records | create record | API token / basic auth | `praxia[kintone]` |
+| **Salesforce** | SOQL → records | sObject create | Username/token / OAuth | `praxia[salesforce]` |
+
+```bash
+praxia connector list
+praxia connector pull box 0 --limit 20 --save-to ./box_pulled
+praxia connector pull salesforce "SELECT Id, Name FROM Account" --limit 50
+praxia connector pull kintone "42?status='open'"
+praxia connector push salesforce Lead lead.json
+praxia connector push gdrive 0AbCdEfGh review.md
+```
+
+```python
+from praxia.connectors import get_connector
+
+box = get_connector("box", access_token=os.environ["BOX_TOKEN"])
+docs = box.pull("0", limit=20)
+box.push("12345", {"name": "review.md", "body": "..."})
+```
+
+**Credentials** come from environment variables prefixed
+`PRAXIA_CONN_<NAME>_<KEY>`, e.g. `PRAXIA_CONN_BOX_ACCESS_TOKEN`.
+
+**Access control**: every Pull/Push goes through `PolicyManager.require()`
+before contacting the external service. Admin policies are enforced before
+any data leaves your environment.
+
+---
+
+## 22. Dashboards
+
+Personal and organizational views aggregated from existing JSONL sources
+(no new tables).
+
+```bash
+praxia dashboard --scope personal --user-id alice
+praxia dashboard --scope org
+```
+
+```python
+from praxia.analytics import Dashboard
+d = Dashboard(memory_dir=".praxia")
+ps = d.personal_summary("alice")
+# ps.flow_runs, ps.skill_runs, ps.memory_entries, ps.success_rate,
+# ps.total_input_tokens, ps.top_skills, ps.recent_episodes, ps.last_active_ts
+
+os_ = d.org_summary("default-org")
+# os_.active_users, os_.total_flow_runs, os_.org_success_rate,
+# os_.promoted_blocks, os_.frozen_files, os_.distributed_skills,
+# os_.distributed_prompts, os_.top_users, os_.top_skills
+```
+
+The Streamlit UI's 📊 Dashboard tab displays both views with metrics and
+ranking tables.

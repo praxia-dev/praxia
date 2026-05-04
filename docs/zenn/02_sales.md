@@ -203,6 +203,69 @@ for acc in accounts['records']:
     # Slack や Salesforce にループバック
 ```
 
+## 外部システム連携 — Salesforce + SharePoint + kintone と双方向
+
+営業現場のシステム連携 3 セット:
+
+```python
+from praxia.connectors import get_connector
+from praxia.flows import SalesAgentFlow
+from praxia import Praxia
+
+p = Praxia(user_id="alice", default_model="claude")
+
+# (1) Salesforce から休眠アカウントを Pull
+sf = get_connector("salesforce", username="...", password="...", security_token="...")
+dormant = sf.pull(
+    "SELECT Id, Name, Industry, LastActivityDate FROM Account "
+    "WHERE LastActivityDate < LAST_N_DAYS:180 AND AnnualRevenue > 5000000000",
+    limit=30,
+)
+
+# (2) SharePoint から関連 IR / 議事録を Pull
+sp = get_connector("sharepoint", tenant_id="...", client_id="...", client_secret="...")
+
+for acc in dormant:
+    ir_files = sp.pull(f"<drive_id>:/IR/{acc.metadata['account_name']}", limit=5)
+
+    # (3) Praxia で商談準備
+    result = p.run(SalesAgentFlow, inputs={
+        "customer_name": acc.name,
+        "product": "Praxia Sales",
+        "additional_context": "\n\n".join(f.content[:2000] for f in ir_files),
+    })
+
+    # (4) kintone の営業管理アプリにプッシュ (ToDo として)
+    kt = get_connector("kintone", subdomain="acme", api_token=os.environ["KINTONE_TOKEN"])
+    kt.push("42", json.dumps({
+        "account_id": {"value": acc.id},
+        "preparation_summary": {"value": result.final_output[:5000]},
+        "status": {"value": {"value": "ready_for_outreach"}},
+    }))
+```
+
+## ACL で営業データへのアクセスを制御
+
+「アシスタント (member) は休眠リストには触れさせたくない」場合:
+
+```bash
+praxia policy add deny connector "salesforce:*LastActivityDate*" \
+    --principals "role:member" \
+    --description "休眠リストはセールス・オペレーターのみ"
+```
+
+## ベスプラの組織配信
+
+ベテラン営業の RFP 回答テンプレを全社員に配信:
+
+```bash
+praxia prompt distribute b2b_rfp_template rfp_template.md \
+    --target-roles member,operator \
+    --description "金融業向け RFP 回答テンプレ (実績 +12pt)"
+
+praxia skill distribute sales_strategist --target-roles member
+```
+
 ## まとめ
 
 Praxia の営業業務での価値:

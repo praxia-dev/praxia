@@ -141,21 +141,50 @@ Switch with one line:
 PersonalMemory(user_id="alice", backend="mem0")
 ```
 
-### Built-in Authentication & RBAC
+### Built-in Authentication, RBAC, SSO & Resource Policies
 
-- API-key + JWT-based auth (`praxia.auth`)
-- 4 default roles: `admin` / `operator` / `member` / `viewer`
-- Audit logging of every memory read/write and skill invocation
-- Compatible with enterprise SSO via OIDC adapter
+- **API-key + JWT auth** (`praxia.auth`) with 4 default roles (`admin` / `operator` / `member` / `viewer`)
+- **SSO via OIDC**: Google, Microsoft Entra ID, Okta, GitHub, Keycloak, custom OIDC, plus SAML skeleton
+- **Resource access policies (ACL)** — glob-pattern allow/deny rules per resource (built for enterprise IS departments)
+- **Append-only audit log** — every authn / authz / policy decision / privileged action recorded
+- **Admin data exports** — CSV / JSON / JSONL dumps of audit, users, usage, memory, policies, shared blocks (chain-of-custody preserved)
+
+### Admin User Management
+- Create / read / update / delete users
+- Activate / deactivate, role grants, API-key rotation
+- All actions audited
+- Available via CLI, Streamlit UI, and SDK
+
+### Custom Prompts (per-user + admin-distributed)
+- Users save personal prompts; admins promote them to org or distribute to specific users / roles
+- Three scopes (personal / org / distributed) with merge precedence
+- Same model as the skill registry
+
+### External Connectors — 6 systems, Pull + Push
+| Connector | Pull | Push | Auth |
+|---|---|---|---|
+| **Box** | ✅ folder → files | ✅ upload to folder | OAuth2 / JWT |
+| **SharePoint / M365** | ✅ drive folder → files | ✅ upload to folder | Microsoft Entra app |
+| **Dropbox** | ✅ folder → files | ✅ upload to folder | OAuth2 |
+| **Google Drive** | ✅ parent folder → files | ✅ upload to folder | Service account / OAuth |
+| **kintone** | ✅ app + query → records | ✅ create record | API token / basic |
+| **Salesforce** | ✅ SOQL → records | ✅ sObject create | Username/token / OAuth |
+
+Pull data into agent flows; push agent outputs back to your system of record. All access subject to admin policies.
+
+### Dashboards
+- **Personal**: flow runs, skill invocations, memory entries, outcome success rate, token usage, top skills, recent episodes
+- **Organizational**: active users, total invocations, promoted/frozen/distributed counts, top users, top skills, audit event counts
 
 ---
 
 ## 🚀 Quickstart
 
 ```bash
-pip install praxia              # Core
-pip install "praxia[ui]"        # + Streamlit UI
-pip install "praxia[all]"       # Everything
+pip install praxia                   # Core
+pip install "praxia[ui]"             # + Streamlit UI
+pip install "praxia[connectors]"     # + Box / SharePoint / Dropbox / GDrive / kintone / Salesforce
+pip install "praxia[all]"            # Everything
 
 # Initialize (creates personal memory + skill registry + admin user)
 praxia init --backend json --model auto
@@ -165,26 +194,55 @@ praxia run sales --customer-name "Acme" --product "BizFlow"
 praxia run logic --document path/to/doc.md
 praxia run rag --question "What license is Praxia released under?"
 
-# Run a single business skill
-praxia skill investment "Mid-term investment thesis on Sony Group stock"
-praxia skill legal "Review the risk in this services agreement"
+# Run a business skill
+praxia skill run investment "Mid-term investment thesis on Sony Group stock"
+praxia skill run legal "Review the risk in this services agreement"
 
-# Launch the UI
+# Launch the UI (11 tabs incl. Dashboard / Policies / Admin / Connectors)
 praxia ui --port 8501
 
-# Distill personal → organizational memory (nightly batch)
+# Personal → org memory distillation
 praxia consolidate --dry-run
-
-# Skill promotion (Phase 4)
-praxia skill promote --candidates       # show eligible personal skills
-praxia skill promote --name my_skill    # promote one to org
-
-# Freeze a shared block into Markdown (Phase 3)
 praxia freeze --block team_norms
 
-# User & role management (Phase 5)
+# Dashboards
+praxia dashboard --scope personal --user-id alice
+praxia dashboard --scope org
+
+# Admin: user management
 praxia user create alice --role member
-praxia user grant alice promote_skills
+praxia user update alice --role operator --email alice@a.test
+praxia user deactivate alice
+praxia user delete alice --yes
+praxia user audit --limit 100
+
+# Admin: resource access policies (ACL — for IS depts)
+praxia policy add deny connector "box:/Confidential/*" \
+    --principals "role:member,role:viewer" \
+    --description "Lock Confidential folder to operators+"
+praxia policy list
+praxia policy test alice member connector box:/Confidential/q3.pdf read
+
+# Admin: data exports (CSV / JSON / JSONL — every export audit-logged)
+praxia admin export-audit audit.csv --since-days 30
+praxia admin export-users users.json --format json
+praxia admin export-memory ./memory_backup --all
+praxia admin export-policies policies.json
+
+# External connectors (Pull / Push, subject to ACL)
+praxia connector list
+praxia connector pull box 0 --limit 20 --save-to ./box_pulled
+praxia connector push salesforce Lead lead.json
+praxia connector pull kintone "42?status='open'"
+
+# Custom prompts (per-user + admin distribution)
+praxia prompt create my_qualifier prompt_body.txt
+praxia prompt list
+praxia prompt distribute curated_prompt body.md --target-roles member
+
+# Skill registry — promotion and admin distribution
+praxia skill promote --candidates
+praxia skill distribute investment_analyst --target-roles member,operator
 ```
 
 Minimal Python example:
@@ -263,17 +321,23 @@ Detailed Before/After tables for each domain are in **[docs/use-cases.md](docs/u
 
 ## 🆚 Compared with Existing Frameworks
 
-| Capability | CrewAI | AutoGen | LangGraph | **Praxia** |
-|---|---|---|---|---|
-| General multi-agent | ✅ | ✅ | ✅ | ✅ |
-| Workflow-specific templates | ❌ | ❌ | ❌ | ✅ |
-| Auto-extracting personal memory | ❌ | ❌ | △ | ✅ |
-| Personal → org promotion | ❌ | ❌ | ❌ | ✅ |
-| Sleep-time consolidation | ❌ | ❌ | ❌ | ✅ |
-| Skills registry cycling | ❌ | ❌ | ❌ | ✅ |
-| Hallucination eval bundled | ❌ | ❌ | ❌ | ✅ |
-| Built-in auth + RBAC + audit | ❌ | ❌ | ❌ | ✅ |
-| MCP / Claude Skills compatible | △ | △ | △ | ✅ |
+| Capability | CrewAI | AutoGen | LangGraph | Glean | **Praxia** |
+|---|---|---|---|---|---|
+| Multi-agent orchestration | ✅ | ✅ | ✅ | — | ✅ |
+| Workflow-specific templates | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Auto-extracting personal memory | ❌ | ❌ | △ | ✅ | ✅ |
+| Personal → org promotion | ❌ | ❌ | ❌ | △ | ✅ |
+| Sleep-time consolidation | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Skills registry + admin distribution | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Custom prompt distribution | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Hallucination eval bundled | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Built-in auth + RBAC + SSO | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Resource access policies (ACL) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Audit log + admin data exports | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Personal & org dashboards | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Storage / SaaS connectors (Pull + Push) | ❌ | ❌ | △ | △ | ✅ ×6 |
+| MCP / Claude Skills compatible | △ | △ | △ | ❌ | ✅ |
+| License | MIT | MIT | MIT | Commercial | Apache 2.0 |
 
 ---
 
@@ -285,8 +349,9 @@ Detailed Before/After tables for each domain are in **[docs/use-cases.md](docs/u
 | **Phase 2** | Sleep-time consolidator + statistical (outcome-correlated) promotion | ✅ **Done** |
 | **Phase 3** | Shared blocks + Markdown freeze workflow + CLI | ✅ **Done** |
 | **Phase 4** | Skill registry promotion (personal → org) | ✅ **Done** |
-| **Phase 5** | Auth, RBAC, audit log, OIDC adapter | ✅ **Done** |
-| **Phase 6** | Enterprise GUI / multi-tenant SaaS | 💼 Commercial |
+| **Phase 5** | Auth + RBAC + SSO + audit log + admin user CRUD | ✅ **Done** |
+| **Phase 5+** | Resource access policies (ACL) + admin data exports + custom prompts + 6 connectors + dashboards | ✅ **Done** |
+| **Phase 6** | Multi-tenant SaaS, advanced GUI, vertical editions | 🚧 Commercial |
 
 ---
 

@@ -234,6 +234,64 @@ class TradeSecretVsPatentSkill(Skill):
     """
 ```
 
+## 外部システム連携 — Box / SharePoint の発明提案フォルダから直接取り込み
+
+R&D 部門の発明提案書は Box / SharePoint 上にあるケースが多いはず:
+
+```python
+from praxia.connectors import get_connector
+from praxia.skills import PatentSkill
+
+box = get_connector("box", access_token=os.environ["BOX_TOKEN"])
+proposals = box.pull("/RnD/InventionProposals/2026Q4", limit=20)
+
+skill = PatentSkill()
+results = []
+for prop in proposals:
+    analysis = skill.run(f"""
+    発明提案書: {prop.name}
+
+    {prop.content.decode() if isinstance(prop.content, bytes) else prop.content}
+
+    以下を実施: 要素抽出 / 検索式設計 / 新規性予備判断 / 進歩性予備判断
+    """)
+    results.append({"name": prop.name, "analysis": analysis})
+
+    # Salesforce や kintone の知財管理システムにプッシュ
+    sf = get_connector("salesforce", username="...", password="...", security_token="...")
+    sf.push("Patent_Application__c", json.dumps({
+        "Name": prop.name,
+        "Praxia_Pre_Search__c": analysis,
+        "Status__c": "Awaiting_Attorney_Review",
+    }))
+```
+
+## ACL — 出願前の発明情報を厳格に隔離
+
+弁理士法・営業秘密管理規定に従い、出願前の発明情報は知財部以外からアクセス不可に:
+
+```bash
+praxia policy add deny connector "box:/RnD/InventionProposals/*" \
+    --principals "role:member,role:viewer" \
+    --description "出願前の発明情報は知財部 (operator) のみ"
+
+praxia policy add deny memory "memory:patent_*" \
+    --principals "role:member,role:viewer" \
+    --description "特許関連メモリも同様"
+```
+
+これにより、誤って外部 LLM へ送信される事故を未然に防げます。
+
+## 知財部ベテランの検索式テンプレートを配信
+
+```bash
+praxia prompt distribute semiconductor_search_template tmpl.md \
+    --target-users r_and_d_engineer1,r_and_d_engineer2 \
+    --description "半導体分野の特許検索テンプレ"
+
+praxia skill distribute patent_analyst --target-roles operator
+```
+
 ## まとめ
 
 Praxia の特許業務での価値:
