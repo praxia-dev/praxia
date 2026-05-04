@@ -1,5 +1,7 @@
 # Praxia
 
+🌐 **Live**: [praxia.pages.dev](https://praxia.pages.dev/) (primary, Cloudflare) · [genarch.github.io/praxia](https://genarch.github.io/praxia/) (mirror, GitHub Pages)
+
 ![Praxia hero](docs/images/hero-banner.svg)
 
 > **Specialized Multi-Agent Orchestrator with Cyclic Personal/Organizational Memory**

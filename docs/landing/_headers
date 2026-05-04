@@ -1,0 +1,33 @@
+# Cloudflare Pages HTTP headers
+# Format: pattern \n  Header-Name: value
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+
+# --- Security headers for all pages ---
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https://raw.githubusercontent.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'
+
+# --- Aggressive caching for static assets (1 year, immutable) ---
+/*.svg
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# --- HTML pages: short cache + revalidate ---
+/*.html
+  Cache-Control: public, max-age=600, must-revalidate
+
+/
+  Cache-Control: public, max-age=600, must-revalidate

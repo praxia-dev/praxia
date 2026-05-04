@@ -8,12 +8,23 @@ and modern SaaS marketing sites.
 
 ```
 docs/landing/
-├── index.html         — main landing page (hero / features / pricing)
-├── styles.css         — shared theme (dark + warm-gold accent)
+├── index.html        — main landing page (hero / features / pricing)
+├── styles.css        — shared theme (dark + warm-gold accent)
+├── 404.html          — branded 404 page (used by both mirrors)
+├── robots.txt        — search-engine crawl directives
+├── sitemap.xml       — URL list for search engines
+├── _redirects        — Cloudflare Pages convenience aliases
+├── _headers          — Cloudflare Pages security headers + caching
+├── .nojekyll         — disables Jekyll on GitHub Pages
+├── DEPLOY.md         — full deployment walkthrough (CF + GH Pages)
 └── portal/
-    ├── index.html     — sign-in + sign-up portal
-    └── portal.css     — portal-specific styles
+    ├── index.html    — sign-in + sign-up portal
+    └── portal.css    — portal-specific styles
 ```
+
+## Deployment
+
+We run both **Cloudflare Pages** (primary, fast) and **GitHub Pages** (secondary, integrated). See **[DEPLOY.md](DEPLOY.md)** for the full walkthrough.
 
 ## Local preview
 
@@ -23,25 +34,14 @@ python -m http.server 8000
 # then open http://localhost:8000
 ```
 
-## Deploying
-
-### Option 1: GitHub Pages (zero-config)
-
-1. Settings → Pages → Build from `main` branch, `/docs/landing` folder
-2. Done — `https://<your-org>.github.io/praxia/` serves the page
-
-### Option 2: Vercel / Netlify
-
-Connect the GitHub repo with build directory `docs/landing` (no build step).
-
-### Option 3: Custom CDN
-
-Just upload the three files (`index.html`, `styles.css`, `portal/`) to any
-static host (S3 + CloudFront / Cloudflare Pages / Fastly).
-
 ## Customization
 
-Replace `your-org` in HTML/href links once the GitHub repository is created.
+If you forked the repo to a different GitHub org, replace `genarch` in HTML/href links accordingly. A bulk find-replace works:
+
+```bash
+find docs/landing -type f \( -name "*.html" -o -name "*.md" \) \
+  -exec sed -i 's|genarch|your-org|g' {} +
+```
 
 For the **portal**, the SSO buttons and forms are wired with placeholder
 JavaScript that calls `/auth/sso/<provider>/start` and `/auth/signin`.

@@ -124,6 +124,83 @@ pre .str     { color: var(--accent-bright); }
   color: var(--accent) !important;
 }
 
+/* Mirror cross-link pill in nav */
+.nav-mirror {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(140, 200, 255, 0.06);
+  border: 1px solid rgba(140, 200, 255, 0.2);
+  color: var(--text-soft) !important;
+  font-size: 12px;
+  transition: all 120ms ease;
+}
+.nav-mirror:hover {
+  background: rgba(140, 200, 255, 0.12);
+  border-color: rgba(140, 200, 255, 0.45);
+  color: #8cc8ff !important;
+}
+.mirror-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8cc8ff;
+  box-shadow: 0 0 8px rgba(140, 200, 255, 0.45);
+  flex-shrink: 0;
+  animation: mirror-pulse 2.4s ease-in-out infinite;
+}
+@keyframes mirror-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* Mirror banner (shown on GitHub Pages mirror) */
+.mirror-banner {
+  position: relative;
+  background: linear-gradient(90deg, rgba(140,200,255,0.08), rgba(140,200,255,0.03));
+  border-bottom: 1px solid rgba(140, 200, 255, 0.2);
+  padding: 0.7rem 1.5rem;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+.mirror-banner a {
+  color: #8cc8ff;
+  font-weight: 600;
+  margin-left: 0.25rem;
+}
+.mirror-banner a:hover { color: #b8dcff; }
+#mirror-banner-close {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+}
+#mirror-banner-close:hover { color: var(--text); }
+
+/* Footer mirror info */
+.mirror-info {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.mirror-info a {
+  color: var(--text-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 2px;
+}
+.mirror-info a:hover { color: var(--accent); }
+
 /* ------------------------------------------------------------------ HERO */
 
 .hero {

@@ -224,9 +224,18 @@ PyPI トークンは https://pypi.org/manage/account/token/ で発行。
 
 ---
 
-## ✅ Step 9: ランディングページの公開先
+## ✅ Step 9: ランディングページの公開先 — 両方使う
 
-公開先 3 候補から選択。**国際展開を見据えるなら Cloudflare Pages 推奨**。
+GitHub Pages と Cloudflare Pages の **両方** にデプロイし、相互リンクで運用します。
+
+- **Primary**: Cloudflare Pages (`https://praxia.pages.dev/`) — 国際的に最速、無制限帯域
+- **Secondary**: GitHub Pages (`https://genarch.github.io/praxia/`) — リポジトリ統合、フォールバック
+
+両方が main へのプッシュで自動デプロイされ、ランディングページは visitor のいるミラーを検知して相互リンクを表示します。
+
+詳細手順: **[docs/landing/DEPLOY.md](docs/landing/DEPLOY.md)**
+
+クイック概要:
 
 ### 9-A. GitHub Pages — 最も簡単 (5 分)
 

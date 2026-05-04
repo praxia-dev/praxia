@@ -9,7 +9,30 @@
   <meta property="og:description" content="Specialized multi-agent orchestrator that auto-promotes individual tacit knowledge into organizational know-how." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪡%3C/text%3E%3C/svg%3E" />
+  <link rel="canonical" href="https://praxia.pages.dev/" />
+  <link rel="alternate" href="https://genarch.github.io/praxia/" hreflang="en" />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Cross-mirror awareness — show the OTHER mirror's URL in the banner
+    // so visitors can switch (and search engines can pick canonical).
+    (function() {
+      const isCloudflare = location.hostname.endsWith('pages.dev') || location.hostname === 'praxia.dev';
+      const isGithubPages = location.hostname.endsWith('.github.io');
+      if (isCloudflare) {
+        document.documentElement.dataset.mirror = 'cf';
+        document.documentElement.dataset.altUrl = 'https://genarch.github.io/praxia/';
+        document.documentElement.dataset.altLabel = 'GitHub Pages mirror';
+      } else if (isGithubPages) {
+        document.documentElement.dataset.mirror = 'gh';
+        document.documentElement.dataset.altUrl = 'https://praxia.pages.dev/';
+        document.documentElement.dataset.altLabel = 'Faster mirror (Cloudflare)';
+      } else {
+        document.documentElement.dataset.mirror = 'local';
+        document.documentElement.dataset.altUrl = 'https://github.com/genarch/praxia';
+        document.documentElement.dataset.altLabel = 'View on GitHub';
+      }
+    })();
+  </script>
 </head>
 <body>
   <nav class="nav">
@@ -25,10 +48,21 @@
       <a href="#extending">Extend</a>
       <a href="#faq">FAQ</a>
       <a href="#pricing">Pricing</a>
+      <a id="mirror-link" href="#" target="_blank" rel="noopener" class="nav-mirror" title="Switch to the other mirror">
+        <span class="mirror-dot"></span>
+        <span class="mirror-label">Mirror</span>
+      </a>
       <a href="portal/index.html" class="nav-cta">Open Portal</a>
-      <a href="https://github.com/your-org/praxia" target="_blank" rel="noopener" class="nav-github">GitHub →</a>
+      <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="nav-github">GitHub →</a>
     </div>
   </nav>
+
+  <!-- Mirror awareness banner (shown only on github.io to nudge users to the faster mirror) -->
+  <div id="mirror-banner" class="mirror-banner" hidden>
+    <span>You're on the GitHub Pages mirror. </span>
+    <a id="mirror-banner-link" href="https://praxia.pages.dev/">Try the faster Cloudflare mirror →</a>
+    <button id="mirror-banner-close" aria-label="Dismiss">×</button>
+  </div>
 
   <header class="hero">
     <div class="hero-grid"></div>
@@ -42,7 +76,7 @@
       </p>
       <div class="hero-cta">
         <a href="#install" class="btn btn-primary">Get started</a>
-        <a href="https://github.com/your-org/praxia" target="_blank" rel="noopener" class="btn btn-ghost">★ Star on GitHub</a>
+        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-ghost">★ Star on GitHub</a>
       </div>
       <div class="hero-meta">
         <span>🐍 Python 3.11+</span>
@@ -347,7 +381,7 @@ praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account
       </div>
       <p class="cta-line">
         See full Before/After tables in
-        <a href="https://github.com/your-org/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
+        <a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
       </p>
     </div>
   </section>
@@ -497,7 +531,7 @@ focusing on:
       </div>
       <p class="cta-line">
         Full Before/After tables (3 use cases × 6 domains = 18 scenarios) in
-        <a href="https://github.com/your-org/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
+        <a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
       </p>
     </div>
   </section>
@@ -601,7 +635,7 @@ P  = Praxia cost (license + infra)</code></pre>
       </div>
       <p class="cta-line">
         Detailed extension guides in
-        <a href="https://github.com/your-org/praxia/blob/main/docs/FEATURES.md#extending-praxia">docs/FEATURES.md</a>.
+        <a href="https://github.com/genarch/praxia/blob/main/docs/FEATURES.md#extending-praxia">docs/FEATURES.md</a>.
       </p>
     </div>
   </section>
@@ -759,7 +793,7 @@ P  = Praxia cost (license + infra)</code></pre>
       <h2>Ready to make your team's tacit knowledge unforgettable?</h2>
       <p>Star us on GitHub, run the quickstart, or reach out for a tailored PoC.</p>
       <div class="hero-cta">
-        <a href="https://github.com/your-org/praxia" target="_blank" rel="noopener" class="btn btn-primary">★ Star on GitHub</a>
+        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-primary">★ Star on GitHub</a>
         <a href="portal/index.html" class="btn btn-ghost">Open Portal</a>
         <a href="mailto:hello@praxia.ai" class="btn btn-ghost">Contact us</a>
       </div>
@@ -787,24 +821,29 @@ P  = Praxia cost (license + infra)</code></pre>
       <div>
         <h4>Resources</h4>
         <ul>
-          <li><a href="https://github.com/your-org/praxia">GitHub</a></li>
-          <li><a href="https://github.com/your-org/praxia/blob/main/docs/quickstart.md">Quickstart</a></li>
-          <li><a href="https://github.com/your-org/praxia/blob/main/docs/architecture.md">Architecture</a></li>
-          <li><a href="https://github.com/your-org/praxia/blob/main/docs/use-cases.md">Use cases</a></li>
+          <li><a href="https://github.com/genarch/praxia">GitHub</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/quickstart.md">Quickstart</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/architecture.md">Architecture</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md">Use cases</a></li>
         </ul>
       </div>
       <div>
         <h4>Community</h4>
         <ul>
-          <li><a href="https://github.com/your-org/praxia/discussions">Discussions</a></li>
-          <li><a href="https://github.com/your-org/praxia/issues">Issues</a></li>
-          <li><a href="https://github.com/your-org/praxia/blob/main/CONTRIBUTING.md">Contributing</a></li>
-          <li><a href="https://github.com/your-org/praxia/blob/main/NOTICE.md">Third-party licenses</a></li>
+          <li><a href="https://github.com/genarch/praxia/discussions">Discussions</a></li>
+          <li><a href="https://github.com/genarch/praxia/issues">Issues</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/CONTRIBUTING.md">Contributing</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/NOTICE.md">Third-party licenses</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <span>© 2026 GenArch and Praxia Contributors · Apache License 2.0</span>
+      <span class="mirror-info">
+        Mirrors:
+        <a href="https://praxia.pages.dev/">praxia.pages.dev</a> ·
+        <a href="https://genarch.github.io/praxia/">genarch.github.io/praxia</a>
+      </span>
     </div>
   </footer>
 
@@ -819,6 +858,31 @@ P  = Praxia cost (license + infra)</code></pre>
         document.getElementById(target).classList.add('active');
       });
     });
+
+    // Mirror cross-linking: wire up the small "Mirror" pill in the nav
+    (function() {
+      const html = document.documentElement;
+      const link = document.getElementById('mirror-link');
+      const banner = document.getElementById('mirror-banner');
+      const bannerLink = document.getElementById('mirror-banner-link');
+      const closeBtn = document.getElementById('mirror-banner-close');
+      const altUrl = html.dataset.altUrl;
+      const altLabel = html.dataset.altLabel;
+      if (link && altUrl) {
+        link.href = altUrl;
+        link.querySelector('.mirror-label').textContent = altLabel;
+        link.title = `Open: ${altUrl}`;
+      }
+      // Show the banner ONLY on the GitHub Pages mirror (nudge to Cloudflare)
+      if (html.dataset.mirror === 'gh' && banner && !sessionStorage.getItem('praxia-mirror-dismissed')) {
+        banner.hidden = false;
+        if (bannerLink) bannerLink.href = altUrl;
+        if (closeBtn) closeBtn.addEventListener('click', () => {
+          banner.hidden = true;
+          sessionStorage.setItem('praxia-mirror-dismissed', '1');
+        });
+      }
+    })();
   </script>
 </body>
 </html>

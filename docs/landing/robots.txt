@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap (set canonical to whichever URL is primary)
+Sitemap: https://praxia.pages.dev/sitemap.xml
