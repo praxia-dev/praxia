@@ -67,8 +67,18 @@ loom = get_loom(user_id, org_id, model_choice)
 
 # --- Main: tabs -------------------------------------------------------------
 
-tab_run, tab_skill, tab_memory, tab_consolidate, tab_about = st.tabs(
-    ["🎬 Run Flow", "🛠 Business Skill", "🧠 Memory", "🌙 Consolidate", "ℹ About"]
+tab_run, tab_skill, tab_memory, tab_consolidate, tab_dashboard, tab_prompts, tab_users, tab_connectors, tab_about = st.tabs(
+    [
+        "🎬 Run Flow",
+        "🛠 Skill",
+        "🧠 Memory",
+        "🌙 Consolidate",
+        "📊 Dashboard",
+        "📝 Prompts",
+        "👥 Users",
+        "🔌 Connectors",
+        "ℹ About",
+    ]
 )
 
 
@@ -187,7 +197,237 @@ with tab_consolidate:
         st.json(report)
 
 
-# Tab 5: About -------------------------------------------------------------
+# Tab 5: Dashboard -------------------------------------------------------
+with tab_dashboard:
+    st.header("📊 Dashboard")
+    from praxia.analytics import Dashboard
+
+    d = Dashboard(memory_dir=loom.config.memory_dir)
+    scope = st.radio("Scope", ["personal", "org"], horizontal=True)
+    if scope == "personal":
+        s = d.personal_summary(user_id)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Flow runs", s.flow_runs)
+        c2.metric("Skill runs", s.skill_runs)
+        c3.metric("Memory entries", s.memory_entries)
+        c4.metric("Success rate", f"{s.success_rate:.0%}")
+        c5, c6, c7 = st.columns(3)
+        c5.metric("Episodes", s.episodes)
+        c6.metric("Outcomes", s.outcomes_recorded)
+        c7.metric("Tokens (in/out)", f"{s.total_input_tokens:,} / {s.total_output_tokens:,}")
+        if s.top_skills:
+            st.subheader("Top skills")
+            st.table([{"skill": n, "count": c} for n, c in s.top_skills])
+        if s.recent_episodes:
+            st.subheader("Recent episodes")
+            for ep in s.recent_episodes:
+                st.text(ep)
+    else:
+        s = d.org_summary(org_id)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Active users", s.active_users)
+        c2.metric("Flow runs", s.total_flow_runs)
+        c3.metric("Skill runs", s.total_skill_runs)
+        c4.metric("Org success rate", f"{s.org_success_rate:.0%}")
+        c5, c6, c7 = st.columns(3)
+        c5.metric("Promoted blocks", s.promoted_blocks)
+        c6.metric("Frozen MD files", s.frozen_files)
+        c7.metric(
+            "Distributed (skills/prompts)",
+            f"{s.distributed_skills}/{s.distributed_prompts}",
+        )
+        if s.top_users:
+            st.subheader("Top users")
+            st.table([{"user_id": u, "events": c} for u, c in s.top_users])
+        if s.top_skills:
+            st.subheader("Top skills")
+            st.table([{"skill": n, "count": c} for n, c in s.top_skills])
+
+# Tab 6: Prompts ---------------------------------------------------------
+with tab_prompts:
+    st.header("📝 Custom Prompts")
+    from praxia.skills.prompts import PromptStore
+
+    store = PromptStore(storage_dir=loom.config.memory_dir / "prompts")
+    sub_create, sub_browse, sub_distribute = st.tabs(
+        ["Create / edit", "Browse", "Admin: distribute"]
+    )
+
+    with sub_create:
+        with st.form("prompt_create_form"):
+            name = st.text_input("Name", placeholder="my_sales_qualifier")
+            description = st.text_input("Description")
+            tags = st.text_input("Tags (comma-separated)")
+            body = st.text_area("Prompt body", height=240)
+            submit = st.form_submit_button("Save")
+            if submit and name and body:
+                store.save_personal(
+                    user_id=user_id,
+                    name=name,
+                    body=body,
+                    description=description,
+                    tags=[t.strip() for t in tags.split(",") if t.strip()],
+                )
+                st.success(f"Saved {name}")
+
+    with sub_browse:
+        prompts = store.list_for_user(user_id=user_id, role="member")
+        for p in prompts:
+            with st.expander(f"📄 {p.name} [{p.scope}]", expanded=False):
+                st.caption(p.description)
+                st.text(p.body[:1000] + ("…" if len(p.body) > 1000 else ""))
+                st.caption(f"tags: {', '.join(p.tags) or '—'} | owner: {p.owner}")
+
+    with sub_distribute:
+        st.markdown("**Admin only.** Push a curated prompt to specific users or roles.")
+        with st.form("prompt_distribute_form"):
+            d_name = st.text_input("Name", key="dn")
+            d_body = st.text_area("Body", height=200, key="db")
+            d_target_users = st.text_input("Target user IDs (comma-separated)", key="dtu")
+            d_target_roles = st.multiselect(
+                "Target roles", ["admin", "operator", "member", "viewer"], key="dtr"
+            )
+            submit = st.form_submit_button("Distribute")
+            if submit and d_name and d_body and (d_target_users or d_target_roles):
+                saved = store.distribute(
+                    name=d_name,
+                    body=d_body,
+                    target_users=[u.strip() for u in d_target_users.split(",") if u.strip()] or None,
+                    target_roles=d_target_roles or None,
+                )
+                st.success(f"Distributed to {len(saved)} target(s)")
+
+# Tab 7: User management -------------------------------------------------
+with tab_users:
+    st.header("👥 User management (admin)")
+    try:
+        from praxia.auth import AuthManager, Role
+        auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
+        users_list = auth.users.list_all()
+    except Exception as e:
+        st.error(f"Auth not available: {e}")
+        users_list = []
+
+    sub_list, sub_create, sub_edit = st.tabs(["List", "Create", "Edit / Delete"])
+
+    with sub_list:
+        if users_list:
+            st.table(
+                [
+                    {
+                        "username": u.username,
+                        "role": u.role,
+                        "email": u.email or "—",
+                        "active": u.is_active,
+                    }
+                    for u in users_list
+                ]
+            )
+        else:
+            st.info("No users yet.")
+
+    with sub_create:
+        with st.form("user_create_form"):
+            new_username = st.text_input("Username")
+            new_role = st.selectbox("Role", ["admin", "operator", "member", "viewer"])
+            new_email = st.text_input("Email")
+            submit = st.form_submit_button("Create")
+            if submit and new_username:
+                user, raw = auth.create_user(new_username, role=new_role, email=new_email or None)
+                st.success(f"Created {user.username} (role={user.role})")
+                st.code(raw, language="text")
+                st.warning("Save this API key now — it will not be shown again.")
+
+    with sub_edit:
+        if users_list:
+            target = st.selectbox("Select user", [u.username for u in users_list])
+            t = next((u for u in users_list if u.username == target), None)
+            if t:
+                colA, colB = st.columns(2)
+                with colA:
+                    new_role = st.selectbox(
+                        "New role",
+                        ["admin", "operator", "member", "viewer"],
+                        index=["admin", "operator", "member", "viewer"].index(t.role),
+                    )
+                    new_email = st.text_input("New email", value=t.email or "")
+                    if st.button("Update"):
+                        auth.update_user(target, role=new_role, email=new_email or None)
+                        st.success("Updated")
+                        st.rerun()
+                with colB:
+                    if st.button("Rotate API key"):
+                        new_key = auth.users.rotate_api_key(t.id)
+                        st.code(new_key, language="text")
+                    if st.button("Deactivate" if t.is_active else "Activate"):
+                        auth.update_user(target, is_active=not t.is_active)
+                        st.success("Toggled")
+                        st.rerun()
+                    if st.button("🗑 Delete (cannot undo)", type="primary"):
+                        auth.delete_user(target)
+                        st.success("Deleted")
+                        st.rerun()
+
+# Tab 8: Connectors ------------------------------------------------------
+with tab_connectors:
+    st.header("🔌 External connectors")
+    st.markdown(
+        "Pull data from external systems for use as context, or push Praxia "
+        "outputs back to your team's systems of record."
+    )
+    from praxia.connectors.registry import list_builtin
+
+    connector_names = list_builtin()
+    sel = st.selectbox("Connector", connector_names)
+    op = st.radio("Operation", ["Pull", "Push"], horizontal=True)
+    path = st.text_input("Path / folder ID / SOQL / app ID")
+
+    st.caption(
+        "Credentials are read from environment variables prefixed with "
+        f"`PRAXIA_CONN_{sel.upper()}_*`."
+    )
+
+    if op == "Pull":
+        limit = st.slider("Limit", 5, 200, 20)
+        if st.button("Pull"):
+            try:
+                from praxia.connectors import get_connector
+                import os
+                cfg = {
+                    k.replace(f"PRAXIA_CONN_{sel.upper()}_", "").lower(): v
+                    for k, v in os.environ.items()
+                    if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
+                }
+                items = get_connector(sel, **cfg).pull(path, limit=limit)
+                st.success(f"Pulled {len(items)} items")
+                for it in items[:5]:
+                    with st.expander(f"📥 {it.name}"):
+                        if isinstance(it.content, str):
+                            st.text(it.content[:1000])
+                        else:
+                            st.text(f"<binary, {len(it.content)} bytes>")
+            except Exception as e:
+                st.error(str(e))
+    else:
+        body = st.text_area("Body / payload (text or JSON)", height=200)
+        if st.button("Push"):
+            try:
+                from praxia.connectors import get_connector
+                from praxia.connectors.base import ConnectorItem
+                import os
+                cfg = {
+                    k.replace(f"PRAXIA_CONN_{sel.upper()}_", "").lower(): v
+                    for k, v in os.environ.items()
+                    if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
+                }
+                receipt = get_connector(sel, **cfg).push(
+                    path, ConnectorItem(id="", name="praxia_output", content=body)
+                )
+                st.success(f"Pushed: {receipt}")
+            except Exception as e:
+                st.error(str(e))
+
+# Tab 9: About -----------------------------------------------------------
 with tab_about:
     st.header("ℹ Praxia について")
     st.markdown(

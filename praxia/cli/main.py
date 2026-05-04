@@ -380,6 +380,66 @@ def user_rotate_key(username: str = typer.Argument(...)) -> None:
     console.print(f"✅ New API key for [bold]{username}[/bold]: [yellow]{raw}[/yellow]")
 
 
+@user_app.command("update")
+def user_update(
+    username: str = typer.Argument(...),
+    new_username: str = typer.Option("", help="Rename the user"),
+    email: str = typer.Option("", help="New email"),
+    role: str = typer.Option("", help="New role"),
+    activate: bool = typer.Option(False, "--activate"),
+    deactivate: bool = typer.Option(False, "--deactivate"),
+) -> None:
+    """Update a user's profile (admin only). All fields are optional."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    is_active: bool | None = None
+    if activate:
+        is_active = True
+    elif deactivate:
+        is_active = False
+    user = auth.update_user(
+        username,
+        new_username=new_username or None,
+        email=email or None,
+        role=role or None,
+        is_active=is_active,
+    )
+    console.print(
+        f"✅ Updated [bold]{user.username}[/bold] (role={user.role}, active={user.is_active}, email={user.email})"
+    )
+
+
+@user_app.command("delete")
+def user_delete(
+    username: str = typer.Argument(...),
+    yes: bool = typer.Option(False, "--yes", help="Skip confirmation"),
+) -> None:
+    """Hard-delete a user (admin only)."""
+    from praxia.auth import AuthManager
+
+    if not yes:
+        confirm = typer.confirm(f"Permanently delete user '{username}'?")
+        if not confirm:
+            raise typer.Exit(0)
+    auth = AuthManager()
+    if auth.delete_user(username):
+        console.print(f"🗑  Deleted [bold]{username}[/bold]")
+    else:
+        console.print(f"[red]Unknown user: {username}[/red]")
+        raise typer.Exit(1)
+
+
+@user_app.command("deactivate")
+def user_deactivate(username: str = typer.Argument(...)) -> None:
+    """Soft-deactivate a user (preserves history; API keys stop working)."""
+    from praxia.auth import AuthManager
+
+    auth = AuthManager()
+    auth.deactivate_user(username)
+    console.print(f"⏸  Deactivated [bold]{username}[/bold]")
+
+
 @user_app.command("audit")
 def user_audit(limit: int = typer.Option(50)) -> None:
     """Tail the audit log."""
@@ -398,6 +458,292 @@ def user_audit(limit: int = typer.Option(50)) -> None:
         style = "green" if e.outcome == "success" else "red"
         table.add_row(ts, e.actor_id[:12], e.action, e.resource, f"[{style}]{e.outcome}[/{style}]")
     console.print(table)
+
+
+# --- Custom prompts -----------------------------------------------------
+
+prompt_app = typer.Typer(help="Custom prompt management (user + admin distribution)")
+app.add_typer(prompt_app, name="prompt")
+
+
+@prompt_app.command("create")
+def prompt_create(
+    name: str = typer.Argument(...),
+    body: str = typer.Argument(..., help="Prompt body or path to file"),
+    user_id: str = typer.Option("default-user"),
+    description: str = typer.Option(""),
+    tags: str = typer.Option("", help="Comma-separated tags"),
+) -> None:
+    """Save a personal prompt for the current user."""
+    from praxia.skills.prompts import PromptStore
+
+    body_text = Path(body).read_text(encoding="utf-8") if Path(body).is_file() else body
+    store = PromptStore()
+    p = store.save_personal(
+        user_id,
+        name=name,
+        body=body_text,
+        description=description,
+        tags=[t.strip() for t in tags.split(",") if t.strip()],
+    )
+    console.print(f"✅ Saved personal prompt [bold]{p.name}[/bold] for {user_id}")
+
+
+@prompt_app.command("list")
+def prompt_list(
+    user_id: str = typer.Option("default-user"),
+    role: str = typer.Option("member"),
+) -> None:
+    """List all prompts visible to the user (personal + org + distributed)."""
+    from praxia.skills.prompts import PromptStore
+
+    store = PromptStore()
+    prompts = store.list_for_user(user_id=user_id, role=role)
+    table = Table(title=f"Prompts visible to {user_id}")
+    table.add_column("Name", style="cyan")
+    table.add_column("Scope")
+    table.add_column("Owner")
+    table.add_column("Description")
+    for p in prompts:
+        table.add_row(p.name, p.scope, p.owner, p.description)
+    console.print(table)
+
+
+@prompt_app.command("distribute")
+def prompt_distribute(
+    name: str = typer.Argument(...),
+    body: str = typer.Argument(..., help="Prompt body or path to file"),
+    target_users: str = typer.Option("", help="Comma-separated user_ids"),
+    target_roles: str = typer.Option("", help="Comma-separated roles"),
+    description: str = typer.Option(""),
+) -> None:
+    """Admin: push a prompt to specific users or roles."""
+    from praxia.skills.prompts import PromptStore
+
+    body_text = Path(body).read_text(encoding="utf-8") if Path(body).is_file() else body
+    store = PromptStore()
+    saved = store.distribute(
+        name=name,
+        body=body_text,
+        description=description,
+        target_users=[u.strip() for u in target_users.split(",") if u.strip()] or None,
+        target_roles=[r.strip() for r in target_roles.split(",") if r.strip()] or None,
+    )
+    console.print(f"📤 Distributed [bold]{name}[/bold] to {len(saved)} target(s)")
+
+
+@prompt_app.command("delete")
+def prompt_delete(
+    name: str = typer.Argument(...),
+    user_id: str = typer.Option("default-user"),
+) -> None:
+    """Delete a personal prompt."""
+    from praxia.skills.prompts import PromptStore
+
+    store = PromptStore()
+    if store.delete_personal(user_id, name):
+        console.print(f"🗑  Deleted personal prompt {name}")
+    else:
+        console.print(f"[red]Not found: {name}[/red]")
+        raise typer.Exit(1)
+
+
+# --- Skill distribution (extends existing skill_app) -----------------------
+
+@skill_app.command("distribute")
+def skill_distribute(
+    name: str = typer.Argument(..., help="Skill name (must exist in org or personal)"),
+    target_users: str = typer.Option("", help="Comma-separated user_ids"),
+    target_roles: str = typer.Option("", help="Comma-separated roles"),
+    source_user_id: str = typer.Option("", help="Source user (if distributing a personal skill)"),
+) -> None:
+    """Admin: distribute a skill to specific users or roles."""
+    from praxia.skills.registry import SkillRegistry
+    from praxia.skills import BUSINESS_SKILLS
+
+    reg = SkillRegistry()
+    # Resolve the skill — try built-in business skills first
+    skill_obj = None
+    for sk in BUSINESS_SKILLS:
+        if sk.manifest.name == name:
+            skill_obj = sk()
+            break
+    if skill_obj is None:
+        console.print(f"[red]Skill not found: {name}[/red]")
+        raise typer.Exit(1)
+    saved = reg.distribute(
+        skill_obj,
+        target_users=[u.strip() for u in target_users.split(",") if u.strip()] or None,
+        target_roles=[r.strip() for r in target_roles.split(",") if r.strip()] or None,
+    )
+    console.print(f"📤 Distributed [bold]{name}[/bold] to {len(saved)} target(s)")
+
+
+# --- Dashboard ----------------------------------------------------------
+
+@app.command()
+def dashboard(
+    scope: str = typer.Option("personal", help="personal | org"),
+    user_id: str = typer.Option("default-user"),
+    org_id: str = typer.Option("default-org"),
+) -> None:
+    """Show usage dashboard (personal or organizational)."""
+    from praxia.analytics import Dashboard
+
+    d = Dashboard()
+    if scope == "personal":
+        s = d.personal_summary(user_id)
+        import datetime
+        last = (
+            datetime.datetime.fromtimestamp(s.last_active_ts).strftime("%Y-%m-%d %H:%M")
+            if s.last_active_ts
+            else "—"
+        )
+        console.print(
+            Panel.fit(
+                f"📊 Personal dashboard for [bold]{s.user_id}[/bold]\n\n"
+                f"  Flow runs:        {s.flow_runs}\n"
+                f"  Skill runs:       {s.skill_runs}\n"
+                f"  Memory entries:   {s.memory_entries}\n"
+                f"  Episodes:         {s.episodes}\n"
+                f"  Outcomes:         {s.outcomes_recorded} (success rate: {s.success_rate:.0%})\n"
+                f"  Tokens (in/out):  {s.total_input_tokens:,} / {s.total_output_tokens:,}\n"
+                f"  Last active:      {last}",
+                title="Personal",
+                border_style="cyan",
+            )
+        )
+        if s.top_skills:
+            top = Table(title="Top skills (by invocations)")
+            top.add_column("Skill")
+            top.add_column("Count", justify="right")
+            for n, c in s.top_skills:
+                top.add_row(n, str(c))
+            console.print(top)
+    elif scope == "org":
+        s = d.org_summary(org_id)
+        console.print(
+            Panel.fit(
+                f"📊 Organization dashboard for [bold]{s.org_id}[/bold]\n\n"
+                f"  Active users:           {s.active_users}\n"
+                f"  Total flow runs:        {s.total_flow_runs}\n"
+                f"  Total skill runs:       {s.total_skill_runs}\n"
+                f"  Total outcomes:         {s.total_outcomes} (success rate: {s.org_success_rate:.0%})\n"
+                f"  Promoted shared blocks: {s.promoted_blocks}\n"
+                f"  Frozen Markdown files:  {s.frozen_files}\n"
+                f"  Distributed skills:     {s.distributed_skills}\n"
+                f"  Distributed prompts:    {s.distributed_prompts}\n"
+                f"  Total audit events:     {s.audit_event_count}",
+                title="Organization",
+                border_style="magenta",
+            )
+        )
+        if s.top_users:
+            tu = Table(title="Top users (by audit event count)")
+            tu.add_column("User"); tu.add_column("Events", justify="right")
+            for u, c in s.top_users:
+                tu.add_row(u[:20], str(c))
+            console.print(tu)
+        if s.top_skills:
+            ts = Table(title="Top skills")
+            ts.add_column("Skill"); ts.add_column("Invocations", justify="right")
+            for n, c in s.top_skills:
+                ts.add_row(n, str(c))
+            console.print(ts)
+    else:
+        console.print(f"[red]Unknown scope: {scope}. Use 'personal' or 'org'.[/red]")
+        raise typer.Exit(1)
+
+
+# --- External connectors -----------------------------------------------
+
+connector_app = typer.Typer(help="External storage / SaaS connectors (Box, SharePoint, Dropbox, GDrive, kintone, Salesforce)")
+app.add_typer(connector_app, name="connector")
+
+
+@connector_app.command("list")
+def connector_list() -> None:
+    """List all built-in connectors."""
+    from praxia.connectors.registry import list_builtin
+
+    table = Table(title="Built-in Connectors")
+    table.add_column("Name", style="cyan")
+    table.add_column("Install extra")
+    table.add_column("Auth method")
+    rows = [
+        ("box", "praxia[box]", "OAuth2 access token / JWT"),
+        ("sharepoint", "praxia[sharepoint]", "Microsoft Entra ID app (client credentials)"),
+        ("dropbox", "praxia[dropbox]", "OAuth2 access token"),
+        ("gdrive", "praxia[gdrive]", "Service account or OAuth credentials"),
+        ("kintone", "praxia[kintone]", "API token or basic auth"),
+        ("salesforce", "praxia[salesforce]", "Username/password+token or OAuth"),
+    ]
+    for name, extra, auth in rows:
+        table.add_row(name, extra, auth)
+    console.print(table)
+
+
+@connector_app.command("pull")
+def connector_pull(
+    name: str = typer.Argument(..., help="Connector name (box / sharepoint / dropbox / gdrive / kintone / salesforce)"),
+    path: str = typer.Argument(..., help="Source path / folder ID / SOQL query / kintone app id"),
+    limit: int = typer.Option(20),
+    save_to: str = typer.Option("", help="Optional directory to save items"),
+) -> None:
+    """Pull items from a connector."""
+    from praxia.connectors import get_connector
+
+    config = _load_connector_config(name)
+    conn = get_connector(name, **config)
+    items = conn.pull(path, limit=limit)
+    console.print(f"📥 Pulled {len(items)} item(s) from [bold]{name}[/bold]")
+    if save_to:
+        out_dir = Path(save_to)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for it in items:
+            target = out_dir / it.name
+            mode = "wb" if isinstance(it.content, bytes) else "w"
+            with target.open(mode, encoding=None if mode == "wb" else "utf-8") as f:
+                f.write(it.content)
+        console.print(f"   Saved to {out_dir}/")
+    else:
+        for it in items[:5]:
+            preview = (it.content[:200] if isinstance(it.content, str) else "<binary>") if it.content else ""
+            console.print(f"  • {it.name} ({it.id}): {preview!r}")
+
+
+@connector_app.command("push")
+def connector_push(
+    name: str = typer.Argument(...),
+    path: str = typer.Argument(..., help="Destination folder/app ID / sObject API name"),
+    file: str = typer.Argument(..., help="Local file or inline JSON"),
+) -> None:
+    """Push a file or record to a connector."""
+    from praxia.connectors import get_connector
+    from praxia.connectors.base import ConnectorItem
+
+    config = _load_connector_config(name)
+    conn = get_connector(name, **config)
+    p = Path(file)
+    if p.is_file():
+        body = p.read_bytes()
+        item = ConnectorItem(id="", name=p.name, content=body)
+    else:
+        item = ConnectorItem(id="", name="praxia_inline.json", content=file)
+    receipt = conn.push(path, item)
+    console.print(f"📤 Pushed to [bold]{name}[/bold]: {receipt}")
+
+
+def _load_connector_config(name: str) -> dict[str, str]:
+    """Read connector credentials from env vars (PRAXIA_CONN_<NAME>_<KEY>)."""
+    import os
+
+    prefix = f"PRAXIA_CONN_{name.upper()}_"
+    return {
+        k[len(prefix):].lower(): v
+        for k, v in os.environ.items()
+        if k.startswith(prefix)
+    }
 
 
 if __name__ == "__main__":

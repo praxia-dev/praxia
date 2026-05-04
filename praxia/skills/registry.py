@@ -44,6 +44,7 @@ class SkillRegistry:
         self.root = Path(storage_dir)
         (self.root / "personal").mkdir(parents=True, exist_ok=True)
         (self.root / "org").mkdir(parents=True, exist_ok=True)
+        (self.root / "distributed").mkdir(parents=True, exist_ok=True)
         self._usage_log = self.root / "usage.jsonl"
 
     def register_personal(self, skill: Skill, user_id: str) -> RegisteredSkill:
@@ -177,3 +178,67 @@ class SkillRegistry:
         dst = dst_dir / "SKILL.md"
         dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
         return RegisteredSkill(name=name, manifest_path=dst, scope="org")
+
+    # --- Admin distribution ------------------------------------------------
+
+    def distribute(
+        self,
+        skill: Skill,
+        *,
+        target_users: list[str] | None = None,
+        target_roles: list[str] | None = None,
+    ) -> list[RegisteredSkill]:
+        """Push a skill to specific users or roles. Admin-driven.
+
+        Distributed skills don't replace user's personal skills — they appear
+        as additional entries in `list_for_user()`.
+        """
+        if not target_users and not target_roles:
+            raise ValueError("Must specify target_users or target_roles")
+        out: list[RegisteredSkill] = []
+        for target in (target_users or []) + (target_roles or []):
+            target_dir = self.root / "distributed" / target / skill.manifest.name
+            target_dir.mkdir(parents=True, exist_ok=True)
+            path = target_dir / "SKILL.md"
+            path.write_text(skill.to_skill_md(), encoding="utf-8")
+            out.append(
+                RegisteredSkill(
+                    name=skill.manifest.name,
+                    manifest_path=path,
+                    scope="distributed",
+                    user_id=target,
+                )
+            )
+        return out
+
+    def list_distributed_for(self, *, user_id: str, role: str) -> list[RegisteredSkill]:
+        """All distributed skills targeting this user_id or role."""
+        out: list[RegisteredSkill] = []
+        for target in (user_id, role):
+            base = self.root / "distributed" / target
+            if not base.exists():
+                continue
+            out.extend(
+                RegisteredSkill(
+                    name=p.parent.name,
+                    manifest_path=p,
+                    scope="distributed",
+                    user_id=target,
+                )
+                for p in base.glob("*/SKILL.md")
+            )
+        return out
+
+    def list_for_user(self, *, user_id: str, role: str) -> list[RegisteredSkill]:
+        """Effective skill catalog visible to a specific user.
+
+        Personal entries override distributed; distributed override org.
+        """
+        seen: dict[str, RegisteredSkill] = {}
+        for s in self.list_org():
+            seen[s.name] = s
+        for s in self.list_distributed_for(user_id=user_id, role=role):
+            seen[s.name] = s
+        for s in self.list_personal(user_id):
+            seen[s.name] = s
+        return list(seen.values())

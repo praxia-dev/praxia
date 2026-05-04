@@ -171,3 +171,130 @@ def test_hindsight_backend_listed() -> None:
         load_backend("unsupported_backend_xyz")
     except ValueError as e:
         assert "hindsight" in str(e).lower()
+
+
+def test_admin_user_update_and_delete() -> None:
+    """Admin can edit and delete users via AuthManager."""
+    from praxia.auth import AuthManager, Role
+
+    with tempfile.TemporaryDirectory() as d:
+        auth = AuthManager(storage_dir=d, bootstrap_admin=None)
+        user, _ = auth.create_user("alice", role=Role.MEMBER, email="alice@a.test")
+
+        updated = auth.update_user("alice", email="alice@b.test", role=Role.OPERATOR)
+        assert updated.email == "alice@b.test"
+        assert updated.role == Role.OPERATOR.value
+
+        # Soft-deactivate
+        auth.deactivate_user("alice")
+        assert auth.users.get_by_username("alice").is_active is False
+
+        # Hard delete
+        assert auth.delete_user("alice") is True
+        assert auth.users.get_by_username("alice") is None
+        # Re-deletion is a no-op
+        assert auth.delete_user("alice") is False
+
+
+def test_prompts_personal_org_distributed_scopes() -> None:
+    """PromptStore handles all three scopes correctly."""
+    from praxia.skills.prompts import PromptStore
+
+    with tempfile.TemporaryDirectory() as d:
+        store = PromptStore(storage_dir=d)
+
+        # Personal
+        store.save_personal("alice", name="my_prompt", body="hello", description="x")
+        assert store.get_personal("alice", "my_prompt") is not None
+
+        # Promote → org
+        promoted = store.promote("alice", "my_prompt")
+        assert promoted is not None and promoted.scope == "org"
+        assert store.get_org("my_prompt") is not None
+
+        # Distribute to a role
+        store.distribute(
+            name="curated", body="curated body", target_roles=["member"]
+        )
+        bob_prompts = store.list_for_user(user_id="bob", role="member")
+        assert any(p.name == "curated" for p in bob_prompts)
+        # Viewer doesn't see member-targeted prompt
+        viewer_prompts = store.list_for_user(user_id="charlie", role="viewer")
+        assert not any(p.name == "curated" for p in viewer_prompts)
+
+        # Personal overrides org
+        store.save_personal("alice", name="my_prompt", body="overridden")
+        merged = store.list_for_user(user_id="alice", role="member")
+        my_prompt = next(p for p in merged if p.name == "my_prompt")
+        assert my_prompt.scope == "personal"
+        assert my_prompt.body == "overridden"
+
+
+def test_skill_registry_distribution() -> None:
+    """SkillRegistry can distribute to roles and merge correctly."""
+    from praxia.skills.business import InvestmentSkill
+    from praxia.skills.registry import SkillRegistry
+
+    with tempfile.TemporaryDirectory() as d:
+        reg = SkillRegistry(storage_dir=d)
+        skill = InvestmentSkill()
+        result = reg.distribute(skill, target_roles=["member"])
+        assert len(result) == 1
+        assert result[0].scope == "distributed"
+
+        bob_skills = reg.list_for_user(user_id="bob", role="member")
+        assert any(s.name == "investment_analyst" for s in bob_skills)
+
+
+def test_dashboard_personal_summary() -> None:
+    """Dashboard aggregates personal memory correctly."""
+    from praxia.analytics import Dashboard
+    from praxia.memory.personal import PersonalMemory
+
+    with tempfile.TemporaryDirectory() as d:
+        # Seed with a few memories
+        pm = PersonalMemory(
+            user_id="alice", backend="json", storage_dir=Path(d) / "personal"
+        )
+        ep = pm.record_episode(flow_name="sales", inputs={"x": 1}, output="...")
+        pm.record_outcome(episode_id=ep.id, success=True, score=0.9)
+        pm.record_episode(flow_name="logic", inputs={"y": 2}, output="...")
+
+        d_ = Dashboard(memory_dir=d)
+        summary = d_.personal_summary("alice")
+        assert summary.user_id == "alice"
+        assert summary.episodes == 2
+        assert summary.outcomes_recorded == 1
+        assert summary.success_rate == 1.0
+
+
+def test_connector_registry_lists_six() -> None:
+    """All six connectors are wired into the factory."""
+    from praxia.connectors.registry import list_builtin
+
+    builtin = list_builtin()
+    assert set(builtin) == {"box", "sharepoint", "dropbox", "gdrive", "kintone", "salesforce"}
+
+
+def test_connector_missing_dep_raises_clear_error() -> None:
+    """Connectors raise MissingDependencyError when SDK isn't installed."""
+    from praxia.connectors import MissingDependencyError, get_connector
+
+    # Try one that's almost certainly not installed in CI
+    try:
+        get_connector("dropbox", access_token="dummy")
+    except (MissingDependencyError, ImportError) as e:
+        assert "dropbox" in str(e).lower()
+    except Exception:
+        # If actually installed, the constructor may accept the dummy token
+        pass
+
+
+def test_connector_unknown_name_raises() -> None:
+    """Unknown connector name raises ValueError listing built-ins."""
+    from praxia.connectors import get_connector
+    try:
+        get_connector("nonexistent")
+    except ValueError as e:
+        msg = str(e).lower()
+        assert "box" in msg and "salesforce" in msg

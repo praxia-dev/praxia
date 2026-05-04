@@ -238,6 +238,77 @@ class AuthManager:
         )
         return user
 
+    def update_user(
+        self,
+        username: str,
+        *,
+        new_username: str | None = None,
+        email: str | None = None,
+        role: Role | str | None = None,
+        is_active: bool | None = None,
+        metadata_updates: dict[str, str] | None = None,
+    ) -> User:
+        """Edit a user's profile. All fields optional."""
+        u = self.users.get_by_username(username)
+        if not u:
+            raise ValueError(f"Unknown user: {username}")
+        changes: dict[str, str] = {}
+        if new_username and new_username != u.username:
+            if self.users.get_by_username(new_username):
+                raise ValueError(f"Username already in use: {new_username}")
+            changes["username"] = f"{u.username} -> {new_username}"
+            u.username = new_username
+        if email is not None:
+            changes["email"] = email
+            u.email = email
+        if role is not None:
+            r = role.value if isinstance(role, Role) else role
+            changes["role"] = r
+            u.role = r
+        if is_active is not None:
+            changes["is_active"] = str(is_active)
+            u.is_active = is_active
+        if metadata_updates:
+            u.metadata.update(metadata_updates)
+            changes["metadata"] = ",".join(metadata_updates)
+        self.users.update(u)
+        self.audit.record(
+            actor_id="system",
+            actor_role="admin",
+            action="user.update",
+            resource=f"user:{u.username}",
+            metadata=changes,
+        )
+        return u
+
+    def delete_user(self, username: str) -> bool:
+        """Hard-delete a user and audit the action."""
+        u = self.users.get_by_username(username)
+        if not u:
+            return False
+        ok = self.users.delete(u.id)
+        if ok:
+            self.audit.record(
+                actor_id="system",
+                actor_role="admin",
+                action="user.delete",
+                resource=f"user:{username}",
+                metadata={"id": u.id},
+            )
+        return ok
+
+    def deactivate_user(self, username: str) -> None:
+        u = self.users.get_by_username(username)
+        if not u:
+            raise ValueError(f"Unknown user: {username}")
+        self.users.deactivate(u.id)
+        self.audit.record(
+            actor_id="system",
+            actor_role="admin",
+            action="user.deactivate",
+            resource=f"user:{username}",
+        )
+
     def grant_role(self, username: str, role: Role | str) -> None:
         u = self.users.get_by_username(username)
         if not u:

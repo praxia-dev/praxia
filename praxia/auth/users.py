@@ -114,6 +114,17 @@ class UserStore:
         u.is_active = False
         self.update(u)
 
+    def delete(self, user_id: str) -> bool:
+        """Hard-delete a user. Returns True iff a user was removed."""
+        users_before = self.list_all()
+        users_after = [u for u in users_before if u.id != user_id]
+        if len(users_after) == len(users_before):
+            return False
+        with self.users_path.open("w", encoding="utf-8") as f:
+            for u in users_after:
+                f.write(json.dumps(asdict(u), ensure_ascii=False) + "\n")
+        return True
+
     def rotate_api_key(self, user_id: str) -> str:
         u = self.get_by_id(user_id)
         if not u:

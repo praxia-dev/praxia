@@ -62,6 +62,20 @@ qwen-local = [
     # Run Qwen locally via Ollama (LiteLLM bridges automatically)
     "ollama>=0.3",
 ]
+# --- External storage / SaaS connectors ---
+box = ["boxsdk>=3.10"]
+sharepoint = ["msal>=1.28", "requests>=2.31"]
+dropbox = ["dropbox>=11"]
+gdrive = [
+    "google-api-python-client>=2.130",
+    "google-auth>=2.30",
+    "google-auth-oauthlib>=1.2",
+]
+kintone = ["requests>=2.31"]
+salesforce = ["simple-salesforce>=1.12"]
+connectors = [
+    "praxia[box,sharepoint,dropbox,gdrive,kintone,salesforce]",
+]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
@@ -69,7 +83,7 @@ dev = [
     "mypy>=1.11",
 ]
 all = [
-    "praxia[ui,graph,qwen-local,dev]",
+    "praxia[ui,graph,qwen-local,connectors,dev]",
 ]
 
 [project.scripts]
