@@ -2,6 +2,8 @@
 
 Praxia is licensed under [Apache License 2.0](LICENSE).
 
+**Praxia copyright**: © 2026 GENARCH (sole proprietor: Genki Watanabe) and Praxia Contributors. All rights reserved.
+
 This product includes software developed by the third parties listed below.
 Each dependency retains its own license. By using Praxia, you accept the
 terms of the bundled licenses for the dependencies you choose to install.
