@@ -159,3 +159,8 @@ warn_unused_ignores = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "evaluation: regression-prevention scenario tests (run with -m evaluation)",
+    "integration: tests that hit real external services (skipped by default)",
+    "slow: tests > 5s; usable as -m 'not slow' for fast iteration",
+]

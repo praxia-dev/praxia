@@ -396,6 +396,23 @@ pre .str     { color: var(--accent-bright); }
   margin-bottom: 0.5rem;
 }
 
+.persona-card { padding: 1.5rem; }
+.persona-icon { font-size: 32px; margin-bottom: 0.5rem; }
+.persona-card .persona-need { color: rgba(255,255,255,0.85); }
+.persona-card .persona-fit { color: rgba(255,255,255,0.78); }
+.persona-card .persona-result {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(201,164,86,0.2);
+  color: rgba(255,255,255,0.92);
+}
+.section-subtitle {
+  color: rgba(255,255,255,0.7);
+  max-width: 720px;
+  margin: 0.5rem auto 0;
+  font-size: 1.05rem;
+}
+
 .domain-tag {
   display: inline-block;
   padding: 0.2rem 0.65rem;

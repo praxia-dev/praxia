@@ -42,12 +42,12 @@
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
+      <a href="#who-its-for">Who it's for</a>
+      <a href="#oss-edge">OSS edge</a>
       <a href="#how-it-works">How it works</a>
-      <a href="#ui-tour">UI</a>
       <a href="#examples">Examples</a>
       <a href="#roi">ROI</a>
       <a href="#extending">Extend</a>
-      <a href="#where-it-fits">Where it fits</a>
       <a href="#faq">FAQ</a>
       <a href="#pricing">Pricing</a>
       <a id="mirror-link" href="#" target="_blank" rel="noopener" class="nav-mirror" title="Switch to the other mirror">
@@ -247,6 +247,152 @@
           <div class="card-icon">📐</div>
           <h3>Formal design specs (EN + JA)</h3>
           <p>Basic design / I/F spec / detailed design as procurement-ready documents in both English and Japanese. Every public surface and plugin protocol covered.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="who-its-for" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Who it's for</span>
+        <h2>Four target personas, one platform.</h2>
+        <p class="section-subtitle">
+          Praxia is opinionated about <em>where</em> it shines —
+          mid-cap to large enterprises with senior staff whose tacit
+          knowledge is currently locked in one person's editor.
+        </p>
+      </div>
+      <div class="grid grid-2">
+        <article class="card persona-card">
+          <div class="persona-icon">🏢</div>
+          <h3>Information Systems / Platform team (300–5,000 employees)</h3>
+          <p class="persona-need">
+            <strong>Need:</strong> Roll out AI tools across the org without
+            handing every team a different vendor — and without
+            paywalling SSO / RBAC / audit.
+          </p>
+          <p class="persona-fit">
+            <strong>Fit:</strong> Auth + RBAC + ACL + per-user OAuth +
+            audit log all in OSS, not behind an enterprise tier. Self-hostable
+            on-prem or private cloud. Same code as the OSS, just operated by you.
+          </p>
+          <p class="persona-result">
+            <strong>Typical year-1 result:</strong> 100 knowledge workers,
+            <strong>~$1.25M net benefit</strong>, full audit trail,
+            no per-seat licensing surprises.
+          </p>
+        </article>
+        <article class="card persona-card">
+          <div class="persona-icon">🏗️</div>
+          <h3>Engineering / Product VP (50–500 in scope)</h3>
+          <p class="persona-need">
+            <strong>Need:</strong> Senior architects' code-review and
+            design intuition is the bottleneck. Junior PMs ramp in 12–18
+            months. Best practices live in Slack threads and one staff
+            engineer's head.
+          </p>
+          <p class="persona-fit">
+            <strong>Fit:</strong> DesignSkill + sleep-time consolidation
+            distills "how senior X reviews specs" into reusable shared
+            blocks. Markdown + git frozen layer fits existing PR review
+            workflow.
+          </p>
+          <p class="persona-result">
+            <strong>Typical year-1 result:</strong> Senior load 16h/wk → <strong>4h/wk</strong>,
+            junior PM ramp <strong>6–9 months</strong>, NFR coverage 5–7 → <strong>15–20 axes</strong>.
+          </p>
+        </article>
+        <article class="card persona-card">
+          <div class="persona-icon">⚖️</div>
+          <h3>Legal / Compliance lead (regulated industry)</h3>
+          <p class="persona-need">
+            <strong>Need:</strong> 50–100 contracts/month bottlenecked on 2–3
+            people. Critical risk slips through under deadline. Need an
+            <em>auditable</em> AI workflow with no vendor lock-in.
+          </p>
+          <p class="persona-fit">
+            <strong>Fit:</strong> LegalSkill (RACE framework) + read-only
+            memory mode for sensitive contracts + per-user OAuth respects
+            external system ACL + every action audited. Apache 2.0 means
+            you can show the source to your auditors.
+          </p>
+          <p class="persona-result">
+            <strong>Typical year-1 result:</strong> Per-contract review
+            60–90min → <strong>10–15min</strong>, throughput 50–80/mo →
+            <strong>200–300/mo</strong>, critical-miss rate
+            5–10% → <strong>1–2%</strong>.
+          </p>
+        </article>
+        <article class="card persona-card">
+          <div class="persona-icon">🧪</div>
+          <h3>OSS / Research integrator (engineering team)</h3>
+          <p class="persona-need">
+            <strong>Need:</strong> Build a domain-specific agent system
+            over Mem0 / LangGraph / your-own-vector-DB without
+            re-implementing auth, memory cycling, dashboards, exporters
+            yourself.
+          </p>
+          <p class="persona-fit">
+            <strong>Fit:</strong> 7 plugin types (~50 LoC each) — connectors,
+            memory backends, parsers, exporters, OAuth providers, skills,
+            flows. Use as a Python library, run <code>praxia serve</code>
+            as a backend, embed in LangGraph. Apache 2.0.
+          </p>
+          <p class="persona-result">
+            <strong>Typical day-30:</strong> domain skill PR'd, custom
+            connector pip-installable, memory cycling working,
+            <strong>~3 weeks ahead of building it from scratch</strong>.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="oss-edge" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Why OSS matters here</span>
+        <h2>The capabilities you typically pay for — already in the package.</h2>
+      </div>
+      <div class="grid grid-3">
+        <article class="card">
+          <h3>SSO + RBAC + audit are not paywalled</h3>
+          <p>OIDC SSO (Google / Microsoft / Okta / GitHub / Keycloak) is in
+          the OSS. Most agent frameworks ship without it; most agent
+          platforms paywall it. Praxia treats it as table stakes.</p>
+        </article>
+        <article class="card">
+          <h3>Memory format is not locked in</h3>
+          <p>Layer 4 is plain Markdown in your git repo. Layer 3 exports to
+          JSONL. Layer 1 is your chosen backend's native format. The
+          framework doesn't hold your data hostage — leaving costs nothing.</p>
+        </article>
+        <article class="card">
+          <h3>You can read every line</h3>
+          <p>Apache 2.0. Show the source to your auditors, your security
+          team, your customers. No "trust us, the SaaS is secure" —
+          inspect the auth manager yourself.</p>
+        </article>
+        <article class="card">
+          <h3>Multi-LTM ensembles, not single-vendor</h3>
+          <p>Run Mem0 + Zep + HindSight in parallel and fuse with RRF, or
+          route per query. No commercial agent platform exposes this — they
+          pick a backend and lock you in. Praxia treats it as a first-class feature.</p>
+        </article>
+        <article class="card">
+          <h3>Per-user OAuth respects external ACL</h3>
+          <p>When alice pulls from Box, Box's own ACL applies — alice only
+          sees what alice can see. Service-account designs (typical SaaS
+          shortcut) leak data across users. Praxia's per-user OAuth makes
+          this the default.</p>
+        </article>
+        <article class="card">
+          <h3>Run fully on-prem with Gemma / Qwen</h3>
+          <p>Set <code>PRAXIA_LOCAL_MODEL=gemma</code>, run Ollama,
+          choose <code>backend=json</code>. No cloud LLM, no cloud vector DB,
+          no telemetry. Air-gapped customers run identical code as
+          cloud customers.</p>
         </article>
       </div>
     </div>

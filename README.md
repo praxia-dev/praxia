@@ -33,6 +33,32 @@ Praxia turns "one expert's drawer" into "everyone's best practices."
 
 ---
 
+## 👥 Who Praxia is for
+
+| Persona | What they need | How Praxia fits | Typical year-1 result |
+|---|---|---|---|
+| **🏢 Information Systems / Platform team** (300–5,000 employees) | Roll out AI tools without paywalled SSO/RBAC/audit, on-prem option | Auth + RBAC + ACL + per-user OAuth + audit log all in OSS, self-hostable | 100 KW × ~$1.25M net benefit, full audit trail |
+| **🏗️ Engineering / Product VP** (50–500 in scope) | Senior architect bottleneck; junior PM 12–18mo ramp | DesignSkill + sleep-time consolidation distills senior review patterns; Markdown+git frozen layer fits PR workflow | Senior load 16h/wk → 4h/wk; junior ramp 6–9mo |
+| **⚖️ Legal / Compliance lead** (regulated industry) | 50–100 contracts/mo bottleneck; need *auditable* AI workflow without lock-in | LegalSkill (RACE) + read-only memory mode + per-user OAuth + every action audited; Apache 2.0 source for auditors | 60–90min → 10–15min/contract; throughput 50–80/mo → 200–300/mo |
+| **🧪 OSS / Research integrator** | Build domain agent system without re-implementing auth, memory cycling, exporters | 7 plugin types (~50 LoC each); use as library, run `praxia serve` as backend, embed in LangGraph | Day-30: domain skill + custom connector + memory cycling working — **~3 weeks ahead of from-scratch** |
+
+Detailed Before/After by industry: [docs/use-cases.md](docs/use-cases.md).
+
+---
+
+## 💎 Why OSS matters here
+
+The capabilities you typically pay enterprise tier for — already in the Apache 2.0 package:
+
+- **SSO + RBAC + audit are not paywalled.** OIDC SSO (Google / Microsoft / Okta / GitHub / Keycloak) is in the OSS. Most agent frameworks ship without it; most agent platforms paywall it. Praxia treats it as table stakes.
+- **Memory format is not locked in.** Layer 4 is plain Markdown in your git repo. Layer 3 exports to JSONL. Layer 1 is your chosen backend's native format. Leaving costs nothing.
+- **You can read every line.** Apache 2.0. Show the source to your auditors, your security team, your customers.
+- **Multi-LTM ensembles, not single-vendor.** Run Mem0 + Zep + HindSight in parallel, fuse with RRF, or route per query. No commercial agent platform exposes this — they pick a backend and lock you in.
+- **Per-user OAuth respects external ACL.** When Alice pulls from Box, Box's own ACL applies — Alice only sees what Alice can see. Service-account designs (typical SaaS shortcut) leak data across users.
+- **Air-gapped operation.** `PRAXIA_LOCAL_MODEL=gemma`, Ollama, `backend=json` — no cloud LLM, no cloud vector DB, no telemetry. Same code as cloud customers.
+
+---
+
 ## 🏗 Architecture — 5-Layer Memory Stack
 
 ![Architecture diagram](docs/images/architecture.svg)
@@ -438,7 +464,8 @@ Full guide: [docs/quickstart.md](docs/quickstart.md).
 
 > **Deploying it?** Two paths — fastest is `praxia ui` (full-stack); for "Praxia as a brain behind your own frontend" use the SDK or `praxia serve` (HTTP API). Setup recipes: [docs/deployment-modes.md](docs/deployment-modes.md).
 > **Building a connector?** Step-by-step recipe in [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md). The pattern is ~50 lines + an entry-point.
-> **Formal specs?** Basic design / I/F / detailed design (EN + JA) under [docs/specs/](docs/specs/).
+> **Formal specs?** Basic design / I/F / detailed design / **functional spec (機能仕様書)** (EN + JA) under [docs/specs/](docs/specs/).
+> **Regression suite?** 311 tests covering auth/memory/exporters/CLI/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ---
 
