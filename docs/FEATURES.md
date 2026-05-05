@@ -37,7 +37,14 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 23. [File parsers (PDF / Office / CSV / HTML / text)](#23-file-parsers-pdf--office--csv--html--text)
 24. [Audio I/O — voice input + voice output](#24-audio-io--voice-input--voice-output)
 25. [User-delegated OAuth](#25-user-delegated-oauth-per-user-external-system-access)
-26. [Legal templates](#26-legal-templates)
+26. [Memory mode toggle (accumulate vs read-only)](#26-memory-mode-toggle-accumulate-vs-read-only)
+27. [Admin-controlled LTM policy](#27-admin-controlled-ltm-policy)
+28. [Output exporters (HTML / PPTX / DOCX / MD / JSON)](#28-output-exporters-html--pptx--docx--md--json)
+29. [Gemma support](#29-gemma-support-googles-open-weight-family)
+30. [Deployment modes (frontend-included vs backend-only)](#30-deployment-modes-frontend-included-vs-backend-only)
+31. [Custom connector guide](#31-custom-connector-guide)
+32. [Design specifications](#32-design-specifications)
+33. [Legal templates](#33-legal-templates)
 
 ---
 
@@ -1128,7 +1135,121 @@ when user-delegated isn't appropriate (e.g., headless CI jobs).
 
 ---
 
-## 26. Legal templates
+## 26. Memory mode toggle (accumulate vs read-only)
+
+Per-user switch for whether the assistant should record episodes / facts / outcomes / preferences. Useful when users want help on sensitive content without leaving a trail.
+
+```python
+PersonalMemory(user_id="alice", backend="mem0", mode="read_only")
+# record_* calls return a no-op MemoryEntry; nothing is persisted
+```
+
+CLI:
+```bash
+praxia memory mode --user-id alice read_only        # off
+praxia memory mode --user-id alice accumulate       # back on
+praxia memory show --user-id alice                  # see the resolved config + reason
+```
+
+Admins can lock the mode for the whole tenant or for specific roles:
+```bash
+praxia admin memory-policy-set --default-mode read_only --mode-locked
+praxia admin memory-policy-set --accumulate-locked-roles operator,admin
+```
+
+Resolution order: admin enforced > call-site argument > user pref > admin default. Implemented in [`praxia.memory.policy`](../praxia/memory/policy.py).
+
+---
+
+## 27. Admin-controlled LTM policy
+
+Pin which backend(s) users may pick, and what the default mode is, at the tenant level:
+
+```bash
+praxia admin memory-policy-set \
+    --enforced-backend mem0 \
+    --allowed mem0,zep \
+    --default-mode accumulate
+praxia admin memory-policy-show
+```
+
+Per-user `praxia memory backend --user-id alice zep` is honored only if `zep` is in `--allowed`. `--enforced-backend` overrides every user choice.
+
+---
+
+## 28. Output exporters (HTML / PPTX / DOCX / MD / JSON)
+
+Skills produce Markdown by default. Convert to whatever the requester wants:
+
+```python
+from praxia.io.exporters import export_as
+
+result = export_as(md_text, format="pptx", title="Q3 Review")
+# result.bytes → write to disk, stream over HTTP, push to a connector
+```
+
+Built-in formats: `md`, `html`, `pptx`, `docx`, `json`. The Markdown renderer is built-in (no `markdown` dep); PPTX / DOCX require the `[office]` extra.
+
+CLI shortcut:
+```bash
+praxia export report.md report.html
+praxia export report.md slides.pptx --title "Q3 Review"
+```
+
+The `OutputFormatSkill` infers the requested format from the user's natural-language hint (English or Japanese):
+
+```python
+from praxia.skills.output_format import OutputFormatSkill
+fs = OutputFormatSkill()
+fs.detect("レポートをパワポで").format          # "pptx"
+fs.detect("as a Word document").format          # "docx"
+fs.deliver(md, user_request="HTML please")      # ExporterResult with .bytes
+```
+
+Custom formats register via the `praxia.exporters` entry-point — same pattern as connectors.
+
+---
+
+## 29. Gemma support (Google's open-weight family)
+
+Aliases added to `LLM`:
+
+| Alias | Resolves to | Notes |
+|---|---|---|
+| `gemma` | `ollama/gemma2:9b` | Local, default — good size / quality balance |
+| `gemma-2b` | `ollama/gemma2:2b` | Edge / dev |
+| `gemma-9b` | `ollama/gemma2:9b` | Same as `gemma` |
+| `gemma-27b` | `ollama/gemma2:27b` | Largest local Gemma |
+| `gemma-cloud` | `vertex_ai/google/gemma-2-27b-it` | Hosted via Google Vertex AI |
+
+`PRAXIA_LOCAL_MODEL=gemma` makes `LLM.auto_detect()` fall back to Gemma instead of Qwen-local when no cloud LLM key is set.
+
+---
+
+## 30. Deployment modes (frontend-included vs backend-only)
+
+Praxia ships in two halves you can mix:
+
+* **Mode A (full-stack)**: `praxia ui` + Praxia core in one process — fastest path.
+* **Mode B (backend-only)**: SDK embed *or* `praxia serve` (FastAPI) — bring your own frontend.
+
+Full setup steps and a production checklist: [`docs/deployment-modes.md`](deployment-modes.md) / [`deployment-modes.ja.md`](deployment-modes.ja.md).
+
+---
+
+## 31. Custom connector guide
+
+Step-by-step recipe for building a custom storage / SaaS connector — including OAuth registration, ACL integration, audit logging, and PyPI publishing checklist. The pattern is **~50 lines of Python** + an entry-point declaration. See [`docs/CUSTOM_CONNECTORS.md`](CUSTOM_CONNECTORS.md) / [`CUSTOM_CONNECTORS.ja.md`](CUSTOM_CONNECTORS.ja.md).
+
+---
+
+## 32. Design specifications
+
+Formal documents in both English and Japanese — basic design / interface spec / detailed design. See [`docs/specs/`](specs/).
+
+---
+
+## 33. Legal templates
 
 `docs/legal/` contains starter templates for:
 

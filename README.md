@@ -361,6 +361,10 @@ m.consolidate(dry_run=True)
 
 Full guide: [docs/quickstart.md](docs/quickstart.md).
 
+> **Deploying it?** Two paths — fastest is `praxia ui` (full-stack); for "Praxia as a brain behind your own frontend" use the SDK or `praxia serve` (HTTP API). Setup recipes: [docs/deployment-modes.md](docs/deployment-modes.md).
+> **Building a connector?** Step-by-step recipe in [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md). The pattern is ~50 lines + an entry-point.
+> **Formal specs?** Basic design / I/F / detailed design (EN + JA) under [docs/specs/](docs/specs/).
+
 ---
 
 ## 📐 Design Philosophy

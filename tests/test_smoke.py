@@ -929,6 +929,169 @@ def test_routed_backend_rejects_unknown_write_target() -> None:
         raise AssertionError("Should have raised ValueError")
 
 
+def test_personal_memory_read_only_mode_drops_writes() -> None:
+    """In read_only mode, record_* calls return a no-op entry without persisting."""
+    from praxia import PersonalMemory
+
+    with tempfile.TemporaryDirectory() as d:
+        pm = PersonalMemory(
+            user_id="alice", backend="json", storage_dir=d, mode="read_only"
+        )
+        assert pm.mode == "read_only"
+
+        e1 = pm.record_fact("a fact that should NOT be persisted")
+        e2 = pm.record_episode(flow_name="test", inputs={}, output="...")
+        assert e1.metadata.get("read_only_dropped") is True
+        assert e2.metadata.get("read_only_dropped") is True
+
+        # Nothing landed on disk
+        assert pm.all_entries() == []
+
+        # Switch back and writes work again
+        pm.set_mode("accumulate")
+        e3 = pm.record_fact("real fact")
+        assert e3.metadata.get("read_only_dropped") is None
+        assert len(pm.all_entries()) == 1
+
+
+def test_memory_admin_policy_roundtrip_and_resolve() -> None:
+    """Admin policy persists and resolution merges with user pref."""
+    from praxia.memory.policy import (
+        MemoryAdminPolicy,
+        MemoryUserPreference,
+        resolve_memory_config,
+    )
+
+    with tempfile.TemporaryDirectory() as d:
+        # Admin pins the backend and locks the mode
+        admin = MemoryAdminPolicy(
+            enforced_backend="mem0",
+            default_backend="json",
+            allowed_backends=["mem0", "json"],
+            default_mode="read_only",
+            mode_locked=True,
+        )
+        admin.save(d)
+
+        # User wants something different — admin wins
+        pref = MemoryUserPreference(user_id="alice", backend="zep", mode="accumulate")
+        pref.save(d)
+
+        cfg = resolve_memory_config(user_id="alice", storage_dir=d)
+        assert cfg.backend == "mem0"          # admin enforced
+        assert cfg.mode == "read_only"        # admin locked
+        assert cfg.locked_by_admin is True
+        assert "admin enforced" in cfg.reason
+
+        # Without admin enforcement, user pref takes precedence
+        admin2 = MemoryAdminPolicy(
+            default_backend="json", default_mode="accumulate", mode_locked=False
+        )
+        admin2.save(d)
+        cfg2 = resolve_memory_config(user_id="alice", storage_dir=d)
+        assert cfg2.backend == "zep"
+        assert cfg2.mode == "accumulate"
+        assert cfg2.locked_by_admin is False
+
+
+def test_memory_admin_policy_is_backend_allowed() -> None:
+    from praxia.memory.policy import MemoryAdminPolicy
+
+    p = MemoryAdminPolicy(allowed_backends=["json", "mem0"])
+    assert p.is_backend_allowed("json") is True
+    assert p.is_backend_allowed("zep") is False
+
+    p_enforced = MemoryAdminPolicy(enforced_backend="mem0")
+    assert p_enforced.is_backend_allowed("mem0") is True
+    assert p_enforced.is_backend_allowed("json") is False  # enforced overrides allow-list
+
+
+def test_html_exporter_renders_markdown() -> None:
+    from praxia.io.exporters import export_as
+
+    md = "# Title\n\n## Section\n\n- bullet **bold**\n- bullet two\n\nA paragraph with `code`."
+    result = export_as(md, format="html", title="Doc")
+    html = result.bytes.decode("utf-8")
+    assert "<h1>Title</h1>" in html
+    assert "<h2>Section</h2>" in html
+    assert "<li>bullet <strong>bold</strong></li>" in html
+    assert "<code>code</code>" in html
+    assert "<title>Doc</title>" in html
+
+
+def test_md_exporter_passthrough_with_frontmatter() -> None:
+    from praxia.io.exporters import export_as
+
+    md = "Plain content here."
+    result = export_as(
+        md, format="md", title="My Doc", author="Alice", frontmatter={"tags": "test"}
+    )
+    text = result.bytes.decode("utf-8")
+    assert text.startswith("---")
+    assert "title: My Doc" in text
+    assert "author: Alice" in text
+    assert "Plain content" in text
+
+
+def test_json_exporter_handles_dict_and_string() -> None:
+    import json as _json
+    from praxia.io.exporters import export_as
+
+    r1 = export_as({"foo": "bar"}, format="json")
+    assert _json.loads(r1.bytes) == {"foo": "bar"}
+
+    r2 = export_as("hello", format="json")
+    assert _json.loads(r2.bytes) == {"text": "hello"}
+
+
+def test_export_as_unknown_format_raises() -> None:
+    from praxia.io.exporters import export_as
+
+    try:
+        export_as("x", format="weirdfmt")
+    except ValueError as e:
+        assert "weirdfmt" in str(e)
+    else:
+        raise AssertionError("Should have raised ValueError")
+
+
+def test_supported_formats_include_builtins() -> None:
+    from praxia.io.exporters import supported_formats
+
+    fmts = supported_formats()
+    for needed in ("md", "html", "json", "pptx", "docx"):
+        assert needed in fmts
+
+
+def test_output_format_skill_detects_pptx_from_japanese() -> None:
+    """OutputFormatSkill recognizes Japanese format hints."""
+    from praxia.skills.output_format import OutputFormatSkill
+
+    fs = OutputFormatSkill()
+    assert fs.detect("レポートをパワポで").format == "pptx"
+    assert fs.detect("Word の文書にして").format == "docx"
+    assert fs.detect("html for the browser please").format == "html"
+    assert fs.detect("just give me markdown").format == "md"
+    assert fs.detect("nothing about format").format == "md"  # default fallback
+
+
+def test_output_format_skill_deliver_returns_bytes() -> None:
+    from praxia.skills.output_format import OutputFormatSkill
+
+    fs = OutputFormatSkill()
+    result = fs.deliver("# Title\n\nbody", user_request="HTML please")
+    assert result.format == "html"
+    assert b"<h1>Title</h1>" in result.bytes
+
+
+def test_gemma_alias_registered() -> None:
+    from praxia.core.llm import DEFAULT_ALIASES
+
+    assert "gemma" in DEFAULT_ALIASES
+    assert DEFAULT_ALIASES["gemma"].startswith("ollama/")
+    assert DEFAULT_ALIASES["gemma-cloud"].startswith("vertex_ai/")
+
+
 def test_authmanager_has_policies_and_exports() -> None:
     """AuthManager exposes policies + exports as composed sub-services."""
     from praxia.auth import AuthManager

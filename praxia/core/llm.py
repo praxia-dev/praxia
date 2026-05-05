@@ -51,6 +51,13 @@ DEFAULT_ALIASES: dict[str, str] = {
     "qwen": "dashscope/qwen-max",
     "qwen-72b": "dashscope/qwen2.5-72b-instruct",
     "qwen-local": "ollama/qwen2.5:14b",
+    # Gemma — Google's open-weight family. Local-first by default, cloud
+    # variants supported via Vertex AI.
+    "gemma": "ollama/gemma2:9b",          # default: local 9B (good size/quality)
+    "gemma-2b": "ollama/gemma2:2b",        # tiny / edge
+    "gemma-9b": "ollama/gemma2:9b",        # alias for 9B
+    "gemma-27b": "ollama/gemma2:27b",      # local 27B (largest open weight)
+    "gemma-cloud": "vertex_ai/google/gemma-2-27b-it",  # via Google Vertex AI
 }
 
 
@@ -198,5 +205,7 @@ class LLM:
             return "gemini"
         if os.getenv("DASHSCOPE_API_KEY"):
             return "qwen"
-        # Last resort: assume Ollama is running locally with Qwen
-        return "qwen-local"
+        # Last resort: pick a local Ollama model. PRAXIA_LOCAL_MODEL lets the
+        # operator opt into Gemma instead of the default Qwen.
+        local = os.getenv("PRAXIA_LOCAL_MODEL", "qwen-local")
+        return local if local in DEFAULT_ALIASES else "qwen-local"

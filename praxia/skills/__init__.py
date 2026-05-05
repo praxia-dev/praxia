@@ -33,11 +33,17 @@ from praxia.skills.business import (  # noqa: E402, F401  (registers via side-ef
     PurchasingSkill,
     SalesSkill,
 )
+from praxia.skills.output_format import OutputFormatSkill  # noqa: E402
+
+# Auto-register the OutputFormatSkill (domain="utility", so it stays out of
+# BUSINESS_SKILLS but is still discoverable via the SKILLS registry).
+if not SKILLS.has(OutputFormatSkill.manifest.name):
+    SKILLS.register(OutputFormatSkill.manifest.name, OutputFormatSkill)
 
 
 def get_business_skills() -> list[type[Skill]]:
-    """Return all built-in + entry-point business skill classes."""
-    return [cls for _, cls in SKILLS.items()]
+    """Return all registered skill classes whose domain is NOT 'utility'."""
+    return [cls for _, cls in SKILLS.items() if cls.manifest.domain != "utility"]
 
 
 # Backwards-compatible alias — kept so existing tests / examples / docs work.
@@ -54,6 +60,7 @@ __all__ = [
     "PurchasingSkill",
     "PatentSkill",
     "LegalSkill",
+    "OutputFormatSkill",
     "BUSINESS_SKILLS",
     "get_business_skills",
 ]

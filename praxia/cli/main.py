@@ -49,7 +49,7 @@ def init(
         "json", help="LTM backend: json|mem0|langmem|letta|zep|hindsight"
     ),
     model: str = typer.Option(
-        "auto", help="LLM model: auto|claude|chatgpt|gemini|qwen|qwen-local"
+        "auto", help="LLM model: auto|claude|chatgpt|gemini|qwen|qwen-local|gemma|gemma-cloud"
     ),
 ) -> None:
     """Initialize: create memory directories + register default skills + bootstrap admin."""
@@ -251,6 +251,39 @@ def freeze(
         tags=["frozen", "auto-promoted"],
     )
     console.print(f"✅ Frozen [bold]{block}[/bold] → {path}")
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="Host to bind"),
+    port: int = typer.Option(8000, help="Port to bind"),
+    storage_dir: str = typer.Option(".praxia"),
+    cors_origin: list[str] = typer.Option(
+        [], help="Allowed CORS origin (repeatable)"
+    ),
+    reload: bool = typer.Option(False, "--reload", help="Auto-reload on code change (dev only)"),
+) -> None:
+    """Run the FastAPI HTTP backend (mode B in deployment-modes.md).
+
+    Endpoints are versioned under /api/v1. Authenticate with X-API-Key or
+    a JWT issued by /api/v1/auth/login.
+
+    Requires `pip install 'praxia[server]'`.
+    """
+    try:
+        import uvicorn  # type: ignore[import-untyped]
+    except ImportError:
+        console.print(
+            "[red]uvicorn is not installed. Run: pip install 'praxia[server]'[/red]"
+        )
+        raise typer.Exit(1)
+    from praxia.server.app import create_app
+
+    fastapi_app = create_app(
+        storage_dir=storage_dir,
+        cors_origins=list(cors_origin) or None,
+    )
+    uvicorn.run(fastapi_app, host=host, port=port, reload=reload)
 
 
 # --- Phase 4: Skill promotion ------------------------------------------------
@@ -999,6 +1032,182 @@ def admin_export_shared_memory(
     auth = AuthManager()
     path = auth.exports.export_shared_memory(output_path=output, format=format)  # type: ignore[arg-type]
     console.print(f"💾 Exported shared memory → [bold]{path}[/bold]")
+
+
+# --- Admin: memory policy (which LTM users may use, accumulate vs read-only) ---
+
+@admin_app.command("memory-policy-show")
+def admin_memory_policy_show(
+    storage_dir: str = typer.Option(".praxia", help="Praxia storage directory"),
+) -> None:
+    """Show the current admin-level memory policy."""
+    from praxia.memory.policy import MemoryAdminPolicy
+
+    policy = MemoryAdminPolicy.load(storage_dir)
+    table = Table(title="Memory Admin Policy")
+    table.add_column("Setting", style="cyan")
+    table.add_column("Value")
+    table.add_row("enforced_backend", str(policy.enforced_backend or "—"))
+    table.add_row("default_backend", policy.default_backend)
+    table.add_row("allowed_backends", ", ".join(policy.allowed_backends) or "(any)")
+    table.add_row("default_mode", policy.default_mode)
+    table.add_row("mode_locked", str(policy.mode_locked))
+    table.add_row("accumulate_locked_to", ", ".join(policy.accumulate_locked_to) or "—")
+    console.print(table)
+
+
+@admin_app.command("memory-policy-set")
+def admin_memory_policy_set(
+    storage_dir: str = typer.Option(".praxia"),
+    enforced_backend: str = typer.Option("", help="Pin all users to this backend (empty = no enforcement)"),
+    default_backend: str = typer.Option("", help="Backend used when user has no preference"),
+    allowed: str = typer.Option("", help="Comma-separated whitelist of backends (empty = any)"),
+    default_mode: str = typer.Option("", help="accumulate | read_only"),
+    mode_locked: bool = typer.Option(False, "--mode-locked/--mode-unlocked"),
+    accumulate_locked_roles: str = typer.Option(
+        "", help="Comma-separated roles forced to accumulate (e.g. operator,admin)"
+    ),
+) -> None:
+    """Update the admin-level memory policy.
+
+    Empty string options leave the existing value untouched.
+    """
+    from praxia.memory.policy import MemoryAdminPolicy
+
+    policy = MemoryAdminPolicy.load(storage_dir)
+    if enforced_backend:
+        policy.enforced_backend = None if enforced_backend == "none" else enforced_backend
+    if default_backend:
+        policy.default_backend = default_backend
+    if allowed:
+        policy.allowed_backends = [b.strip() for b in allowed.split(",") if b.strip()]
+    if default_mode:
+        if default_mode not in ("accumulate", "read_only"):
+            console.print("[red]default_mode must be 'accumulate' or 'read_only'[/red]")
+            raise typer.Exit(1)
+        policy.default_mode = default_mode  # type: ignore[assignment]
+    policy.mode_locked = mode_locked
+    if accumulate_locked_roles:
+        policy.accumulate_locked_to = [
+            r.strip() for r in accumulate_locked_roles.split(",") if r.strip()
+        ]
+    path = policy.save(storage_dir)
+    console.print(f"💾 Memory policy updated → [bold]{path}[/bold]")
+
+
+# --- User: memory mode preference --------------------------------------------
+
+memory_app = typer.Typer(help="Per-user memory preferences (mode + backend)")
+app.add_typer(memory_app, name="memory")
+
+
+@memory_app.command("mode")
+def memory_mode_set(
+    user_id: str = typer.Option(..., help="User ID"),
+    mode: str = typer.Argument(..., help="accumulate | read_only"),
+    storage_dir: str = typer.Option(".praxia"),
+) -> None:
+    """Set this user's memory accumulation mode (subject to admin policy)."""
+    from praxia.memory.policy import MemoryAdminPolicy, MemoryUserPreference
+
+    if mode not in ("accumulate", "read_only"):
+        console.print("[red]mode must be 'accumulate' or 'read_only'[/red]")
+        raise typer.Exit(1)
+
+    admin = MemoryAdminPolicy.load(storage_dir)
+    if admin.mode_locked:
+        console.print(
+            f"[yellow]⚠ Admin policy locks mode to {admin.default_mode!r}. "
+            f"Your preference is saved but the effective mode will not change.[/yellow]"
+        )
+
+    pref = MemoryUserPreference.load(storage_dir, user_id)
+    pref.mode = mode  # type: ignore[assignment]
+    path = pref.save(storage_dir)
+    console.print(f"✅ {user_id}'s memory mode → [bold]{mode}[/bold] ({path})")
+
+
+@memory_app.command("backend")
+def memory_backend_set(
+    user_id: str = typer.Option(..., help="User ID"),
+    backend: str = typer.Argument(..., help="json | mem0 | langmem | letta | zep | hindsight"),
+    storage_dir: str = typer.Option(".praxia"),
+) -> None:
+    """Set this user's preferred memory backend (subject to admin policy)."""
+    from praxia.memory.policy import MemoryAdminPolicy, MemoryUserPreference
+
+    admin = MemoryAdminPolicy.load(storage_dir)
+    if not admin.is_backend_allowed(backend):
+        console.print(
+            f"[red]✗ Backend {backend!r} is not allowed by admin policy. "
+            f"Allowed: {admin.allowed_backends or 'any except enforcement'}[/red]"
+        )
+        raise typer.Exit(1)
+
+    pref = MemoryUserPreference.load(storage_dir, user_id)
+    pref.backend = backend
+    pref.save(storage_dir)
+    console.print(f"✅ {user_id}'s memory backend → [bold]{backend}[/bold]")
+
+
+@memory_app.command("show")
+def memory_show(
+    user_id: str = typer.Option(..., help="User ID"),
+    role: str = typer.Option("member", help="User role (used to evaluate role-based locks)"),
+    storage_dir: str = typer.Option(".praxia"),
+) -> None:
+    """Show the effective memory configuration for this user."""
+    from praxia.memory.policy import resolve_memory_config
+
+    cfg = resolve_memory_config(
+        user_id=user_id,
+        storage_dir=storage_dir,
+        user_role=role,
+    )
+    table = Table(title=f"Memory config for {user_id}")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value")
+    table.add_row("backend", cfg.backend)
+    table.add_row("mode", cfg.mode)
+    table.add_row("locked_by_admin", str(cfg.locked_by_admin))
+    table.add_row("reason", cfg.reason)
+    console.print(table)
+
+
+# --- Output exporters --------------------------------------------------------
+
+@app.command("export")
+def export_command(
+    input_path: str = typer.Argument(..., help="Input file (md/markdown)"),
+    output_path: str = typer.Argument(..., help="Output file (.html/.pptx/.docx/.json/.md)"),
+    format: str = typer.Option("", help="Override format (else inferred from extension)"),
+    title: str = typer.Option("", help="Document title for HTML/DOCX/PPTX"),
+) -> None:
+    """Render a Markdown file to HTML / PPTX / DOCX / JSON."""
+    from pathlib import Path
+    from praxia.io.exporters import export_as
+
+    src = Path(input_path)
+    if not src.exists():
+        console.print(f"[red]Input not found: {input_path}[/red]")
+        raise typer.Exit(1)
+
+    fmt = format or Path(output_path).suffix.lstrip(".")
+    if not fmt:
+        console.print("[red]Cannot infer format — pass --format[/red]")
+        raise typer.Exit(1)
+
+    kwargs = {"title": title} if title else {}
+    result = export_as(
+        src.read_text(encoding="utf-8"),
+        format=fmt,
+        output_path=output_path,
+        **kwargs,
+    )
+    console.print(
+        f"💾 Exported {input_path} → [bold]{output_path}[/bold] "
+        f"({result.format}, {result.size} bytes)"
+    )
 
 
 # --- Unified configuration (single source of truth for all keys) ------------
