@@ -134,6 +134,42 @@ from praxia import PersonalMemory
 pm = PersonalMemory(user_id="alice", backend="pinecone", api_key="...", index_name="praxia")
 ```
 
+### Composing multiple memory backends
+
+Once you have several backends, you don't have to pick one. Wrap them
+with `CompositeBackend` (parallel fan-out + fusion) or `RoutedBackend`
+(query-aware dispatch):
+
+```python
+from praxia.memory.composite import CompositeBackend, WeightedBackend
+from praxia.memory.router import RoutedBackend, RuleRouter
+from praxia.memory.backends import load_backend
+
+# Fan-out + Reciprocal Rank Fusion
+ensemble = CompositeBackend(
+    backends=[
+        WeightedBackend("pinecone", load_backend("pinecone", api_key=..., index_name=...)),
+        WeightedBackend("mem0",     load_backend("mem0")),
+        WeightedBackend("zep",      load_backend("zep")),
+    ],
+    fusion="rrf",          # rrf | union | intersection | weighted | llm_rerank
+    write_to="pinecone",   # writes go to one backend; reads fan-out
+)
+
+# Or route per query (English + Japanese keywords)
+routed = RoutedBackend(
+    backends={"pinecone": ..., "mem0": ..., "zep": ..., "json": ...},
+    router=RuleRouter(),
+    write_to="pinecone",
+)
+
+PersonalMemory(user_id="alice", backend=ensemble)   # or backend=routed
+```
+
+A custom backend integrates with both primitives transparently as long
+as it implements the 4-method protocol — fusion / routing logic lives
+above the backend layer.
+
 ---
 
 ## 4. Adding a business skill

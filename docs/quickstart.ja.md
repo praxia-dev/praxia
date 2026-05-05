@@ -120,7 +120,54 @@ praxia ui --port 8501
 - **💾 Admin** — 監査ログ・ユーザ・利用ログ・メモリ・ポリシー エクスポート
 - **ℹ About**
 
-## 7. 個人 → 組織メモリの蒸留
+## 7. 複数 LTM の融合 + 動的ルーティング (任意・精度向上)
+
+LTM はそれぞれ得意分野が異なります — エンティティ連結 (Mem0)、時系列 KG (Zep)、
+監査ログ (JSON)、ベクトル検索 (HindSight)。複数を同時に走らせて結果を融合
+したり、クエリ毎に最適なバックエンドへ切り替えたりすることで精度を上げます。
+
+```python
+from praxia.memory.composite import CompositeBackend, WeightedBackend
+from praxia.memory.backends import load_backend
+from praxia import PersonalMemory
+
+# A. 並列実行 + Reciprocal Rank Fusion で結果を融合
+composite = CompositeBackend(
+    backends=[
+        WeightedBackend("mem0",      load_backend("mem0"),      weight=1.5),
+        WeightedBackend("zep",       load_backend("zep"),       weight=1.0),
+        WeightedBackend("hindsight", load_backend("hindsight"), weight=1.0),
+    ],
+    fusion="rrf",       # rrf | union | intersection | weighted | llm_rerank
+    write_to="mem0",    # 書き込みは1箇所だけ、検索は全 backend に fan-out
+)
+pm = PersonalMemory(user_id="alice", backend=composite)
+```
+
+```python
+# B. 動的ルーティング — クエリ内容に応じて最適バックエンドを選択
+from praxia.memory.router import RoutedBackend, RuleRouter
+
+routed = RoutedBackend(
+    backends={
+        "mem0":      load_backend("mem0"),
+        "zep":       load_backend("zep"),
+        "hindsight": load_backend("hindsight"),
+        "json":      load_backend("json"),
+    },
+    router=RuleRouter(),   # または LLMRouter(llm=praxia.llm) で LLM 判定
+    write_to="mem0",
+)
+pm = PersonalMemory(user_id="alice", backend=routed)
+```
+
+ルールルータは英語と日本語の両方を判定:
+時系列 (`last week` / `先月`) → Zep、監査 (`changelog` / `履歴`) → JSON、
+エンティティ (`who is` / `について`) → Mem0、類似 (`類似`) → HindSight。
+
+戦略一覧と性能トレードオフは [FEATURES.md § 5.1](FEATURES.md#51-multi-ltm-fusion--dynamic-routing-accuracy-boost) を参照。
+
+## 8. 個人 → 組織メモリの蒸留
 
 ```bash
 praxia consolidate --dry-run                 # 何が昇格されるかを事前確認
@@ -128,7 +175,7 @@ praxia consolidate --threshold 0.75          # 本番閾値
 praxia freeze --block team_norms             # 安定したブロックを git 管理 Markdown に
 ```
 
-## 8. ユーザ委譲 OAuth (エンタープライズ推奨)
+## 9. ユーザ委譲 OAuth (エンタープライズ推奨)
 
 各 Praxia ユーザが **自身の認証情報で** 外部システムを認可。連携先システムの ACL がユーザ単位で適用されます:
 
@@ -147,7 +194,7 @@ praxia connector pull box 0 --user-id alice
 
 対応プロバイダ: Box / Microsoft / Dropbox / Google Drive / Salesforce。
 
-## 9. 管理操作
+## 10. 管理操作
 
 ```bash
 # ユーザ管理 (全操作監査ログ)
@@ -167,7 +214,7 @@ praxia admin export-users users.json --format json
 praxia admin export-memory ./backup --all
 ```
 
-## 10. リソース一覧
+## 11. リソース一覧
 
 ```bash
 praxia list flows         # 利用可能なフロー

@@ -59,6 +59,29 @@ PromotionEngine(
 )
 ```
 
+## 補足: 複数 LTM の同時利用 (Layer 1 内のオプション)
+
+Layer 1 (個人メモリ) は単一バックエンドだけでなく、**複数 LTM を同時利用**
+してその結果を融合する設計にも対応します。各バックエンドの得意分野を組み
+合わせることで、どれか 1 つを「正解」と決めずに精度向上できます。
+
+| バックエンド | 得意分野 |
+|---|---|
+| **Mem0** | エンティティ連結 + ハイブリッド検索 |
+| **Zep / Graphiti** | 時系列 KG (時間軸クエリ) |
+| **HindSight** | 汎用ベクトル検索 |
+| **JSON** | 監査ログ的な厳密リコール |
+
+2 つのコンポジションプリミティブ:
+
+- **`CompositeBackend`** — 全バックエンドへ並列クエリ → 結果を融合
+  (Reciprocal Rank Fusion / Union / Intersection / Weighted / LLM rerank)
+- **`RoutedBackend`** — クエリ内容を `RuleRouter` か `LLMRouter` で判定
+  → 最適バックエンドのみ呼び出し (英語と日本語の両方を判定)
+
+詳細は [FEATURES.md § 5.1](FEATURES.md#51-multi-ltm-fusion--dynamic-routing-accuracy-boost)。
+昇格パイプライン (Layer 2) は組み合わせ後のメモリにも素直に重なります。
+
 ## なぜ Graph 層を任意にしたか
 
 研究 (Mem0 / LinkedIn CMA / GraphRAG) を統合した結論:

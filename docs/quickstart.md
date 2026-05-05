@@ -121,7 +121,54 @@ praxia ui --port 8501
 - **Admin** — export audit log, users, usage, memory, policies (CSV / JSON / JSONL)
 - **About**
 
-## 7. Personal-to-org memory distillation
+## 7. Multi-LTM fusion + dynamic routing (optional, accuracy boost)
+
+Different LTMs are good at different things — entity linking (Mem0),
+temporal KG (Zep), audit trail (JSON), vector recall (HindSight). You can
+run several at once and either fuse the results or pick per-query.
+
+```python
+from praxia.memory.composite import CompositeBackend, WeightedBackend
+from praxia.memory.backends import load_backend
+from praxia import PersonalMemory
+
+# A. Parallel fan-out + Reciprocal Rank Fusion
+composite = CompositeBackend(
+    backends=[
+        WeightedBackend("mem0",      load_backend("mem0"),      weight=1.5),
+        WeightedBackend("zep",       load_backend("zep"),       weight=1.0),
+        WeightedBackend("hindsight", load_backend("hindsight"), weight=1.0),
+    ],
+    fusion="rrf",       # rrf | union | intersection | weighted | llm_rerank
+    write_to="mem0",    # writes go here only; reads fan-out
+)
+pm = PersonalMemory(user_id="alice", backend=composite)
+```
+
+```python
+# B. Dynamic routing — query-aware backend selection
+from praxia.memory.router import RoutedBackend, RuleRouter
+
+routed = RoutedBackend(
+    backends={
+        "mem0":      load_backend("mem0"),
+        "zep":       load_backend("zep"),
+        "hindsight": load_backend("hindsight"),
+        "json":      load_backend("json"),
+    },
+    router=RuleRouter(),   # or LLMRouter(llm=praxia.llm) for LLM-classified routes
+    write_to="mem0",
+)
+pm = PersonalMemory(user_id="alice", backend=routed)
+```
+
+The rule router auto-detects English **and** Japanese keywords:
+temporal (`last week` / `先月`) → Zep, audit (`changelog` / `履歴`) → JSON,
+entity (`who is` / `について`) → Mem0, similarity (`類似`) → HindSight.
+
+See [FEATURES.md § 5.1](FEATURES.md#51-multi-ltm-fusion--dynamic-routing-accuracy-boost) for the full strategy table and tradeoffs.
+
+## 8. Personal-to-org memory distillation
 
 Run the nightly batch that promotes effective patterns from individual
 memory to organizational blocks:
@@ -132,7 +179,7 @@ praxia consolidate --threshold 0.75          # production threshold
 praxia freeze --block team_norms             # freeze a stable block to git-tracked Markdown
 ```
 
-## 8. Per-user OAuth (recommended for enterprise)
+## 9. Per-user OAuth (recommended for enterprise)
 
 Each Praxia user authorizes external systems with **their own credentials** —
 the external system's native ACL is enforced per-user.
@@ -153,7 +200,7 @@ praxia connector pull box 0 --user-id alice
 Supported providers: Box, Microsoft (SharePoint/OneDrive), Dropbox,
 Google Drive, Salesforce. See [PLUGINS.md](PLUGINS.md) to add more.
 
-## 9. Admin operations
+## 10. Admin operations
 
 ```bash
 # User management (audited)
@@ -173,7 +220,7 @@ praxia admin export-users users.json --format json
 praxia admin export-memory ./backup --all
 ```
 
-## 10. Discover what's available
+## 11. Discover what's available
 
 ```bash
 praxia list flows         # available multi-agent flows

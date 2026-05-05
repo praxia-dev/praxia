@@ -280,6 +280,84 @@ PersonalMemory(user_id="alice", backend="hindsight",
 PersonalMemory(user_id="alice", backend="zep")           # for graph use
 ```
 
+### 5.1 Multi-LTM fusion + dynamic routing (accuracy boost)
+
+A single backend has a single failure mode. Praxia ships two composition
+primitives that combine multiple LTMs to lift recall and precision —
+without forcing you to pick a winner.
+
+**A. `CompositeBackend` — parallel fan-out + fusion**
+Fires the same query at all configured backends in parallel and merges the
+result lists. Five fusion strategies:
+
+| Strategy | When to use |
+|---|---|
+| `rrf` (default) | Reciprocal Rank Fusion — score-agnostic, robust baseline (Cormack et al. SIGIR 2009) |
+| `union` | Concatenate + dedupe — maximal recall |
+| `intersection` | Keep items found by ≥ N backends — high precision |
+| `weighted` | Per-backend weights × normalized rank score |
+| `llm_rerank` | LLM-as-judge reranks the candidate pool — slowest, most accurate |
+
+```python
+from praxia.memory.composite import CompositeBackend, WeightedBackend
+from praxia.memory.backends import load_backend
+
+composite = CompositeBackend(
+    backends=[
+        WeightedBackend("mem0",      load_backend("mem0"),      weight=1.5),
+        WeightedBackend("zep",       load_backend("zep"),       weight=1.0),
+        WeightedBackend("hindsight", load_backend("hindsight"), weight=1.0),
+        WeightedBackend("json",      load_backend("json"),      weight=0.5),
+    ],
+    fusion="rrf",
+    write_to="mem0",  # writes go here only; reads fan-out
+)
+PersonalMemory(user_id="alice", backend=composite)
+```
+
+A single backend failing is non-fatal — the fan-out catches the exception
+and continues with the remaining results.
+
+**B. `RoutedBackend` — query-aware dispatch**
+Inspects the query and picks the best backend(s) per call:
+
+| Query shape | Backends preferred | Why |
+|---|---|---|
+| Temporal (`last week`, `先月`) | zep → mem0 → hindsight | Time-axis KG |
+| Audit (`changelog`, `履歴`) | json → mem0 | Exact-recall append-only log |
+| Entity (`who is...`, `について`) | mem0 → hindsight → json | Entity linking |
+| Similarity (`similar`, `類似`) | hindsight → mem0 → letta | Vector search |
+| (none of the above) | mem0 + hindsight + json | Default ensemble |
+
+Two routers ship in the box:
+- `RuleRouter` — regex-based, deterministic, transparent (recommended default)
+- `LLMRouter` — LLM classifies the query intent (highest accuracy, costs an extra call)
+
+```python
+from praxia.memory.router import RoutedBackend, RuleRouter
+
+rb = RoutedBackend(
+    backends={
+        "mem0": load_backend("mem0"),
+        "zep": load_backend("zep"),
+        "hindsight": load_backend("hindsight"),
+        "json": load_backend("json"),
+    },
+    router=RuleRouter(),  # or LLMRouter(llm=praxia.llm)
+    write_to="mem0",
+)
+PersonalMemory(user_id="alice", backend=rb)
+```
+
+When the router picks a single backend, the call is direct (no fusion
+overhead). When it picks several, fan-out + RRF runs automatically.
+
+**Cost / latency tradeoff:**
+- Composite (4 backends, RRF) ≈ slowest backend's latency (parallel) + ms-level fusion overhead
+- Routed (single-backend route) ≈ same as the chosen backend
+- Routed (multi-backend route) ≈ same as composite for those backends
+- LLMRouter adds one classification round-trip (~200–500 ms)
+
 ---
 
 ## 6. LLM provider matrix

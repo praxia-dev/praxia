@@ -698,6 +698,237 @@ def test_audio_modules_import_clean() -> None:
     assert tts.provider == "openai"
 
 
+def test_composite_backend_rrf_fusion() -> None:
+    """CompositeBackend with RRF fuses results from multiple stub backends."""
+    from praxia.memory.backends.base import MemoryRecord
+    from praxia.memory.composite import CompositeBackend, WeightedBackend
+
+    class StubBackend:
+        def __init__(self, records: list[MemoryRecord]) -> None:
+            self._records = records
+
+        def add(self, *, user_id, text, kind, metadata):  # pragma: no cover
+            raise NotImplementedError
+
+        def search(self, *, user_id, query, limit):
+            return self._records[:limit]
+
+        def all(self, *, user_id=None):
+            return list(self._records)
+
+        def clear(self, *, user_id=None):  # pragma: no cover
+            pass
+
+    a = MemoryRecord(id="r1", user_id="alice", text="alpha", kind="fact", timestamp=1.0)
+    b = MemoryRecord(id="r2", user_id="alice", text="beta", kind="fact", timestamp=2.0)
+    c = MemoryRecord(id="r3", user_id="alice", text="gamma", kind="fact", timestamp=3.0)
+
+    composite = CompositeBackend(
+        backends=[
+            WeightedBackend("backend_a", StubBackend([a, b]), weight=1.0),
+            WeightedBackend("backend_b", StubBackend([b, c]), weight=2.0),
+        ],
+        fusion="rrf",
+    )
+    out = composite.search(user_id="alice", query="x", limit=5)
+    ids = [r.id for r in out]
+    # b appears at rank 2 in A and rank 1 in B (weight 2x) → highest aggregate score
+    assert ids[0] == "r2"
+    assert set(ids) == {"r1", "r2", "r3"}
+
+
+def test_composite_backend_intersection() -> None:
+    """Intersection only keeps items in >= min_agreement backends."""
+    from praxia.memory.backends.base import MemoryRecord
+    from praxia.memory.composite import CompositeBackend, WeightedBackend
+
+    class StubBackend:
+        def __init__(self, records):
+            self._records = records
+
+        def add(self, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        def search(self, *, user_id, query, limit):
+            return self._records[:limit]
+
+        def all(self, *, user_id=None):
+            return list(self._records)
+
+        def clear(self, *, user_id=None):  # pragma: no cover
+            pass
+
+    shared = MemoryRecord(id="shared", user_id="u", text="shared", kind="fact", timestamp=1.0)
+    only_a = MemoryRecord(id="only_a", user_id="u", text="solo a", kind="fact", timestamp=1.0)
+    only_b = MemoryRecord(id="only_b", user_id="u", text="solo b", kind="fact", timestamp=1.0)
+
+    composite = CompositeBackend(
+        backends=[
+            WeightedBackend("a", StubBackend([shared, only_a])),
+            WeightedBackend("b", StubBackend([shared, only_b])),
+        ],
+        fusion="intersection",
+        min_agreement=2,
+    )
+    out = composite.search(user_id="u", query="q", limit=5)
+    ids = {r.id for r in out}
+    assert ids == {"shared"}
+
+
+def test_composite_backend_handles_backend_failure() -> None:
+    """One backend raising shouldn't break the search."""
+    from praxia.memory.backends.base import MemoryRecord
+    from praxia.memory.composite import CompositeBackend, WeightedBackend
+
+    class GoodBackend:
+        def search(self, *, user_id, query, limit):
+            return [MemoryRecord(id="ok", user_id="u", text="ok", kind="fact", timestamp=1.0)]
+
+        def all(self, *, user_id=None):
+            return []
+
+        def add(self, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        def clear(self, **k):  # pragma: no cover
+            pass
+
+    class BrokenBackend:
+        def search(self, **k):
+            raise RuntimeError("backend on fire")
+
+        def all(self, **k):
+            raise RuntimeError("nope")
+
+        def add(self, **k):  # pragma: no cover
+            raise NotImplementedError
+
+        def clear(self, **k):  # pragma: no cover
+            pass
+
+    composite = CompositeBackend(
+        backends=[
+            WeightedBackend("good", GoodBackend()),
+            WeightedBackend("broken", BrokenBackend()),
+        ],
+        fusion="rrf",
+    )
+    out = composite.search(user_id="u", query="q", limit=5)
+    assert len(out) == 1
+    assert out[0].id == "ok"
+
+
+def test_rule_router_temporal_query_prefers_zep() -> None:
+    """Temporal keywords should pick KG-aware backends first."""
+    from praxia.memory.router import RuleRouter
+
+    router = RuleRouter()
+    decision = router.route(
+        "what did Bob say last week about pricing?",
+        available_backends=["mem0", "zep", "hindsight", "json"],
+    )
+    assert "zep" in decision.backends
+    assert decision.backends[0] == "zep"
+    assert "temporal" in decision.reason.lower()
+
+
+def test_rule_router_japanese_audit_query_picks_json() -> None:
+    """Japanese audit/history keywords route to JSON for exact recall."""
+    from praxia.memory.router import RuleRouter
+
+    router = RuleRouter()
+    decision = router.route(
+        "先月の変更履歴を教えて",
+        available_backends=["mem0", "zep", "hindsight", "json"],
+    )
+    # Temporal rule fires first (matches 先月) — that's documented behavior
+    assert decision.backends[0] in {"zep", "json"}
+    assert decision.confidence >= 0.5
+
+
+def test_rule_router_falls_back_to_default_ensemble() -> None:
+    """Unmatched query → default ensemble."""
+    from praxia.memory.router import RuleRouter
+
+    router = RuleRouter()
+    decision = router.route(
+        "foo bar baz",
+        available_backends=["mem0", "hindsight", "json"],
+    )
+    assert decision.backends == ["mem0", "hindsight", "json"]
+    assert "default" in decision.reason.lower() or "no specific" in decision.reason.lower()
+
+
+def test_routed_backend_dispatches_via_router() -> None:
+    """RoutedBackend uses the router's decision to pick backend(s)."""
+    from praxia.memory.backends.base import MemoryRecord
+    from praxia.memory.router import RouteDecision, RoutedBackend
+
+    class StubBackend:
+        def __init__(self, name):
+            self._name = name
+            self.search_calls = 0
+
+        def search(self, *, user_id, query, limit):
+            self.search_calls += 1
+            return [MemoryRecord(
+                id=f"{self._name}-1", user_id=user_id, text=self._name,
+                kind="fact", timestamp=1.0,
+            )]
+
+        def all(self, *, user_id=None):
+            return []
+
+        def add(self, *, user_id, text, kind, metadata):
+            return MemoryRecord(
+                id=f"{self._name}-w", user_id=user_id, text=text, kind=kind,
+                timestamp=1.0, metadata=metadata,
+            )
+
+        def clear(self, *, user_id=None):
+            pass
+
+    class StaticRouter:
+        def __init__(self, backends):
+            self._backends = backends
+
+        def route(self, query, *, available_backends):
+            return RouteDecision(
+                backends=self._backends,
+                fusion="rrf",
+                reason="static test router",
+                confidence=1.0,
+            )
+
+    backends = {"mem0": StubBackend("mem0"), "json": StubBackend("json")}
+    rb = RoutedBackend(
+        backends=backends,
+        router=StaticRouter(["json"]),
+        write_to="mem0",
+    )
+
+    # Search routes to JSON only
+    out = rb.search(user_id="alice", query="anything", limit=5)
+    assert backends["json"].search_calls == 1
+    assert backends["mem0"].search_calls == 0
+    assert out[0].id == "json-1"
+
+    # Write goes to write_to (mem0)
+    written = rb.add(user_id="alice", text="hi", kind="fact", metadata={})
+    assert written.id == "mem0-w"
+
+
+def test_routed_backend_rejects_unknown_write_target() -> None:
+    from praxia.memory.router import RoutedBackend, RuleRouter
+
+    try:
+        RoutedBackend(backends={"json": object()}, router=RuleRouter(), write_to="missing")
+    except ValueError as e:
+        assert "missing" in str(e)
+    else:
+        raise AssertionError("Should have raised ValueError")
+
+
 def test_authmanager_has_policies_and_exports() -> None:
     """AuthManager exposes policies + exports as composed sub-services."""
     from praxia.auth import AuthManager

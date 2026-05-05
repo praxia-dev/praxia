@@ -182,6 +182,11 @@ def list_(
         table.add_row("zep", "Zep / Graphiti — temporal KG (Layer 5)")
         table.add_row("hindsight", "vectorize-io/hindsight — agent memory store")
         console.print(table)
+        console.print(
+            "[dim]Combine multiple backends with CompositeBackend (RRF fusion) "
+            "or RoutedBackend (query-aware dispatch) — see "
+            "docs/FEATURES.md § 5.1.[/dim]"
+        )
     else:
         console.print(f"[red]Unknown target: {target}[/red]")
         raise typer.Exit(1)

@@ -44,6 +44,7 @@ Legend: ✅ supported · ~ partial / via plug-in · — not currently supported
 | Admin data exports (CSV/JSON) | — | — | — | ✅ | ✅ |
 | Personal + org usage dashboards | — | — | — | ✅ | ✅ |
 | Storage / SaaS connectors (Pull + Push) | — | — | ~ | ~ | ✅ ×6 |
+| Multi-LTM fusion + dynamic routing | — | — | — | — | ✅ |
 | MCP / Claude Skills format | ~ | ~ | ~ | — | ✅ |
 | License model | MIT (OSS) | MIT (OSS) | MIT (OSS) | Commercial | Apache 2.0 (OSS) |
 

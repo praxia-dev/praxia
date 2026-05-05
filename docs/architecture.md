@@ -34,6 +34,7 @@
 ### Layer 1: Personal Memory (`PersonalMemory`)
 - Auto-extracts tacit knowledge from conversations as a side effect of normal use.
 - Pluggable backend: `json` (default) / `mem0` / `langmem` / `letta` / `zep` / `hindsight`.
+- **Multi-backend composition**: wrap several backends in `CompositeBackend` for parallel fan-out + Reciprocal Rank Fusion, or `RoutedBackend` for query-aware dispatch (temporal → Zep, audit → JSON, entity → Mem0, similarity → HindSight). See [FEATURES.md § 5.1](FEATURES.md#51-multi-ltm-fusion--dynamic-routing-accuracy-boost).
 - Namespaced by `user_id`.
 
 ### Layer 2: Distillation & Promotion Engine (`SleepTimeConsolidator + PromotionEngine`)
@@ -123,6 +124,7 @@ Default roles: `admin` / `operator` / `member` / `viewer`.
 | Decision | Rationale |
 |----------|-----------|
 | Recommend Mem0 OSS as default LTM | Mature auto-extraction; entity-linking-based (after April 2026 graph removal) |
+| Multi-LTM via `CompositeBackend` / `RoutedBackend` | Each backend has different strengths — fusion (RRF) lifts recall without picking a winner; routing keeps single-backend latency for queries that fit one well |
 | Demote graph layer to optional | All-domain graphs have poor ROI (LinkedIn CMA / Mem0 itself signal this) |
 | Three parallel promotion paths | Avoid single-mechanism dependence (frequency + outcome + self-eval) |
 | Markdown + git as frozen layer | Reuse PR review / blame / history workflows already in place |

@@ -382,7 +382,7 @@ Mem0 OSS removed `graph_store` support in April 2026. We follow that signal: vec
 
 ### 5. **Vendor lock-in is a non-goal**
 - LiteLLM lets any provider work
-- LTM backends are pluggable
+- LTM backends are pluggable — and you can run several at once via [CompositeBackend / RoutedBackend](docs/FEATURES.md#51-multi-ltm-fusion--dynamic-routing-accuracy-boost) for higher recall without picking a winner
 - Markdown + git is the persistence layer of last resort
 - Apache 2.0 license, evolving toward an open-core model
 

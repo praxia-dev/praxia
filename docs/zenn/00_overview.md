@@ -253,6 +253,49 @@ LLM("openai/gpt-4o") # 任意の LiteLLM 形式
 | **zep** | ✅ | ✅ | ✅ + 時系列 KG | Layer 5 関係性領域 |
 | **hindsight** | ✅ | ✅ | ❌ | vectorize-io インテグ |
 
+### 複数 LTM の同時利用 — 精度を上げるための合成プリミティブ
+
+「どの LTM が一番優秀か」を選ぶゲームを終わらせるための合成機構を 2 つ用意:
+
+```python
+# A. CompositeBackend: 並列に問い合わせて Reciprocal Rank Fusion で融合
+from praxia.memory.composite import CompositeBackend, WeightedBackend
+from praxia.memory.backends import load_backend
+
+composite = CompositeBackend(
+    backends=[
+        WeightedBackend("mem0",      load_backend("mem0"),      weight=1.5),
+        WeightedBackend("zep",       load_backend("zep"),       weight=1.0),
+        WeightedBackend("hindsight", load_backend("hindsight"), weight=1.0),
+        WeightedBackend("json",      load_backend("json"),      weight=0.5),
+    ],
+    fusion="rrf",       # rrf | union | intersection | weighted | llm_rerank
+    write_to="mem0",    # 書き込みは1つに、検索だけ fan-out
+)
+PersonalMemory(user_id="alice", backend=composite)
+```
+
+```python
+# B. RoutedBackend: クエリ内容に応じて最適なバックエンドを動的選択
+from praxia.memory.router import RoutedBackend, RuleRouter
+
+routed = RoutedBackend(
+    backends={"mem0": ..., "zep": ..., "hindsight": ..., "json": ...},
+    router=RuleRouter(),   # または LLMRouter(llm=...) で LLM 判定
+    write_to="mem0",
+)
+```
+
+`RuleRouter` は英語と日本語の両方を判定:
+- 時系列クエリ (`last week` / `先月`) → **Zep** 優先
+- 監査クエリ (`changelog` / `履歴`) → **JSON** 優先
+- エンティティ問い合わせ (`who is` / `について`) → **Mem0** 優先
+- 類似検索 (`類似`) → **HindSight** 優先
+
+ベンチマークなしで「とりあえず複数併用 → RRF で融合」が再現率の高い堅実な
+ベースラインです。レイテンシが気になるユースケースには `RoutedBackend` で
+クエリ毎にシングルバックエンドを当てる構成が向きます。
+
 ## 認証・認可・監査・SSO
 
 ```python
