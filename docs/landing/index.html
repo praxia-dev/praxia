@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Praxia — Multi-Agent Orchestrator with Cyclic Memory</title>
-  <meta name="description" content="Specialized multi-agent orchestrator that auto-promotes individual tacit knowledge into organizational know-how. Apache 2.0 OSS." />
+  <meta name="description" content="Specialized multi-agent orchestrator with cyclic personal-to-organizational memory. Multi-LTM fusion, HTML/PPTX/DOCX output, Claude/Gemini/Gemma/Qwen, SDK + HTTP API. Apache 2.0 OSS." />
   <meta property="og:title" content="Praxia — Multi-Agent Orchestrator with Cyclic Memory" />
-  <meta property="og:description" content="Specialized multi-agent orchestrator that auto-promotes individual tacit knowledge into organizational know-how." />
+  <meta property="og:description" content="Specialized multi-agent orchestrator with cyclic personal-to-organizational memory. Multi-LTM fusion, HTML/PPTX/DOCX output, Claude/Gemini/Gemma/Qwen, SDK + HTTP API. Apache 2.0 OSS." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪡%3C/text%3E%3C/svg%3E" />
   <link rel="canonical" href="https://praxia.pages.dev/" />
@@ -82,13 +82,16 @@
       </div>
       <div class="hero-meta">
         <span>🐍 Python 3.11+</span>
-        <span>🧠 6 LTM backends</span>
-        <span>🤖 Claude · ChatGPT · Gemini · Qwen</span>
+        <span>🧠 6 LTM backends + multi-LTM fusion</span>
+        <span>🤖 Claude · ChatGPT · Gemini · Gemma · Qwen</span>
         <span>🔐 SSO + RBAC + audit · OAuth per-user</span>
         <span>🛡 Resource ACL</span>
         <span>🔌 6 connectors (Pull + Push)</span>
         <span>📄 PDF · Word · Excel · PowerPoint</span>
+        <span>🖨 HTML / PPTX / DOCX output</span>
         <span>🎙 Voice in / out (STT + TTS)</span>
+        <span>🪪 Memory mode (accumulate / read-only)</span>
+        <span>🌐 SDK · Streamlit UI · FastAPI HTTP</span>
       </div>
     </div>
   </header>
@@ -97,7 +100,7 @@
     <div class="container">
       <div class="section-head">
         <span class="kicker">Why Praxia</span>
-        <h2>22 advantages no other framework offers in one package.</h2>
+        <h2>27+ advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
@@ -209,6 +212,41 @@
           <div class="card-icon">⚖️</div>
           <h3>Legal templates</h3>
           <p>Terms of Service, Privacy Policy, Acceptable Use, Cookie Policy — starter templates wired into the portal sign-up. Marked clearly as templates requiring legal review before commercial use.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🧬</div>
+          <h3>Multi-LTM fusion + routing</h3>
+          <p>Run several LTMs in parallel and fuse with Reciprocal Rank Fusion — or route per query (temporal → Zep, audit → JSON, entity → Mem0). English + Japanese keyword detection. Higher recall without picking a winner.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🪪</div>
+          <h3>Memory mode toggle</h3>
+          <p>Per-user switch: <code>accumulate</code> (default) or <code>read_only</code>. Read-only sessions silently drop writes — useful for sensitive content. Admins can lock the mode tenant-wide or by role.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🛡</div>
+          <h3>Admin-controlled LTM policy</h3>
+          <p>Pin which backend(s) users may pick and what the default mode is, at the tenant level. Resolution: admin enforced &gt; call-site &gt; user pref &gt; admin default.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🖨</div>
+          <h3>Output exporters (HTML · PPTX · DOCX · MD · JSON)</h3>
+          <p>Skills produce Markdown by default. <code>OutputFormatSkill</code> infers requested format from natural-language hints ("パワポで" → PPTX, "as a Word doc" → DOCX). Custom formats register via entry-point.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🦙</div>
+          <h3>Gemma support</h3>
+          <p>Google's open-weight family added. <code>gemma</code> / <code>gemma-2b</code> / <code>gemma-9b</code> / <code>gemma-27b</code> via local Ollama; <code>gemma-cloud</code> via Google Vertex AI.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🌐</div>
+          <h3>Backend-only or full-stack</h3>
+          <p>Use Praxia as a brain behind your own frontend (SDK embed or <code>praxia serve</code> FastAPI HTTP API), or run the bundled Streamlit UI for the fastest path. Same auth, memory, skills.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📐</div>
+          <h3>Formal design specs (EN + JA)</h3>
+          <p>Basic design / I/F spec / detailed design as procurement-ready documents in both English and Japanese. Every public surface and plugin protocol covered.</p>
         </article>
       </div>
     </div>
@@ -362,8 +400,8 @@ p.run(SalesAgentFlow, inputs={...})
         <span class="kicker">5-minute Quickstart</span>
         <h2>From <code>pip install</code> to live agent in under 5 minutes.</h2>
       </div>
-      <pre class="install-block"><code><span class="comment"># Install (with UI + connectors)</span>
-pip install <span class="str">"praxia[ui,connectors]"</span>
+      <pre class="install-block"><code><span class="comment"># Install (with UI + connectors + office parsers)</span>
+pip install <span class="str">"praxia[ui,connectors,office]"</span>
 
 <span class="comment"># Initialize</span>
 praxia init
@@ -375,6 +413,17 @@ praxia skill run investment <span class="str">"3-year thesis on Acme Mfg (fictio
 <span class="comment"># Launch the UI (11 tabs incl. Dashboard / Policies / Admin / Connectors)</span>
 praxia ui --port 8501
 
+<span class="comment"># OR — backend-only mode for your own frontend (FastAPI HTTP)</span>
+pip install <span class="str">"praxia[server]"</span>
+praxia serve --host 0.0.0.0 --port 8000
+
+<span class="comment"># Output exporters — render skill output to HTML / PPTX / DOCX</span>
+praxia export report.md slides.pptx --title <span class="str">"Q3 Review"</span>
+
+<span class="comment"># Memory mode — accumulate (default) or read-only per user</span>
+praxia memory mode --user-id alice read_only
+praxia admin memory-policy-set --enforced-backend mem0 --allowed mem0,zep
+
 <span class="comment"># Personal → org memory distillation</span>
 praxia consolidate
 
@@ -382,7 +431,7 @@ praxia consolidate
 praxia policy add deny connector <span class="str">"box:/Confidential/*"</span> --principals <span class="str">"role:member"</span>
 praxia admin export-audit audit.csv --since-days 30
 praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account"</span></code></pre>
-      <p class="install-note">Bring your own LLM key — Anthropic, OpenAI, Google, Alibaba (Qwen), or run Qwen locally via Ollama.</p>
+      <p class="install-note">Bring your own LLM key — Anthropic, OpenAI, Google (Gemini / Gemma), Alibaba (Qwen), or run Gemma / Qwen locally via Ollama. Two deployment modes: full-stack <code>praxia ui</code> or backend-only <code>praxia serve</code> behind your own frontend — see <a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
     </div>
   </section>
 
@@ -689,17 +738,36 @@ P  = Praxia cost (license + infra)</code></pre>
         </article>
         <article class="card">
           <h3>Custom LTM backend</h3>
-          <p>Implement the 4-method <code>MemoryBackend</code> protocol. Plug in any vector DB (Pinecone, Weaviate, Qdrant, ...) without touching framework code.</p>
+          <p>Implement the 4-method <code>MemoryBackend</code> protocol. Plug in any vector DB (Pinecone, Weaviate, Qdrant, ...) — and optionally combine with built-ins via <code>CompositeBackend</code> / <code>RoutedBackend</code>.</p>
           <pre><code>class PineconeBackend:
     def add(...): ...
     def search(...): ...
     def all(...): ...
     def clear(...): ...</code></pre>
         </article>
+        <article class="card">
+          <h3>Custom connector (~50 lines)</h3>
+          <p>Implement the 2-method <code>Connector</code> protocol (<code>pull</code> / <code>push</code>). Per-user OAuth, ACL enforcement, and audit logging plug in for free. End-to-end Notion example in the guide.</p>
+          <pre><code>class NotionConnector:
+    name = <span class="str">"notion"</span>
+    def pull(self, path, *, limit): ...
+    def push(self, path, data): ...</code></pre>
+        </article>
+        <article class="card">
+          <h3>Custom output format</h3>
+          <p>Built-in: HTML, PPTX, DOCX, MD, JSON. Add your own (LaTeX? RTF? Confluence Storage?) by implementing the <code>Exporter</code> protocol and declaring an entry-point.</p>
+          <pre><code>class LatexExporter:
+    format = <span class="str">"latex"</span>
+    extensions = (<span class="str">"tex"</span>,)
+    def export(self, content) -> bytes: ...</code></pre>
+        </article>
       </div>
       <p class="cta-line">
-        Detailed extension guides in
-        <a href="https://github.com/genarch/praxia/blob/main/docs/FEATURES.md#extending-praxia">docs/FEATURES.md</a>.
+        Detailed extension guides:
+        <a href="https://github.com/genarch/praxia/blob/main/docs/PLUGINS.md">PLUGINS.md</a> ·
+        <a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>
+        ·
+        <a href="https://github.com/genarch/praxia/blob/main/docs/specs/">design specs (EN + JA)</a>.
       </p>
     </div>
   </section>
@@ -732,10 +800,11 @@ P  = Praxia cost (license + infra)</code></pre>
         <article class="card">
           <h3>Plays well with…</h3>
           <ul class="bullet-tight">
-            <li>Mem0 / LangMem / Letta / Zep / HindSight — Praxia uses them as backends</li>
-            <li>Claude / ChatGPT / Gemini / Qwen via LiteLLM</li>
+            <li>Mem0 / LangMem / Letta / Zep / HindSight — Praxia uses them as backends, or several at once via Composite / Routed</li>
+            <li>Claude / ChatGPT / Gemini / <strong>Gemma</strong> / Qwen via LiteLLM (local Ollama or cloud)</li>
             <li>Box / SharePoint / Dropbox / Drive / kintone / Salesforce connectors</li>
             <li>MCP / Claude Skills / Cursor Skills (skill format compatible)</li>
+            <li>Your own frontend (Next.js / Slack / mobile) — run <code>praxia serve</code> as the HTTP backend</li>
           </ul>
         </article>
       </div>
@@ -792,6 +861,26 @@ P  = Praxia cost (license + infra)</code></pre>
         <details>
           <summary>How big can my org grow before hitting limits?</summary>
           <p>JSON backend handles ~10k users comfortably. Beyond that, switch to Mem0 + Qdrant/Pinecone or HindSight. The promotion engine scales with LLM tokens — budget 10–50 LLM calls per consolidation per cluster.</p>
+        </details>
+        <details>
+          <summary>Can I use Praxia behind my own frontend (Next.js / mobile / Slack bot)?</summary>
+          <p>Yes — that's <strong>mode B</strong>. Two paths: embed the Python SDK directly if your backend is Python, or run <code>praxia serve</code> (FastAPI, 8 endpoints under <code>/api/v1</code>) and call it from any HTTP client. Same auth, RBAC, ACL, and audit log as the Streamlit UI. Setup recipe: <a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
+        </details>
+        <details>
+          <summary>Does the user have to write to memory every time?</summary>
+          <p>No. Personal memory accumulates implicitly during normal use. Per user, you can also flip <code>read_only</code> mode for sensitive sessions — writes are silently dropped, reads still work. Admins can lock the mode tenant-wide or per role.</p>
+        </details>
+        <details>
+          <summary>How do I get a PowerPoint / Word output instead of just text?</summary>
+          <p>Use <code>OutputFormatSkill</code> — it detects format hints in natural language ("パワポで" / "as a Word doc" / "HTML please") and renders via the matching exporter. CLI: <code>praxia export report.md slides.pptx</code>. Custom formats register via the <code>praxia.exporters</code> entry-point.</p>
+        </details>
+        <details>
+          <summary>Can I plug in a connector to a system you don't ship?</summary>
+          <p>Yes. The <code>Connector</code> protocol is two methods (<code>pull</code> / <code>push</code>) and ~50 lines. Per-user OAuth, ACL enforcement, and audit logging plug in for free. End-to-end Notion example: <a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>.</p>
+        </details>
+        <details>
+          <summary>Is Gemma supported?</summary>
+          <p>Yes. <code>gemma</code> / <code>gemma-2b</code> / <code>gemma-9b</code> / <code>gemma-27b</code> via local Ollama; <code>gemma-cloud</code> via Google Vertex AI. <code>PRAXIA_LOCAL_MODEL=gemma</code> makes <code>auto_detect()</code> fall back to Gemma instead of Qwen-local when no cloud key is set.</p>
         </details>
       </div>
     </div>
@@ -914,6 +1003,9 @@ P  = Praxia cost (license + infra)</code></pre>
           <li><a href="https://github.com/genarch/praxia">GitHub</a></li>
           <li><a href="https://github.com/genarch/praxia/blob/main/docs/quickstart.md">Quickstart</a></li>
           <li><a href="https://github.com/genarch/praxia/blob/main/docs/architecture.md">Architecture</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">Deployment modes</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">Custom connector guide</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/specs/">Design specs (EN + JA)</a></li>
           <li><a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md">Use cases</a></li>
         </ul>
       </div>

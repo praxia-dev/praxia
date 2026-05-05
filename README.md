@@ -123,11 +123,13 @@ LiteLLM-powered single-line provider switching:
 | Anthropic Claude | `claude` / `claude-sonnet` / `claude-haiku` | `ANTHROPIC_API_KEY` |
 | OpenAI ChatGPT | `chatgpt` / `gpt-4o` / `o1` | `OPENAI_API_KEY` |
 | Google Gemini | `gemini` / `gemini-flash` | `GEMINI_API_KEY` |
+| Google Gemma (open) | `gemma` / `gemma-2b` / `gemma-9b` / `gemma-27b` (Ollama) · `gemma-cloud` (Vertex AI) | (none for local) / Vertex auth |
 | Alibaba Qwen (cloud) | `qwen` / `qwen-72b` | `DASHSCOPE_API_KEY` |
 | Qwen / Llama (local) | `qwen-local` (Ollama) | (none — runs in-house) |
 
 ```python
 LLM("claude")        # Anthropic Claude
+LLM("gemma")         # Google Gemma 9B via local Ollama
 LLM("qwen-local")    # Local Qwen via Ollama
 LLM("openai/gpt-4o") # Any LiteLLM-compatible model string
 ```
@@ -156,6 +158,79 @@ print(doc.content)
 ```
 
 Third-party formats register via `[project.entry-points."praxia.parsers"]` — no fork required.
+
+### Output exporters — render skill output to HTML / PPTX / DOCX / MD / JSON
+
+Skills produce Markdown by default. Convert to whatever the user requested:
+
+```python
+from praxia.io.exporters import export_as
+result = export_as(md_text, format="pptx", title="Q3 Review")
+# result.bytes → write to disk, stream over HTTP, push via a connector
+```
+
+`OutputFormatSkill` infers the format from natural-language hints (English **and** Japanese):
+
+```python
+from praxia.skills.output_format import OutputFormatSkill
+fs = OutputFormatSkill()
+fs.detect("レポートをパワポで").format       # → "pptx"
+fs.detect("as a Word document").format       # → "docx"
+fs.deliver(md, user_request="HTML please")    # ExporterResult with .bytes
+```
+
+CLI shortcut:
+```bash
+praxia export report.md report.html
+praxia export report.md slides.pptx --title "Q3 Review"
+```
+
+Custom formats register via the `praxia.exporters` entry-point — same pattern as connectors.
+
+### Memory mode — accumulate or read-only, per user
+
+Some sessions shouldn't leave a trail (legal review, sensitive data exploration). Toggle per-user:
+
+```bash
+praxia memory mode --user-id alice read_only      # writes silently dropped
+praxia memory mode --user-id alice accumulate     # back on
+praxia memory show --user-id alice                # see the resolved config + reason
+```
+
+Admins can lock the mode for the whole tenant or for specific roles:
+```bash
+praxia admin memory-policy-set --default-mode read_only --mode-locked
+praxia admin memory-policy-set --enforced-backend mem0 --allowed mem0,zep
+praxia admin memory-policy-set --accumulate-locked-roles operator,admin
+```
+
+Resolution order: admin enforced > call-site argument > user pref > admin default. See [`praxia.memory.policy`](praxia/memory/policy.py).
+
+### Multi-LTM fusion + dynamic routing (accuracy boost)
+
+Each LTM has different strengths — entity linking (Mem0), temporal KG (Zep), audit trail (JSON), vector recall (HindSight). You can run several at once and either fuse the results or pick per-query:
+
+```python
+from praxia.memory.composite import CompositeBackend, WeightedBackend
+from praxia.memory.router import RoutedBackend, RuleRouter
+
+# A. Parallel fan-out + Reciprocal Rank Fusion
+composite = CompositeBackend(
+    backends=[WeightedBackend("mem0", ..., weight=1.5),
+              WeightedBackend("zep", ..., weight=1.0),
+              WeightedBackend("hindsight", ..., weight=1.0)],
+    fusion="rrf",
+)
+
+# B. Query-aware dispatch (RuleRouter handles English + Japanese keywords)
+routed = RoutedBackend(
+    backends={"mem0": ..., "zep": ..., "hindsight": ..., "json": ...},
+    router=RuleRouter(),
+    write_to="mem0",
+)
+```
+
+Full design + tradeoffs: [docs/FEATURES.md § 5.1](docs/FEATURES.md#51-multi-ltm-fusion--dynamic-routing-accuracy-boost).
 
 ### Voice input / output
 
@@ -431,6 +506,10 @@ Detailed Before/After tables for each domain are in **[docs/use-cases.md](docs/u
 | Audit log + admin data exports | ❌ | ❌ | ❌ | ✅ | ✅ |
 | Personal & org dashboards | ❌ | ❌ | ❌ | ✅ | ✅ |
 | Storage / SaaS connectors (Pull + Push) | ❌ | ❌ | △ | △ | ✅ ×6 |
+| Multi-LTM fusion + dynamic routing | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Memory mode toggle (accumulate / read-only) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Output exporters (HTML / PPTX / DOCX) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| HTTP API + your-own-frontend mode | ❌ | ❌ | △ | (hosted) | ✅ |
 | MCP / Claude Skills compatible | △ | △ | △ | ❌ | ✅ |
 | License | MIT | MIT | MIT | Commercial | Apache 2.0 |
 
@@ -478,17 +557,57 @@ We may evolve toward an **open-core** model: enterprise GUI / advanced audit fea
 
 ---
 
+## 🚢 Deployment modes
+
+Praxia ships in two halves you can mix:
+
+| Mode | What you run | When to choose it |
+|---|---|---|
+| **A. Full-stack** | `praxia ui` (Streamlit) + Praxia core, one process | Internal team, fastest path |
+| **B-1. Embedded SDK** | Your Python service `import praxia` | You already have a Python backend |
+| **B-2. HTTP service** | `praxia serve` (FastAPI) + your own frontend | Non-Python frontend, mobile, or CDN-cached UI |
+
+Both modes share the same auth, memory, and skills — only the frontend differs. Step-by-step setup, production checklist, and migration path: [docs/deployment-modes.md](docs/deployment-modes.md) / [日本語版](docs/deployment-modes.ja.md).
+
+```bash
+# Full-stack
+praxia ui --port 8501
+
+# Backend-only HTTP API (8 endpoints under /api/v1)
+pip install "praxia[server]"
+praxia serve --host 0.0.0.0 --port 8000 --cors-origin https://your-frontend.example
+```
+
+---
+
+## 📐 Design specs (formal documents)
+
+For procurement / architecture review / extension work, formal design specs are available in **EN + JA**:
+
+| Document | English | 日本語 |
+|---|---|---|
+| Basic design (基本設計仕様書) | [basic-design.en.md](docs/specs/basic-design.en.md) | [basic-design.ja.md](docs/specs/basic-design.ja.md) |
+| Interface spec (I/F 仕様書) | [interface-spec.en.md](docs/specs/interface-spec.en.md) | [interface-spec.ja.md](docs/specs/interface-spec.ja.md) |
+| Detailed design (詳細設計仕様書) | [detailed-design.en.md](docs/specs/detailed-design.en.md) | [detailed-design.ja.md](docs/specs/detailed-design.ja.md) |
+
+---
+
 ## 🛠 Extending Praxia
 
-Praxia uses a **single extensibility primitive** (`praxia.extensions.Registry`) for all four plugin types — connectors, memory backends, skills, flows. Adding a plugin **does not require editing any core file**.
+Praxia uses a **single extensibility primitive** (`praxia.extensions.Registry`) for every plugin point — connectors, memory backends, skills, flows, file parsers, output exporters, OAuth providers. Adding a plugin **does not require editing any core file**.
 
 | Plugin type | Base | Registry | Entry-point group | Lines |
 |---|---|---|---|---|
 | Connector | `Connector` protocol | `CONNECTORS` | `praxia.connectors` | ~50 |
 | Memory backend | `MemoryBackend` protocol | `BACKENDS` | `praxia.memory_backends` | ~80 |
+| File parser | `Parser` protocol | `PARSERS` | `praxia.parsers` | ~30 |
+| Output exporter | `Exporter` protocol | `EXPORTERS` | `praxia.exporters` | ~40 |
+| OAuth provider | `OAuthProviderConfig` | (instance) | `praxia.oauth_providers` | ~10 |
 | Business skill | `Skill` | `SKILLS` | `praxia.skills` | ~20 |
 | Multi-agent flow | `Flow` | `FLOWS` | `praxia.flows` | ~30 |
 | Industry recipe | Markdown | n/a | — | n/a |
+
+**Custom connector tutorial** (end-to-end Notion example): [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md) / [日本語版](docs/CUSTOM_CONNECTORS.ja.md).
 
 **Two ways to register**:
 
