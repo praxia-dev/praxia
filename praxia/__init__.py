@@ -8,6 +8,7 @@ Public API:
     PersonalMemory    — first-layer auto-extracting memory
     SharedMemory      — third-layer organizational memory blocks
 """
+from praxia.config import PraxiaConfig
 from praxia.core.agent import Agent
 from praxia.core.flow import Flow, FlowStep
 from praxia.core.llm import LLM, ProviderConfig
@@ -19,6 +20,7 @@ __version__ = "0.1.0a0"
 
 __all__ = [
     "Praxia",
+    "PraxiaConfig",
     "Agent",
     "Flow",
     "FlowStep",

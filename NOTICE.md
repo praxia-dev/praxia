@@ -60,6 +60,29 @@ pip-licenses --format=markdown > THIRD-PARTY-LICENSES.md
 |---|---|---|
 | **hindsight** | (see upstream) | https://github.com/vectorize-io/hindsight |
 
+## Optional `[office]` extra (file parsers)
+
+| Package | License | Source | Notes |
+|---|---|---|---|
+| **pypdf** | BSD-3-Clause | https://github.com/py-pdf/pypdf | PDF parsing (pure Python) |
+| **python-docx** | MIT | https://github.com/python-openxml/python-docx | Word .docx parsing |
+| **python-pptx** | MIT | https://github.com/scanny/python-pptx | PowerPoint .pptx parsing |
+| **openpyxl** | MIT | https://foss.heptapod.net/openpyxl/openpyxl | Excel .xlsx parsing |
+
+## Optional `[audio]` extra (cloud STT/TTS)
+
+| Package | License | Source | Notes |
+|---|---|---|---|
+| **openai** (Python SDK) | Apache 2.0 | https://github.com/openai/openai-python | Whisper STT + OpenAI TTS |
+| **elevenlabs** | MIT | https://github.com/elevenlabs/elevenlabs-python | Premium TTS / voice cloning |
+
+## Optional `[audio-local]` extra (on-prem STT/TTS)
+
+| Package | License | Source | Notes |
+|---|---|---|---|
+| **openai-whisper** | MIT | https://github.com/openai/whisper | Local Whisper model for STT |
+| **piper-tts** | MIT | https://github.com/rhasspy/piper | Local Piper for TTS |
+
 > Verify the upstream license at the time you install — open-source licenses can change between versions.
 
 ## Optional LTM backends pulled on demand

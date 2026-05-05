@@ -84,9 +84,11 @@
         <span>🐍 Python 3.11+</span>
         <span>🧠 6 LTM backends</span>
         <span>🤖 Claude · ChatGPT · Gemini · Qwen</span>
-        <span>🔐 SSO + RBAC + audit</span>
+        <span>🔐 SSO + RBAC + audit · OAuth per-user</span>
         <span>🛡 Resource ACL</span>
         <span>🔌 6 connectors (Pull + Push)</span>
+        <span>📄 PDF · Word · Excel · PowerPoint</span>
+        <span>🎙 Voice in / out (STT + TTS)</span>
       </div>
     </div>
   </header>
@@ -95,7 +97,7 @@
     <div class="container">
       <div class="section-head">
         <span class="kicker">Why Praxia</span>
-        <h2>18 advantages no other framework offers in one package.</h2>
+        <h2>22 advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
@@ -187,6 +189,26 @@
           <div class="card-icon">👥</div>
           <h3>Full admin user CRUD</h3>
           <p>Create / update / delete / deactivate / rotate keys / change roles — all via CLI, UI, or SDK. All operations audited.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📄</div>
+          <h3>File parsers (PDF · Word · Excel · PowerPoint · CSV · HTML)</h3>
+          <p>Drop a file in — auto-dispatch by extension. PDF page-by-page, Word with heading detection, Excel as Markdown tables, PowerPoint with speaker notes. Custom formats register via entry points.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🎙</div>
+          <h3>Voice input + voice output</h3>
+          <p>Speech-to-text (Whisper) and text-to-speech (OpenAI TTS / ElevenLabs / Piper). Embedded in Streamlit UI as record-and-go input and read-aloud output.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔐</div>
+          <h3>User-delegated OAuth</h3>
+          <p>Each Praxia user authorizes Box / SharePoint / Dropbox / Drive / Salesforce with their <em>own</em> credentials. The external system's native ACL is enforced per Praxia user — alice can only see what alice has access to.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">⚖️</div>
+          <h3>Legal templates</h3>
+          <p>Terms of Service, Privacy Policy, Acceptable Use, Cookie Policy — starter templates wired into the portal sign-up. Marked clearly as templates requiring legal review before commercial use.</p>
         </article>
       </div>
     </div>
@@ -604,15 +626,15 @@ P  = Praxia cost (license + infra)</code></pre>
           <table class="roi-table">
             <tr><th>Variable</th><th>Year 1</th><th>Year 2</th></tr>
             <tr><td>Workers in scope (N)</td><td>100</td><td>100</td></tr>
-            <tr><td>Loaded cost (C)</td><td>¥14M</td><td>¥14M</td></tr>
+            <tr><td>Loaded cost (C)</td><td>$90k</td><td>$90k</td></tr>
             <tr><td>Routine work share (t)</td><td>40%</td><td>40%</td></tr>
             <tr><td>Time savings (s)</td><td>35%</td><td>60%</td></tr>
-            <tr><td>Quality lift (Q)</td><td>¥10M</td><td>¥30M</td></tr>
-            <tr><td>Praxia cost (P)</td><td>¥12M</td><td>¥12M</td></tr>
-            <tr class="roi-total"><td>Net benefit</td><td><strong>¥194M</strong></td><td><strong>¥354M</strong></td></tr>
+            <tr><td>Quality lift (Q)</td><td>$65k</td><td>$200k</td></tr>
+            <tr><td>Praxia cost (P)</td><td>$80k</td><td>$80k</td></tr>
+            <tr class="roi-total"><td>Net benefit</td><td><strong>$1.25M</strong></td><td><strong>$2.30M</strong></td></tr>
           </table>
           <p class="roi-note">
-            3-year cumulative net ≈ <strong>¥800M</strong>. Even after halving each
+            3-year cumulative net ≈ <strong>$5.2M</strong>. Even after halving each
             parameter, ROI remains <strong>&gt; 10×</strong>.
           </p>
         </div>
@@ -778,8 +800,14 @@ P  = Praxia cost (license + infra)</code></pre>
   <section id="pricing" class="section">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Open Core</span>
-        <h2>Free for everyone. Production-grade for teams.</h2>
+        <span class="kicker">Pricing</span>
+        <h2>Same code, different operational support.</h2>
+        <p class="section-subtitle">
+          Praxia is fully open source under Apache 2.0 — every feature
+          (SSO, RBAC, ACL, audit, OAuth, all skills, all connectors) is in
+          the OSS package. Paid plans differ in <strong>who runs and
+          supports it</strong>, not in what features you get.
+        </p>
       </div>
       <div class="grid grid-3">
         <article class="card price-card">
@@ -789,31 +817,31 @@ P  = Praxia cost (license + infra)</code></pre>
             <p class="price-sub">forever · Apache 2.0</p>
           </div>
           <ul class="price-list">
-            <li>Full framework + 3 flows + 6 skills</li>
-            <li>6 LTM backends</li>
-            <li>JSON / file-based auth</li>
-            <li>Audit log on disk</li>
-            <li>Community support</li>
+            <li>Full framework — every feature included</li>
+            <li>Self-hosted on your infrastructure</li>
+            <li>You run upgrades and operations</li>
+            <li>Community support (GitHub Discussions / Issues)</li>
+            <li>Best-effort response from maintainers</li>
           </ul>
           <a href="#install" class="btn btn-ghost btn-block">Install now</a>
         </article>
         <article class="card price-card price-featured">
           <div class="price-head">
-            <h3>Team</h3>
-            <p class="price">From ¥30k <span>/mo</span></p>
-            <p class="price-sub">5–30 seats · contact for quote</p>
+            <h3>Team (managed)</h3>
+            <p class="price">From $200 <span>/mo</span></p>
+            <p class="price-sub">contact for quote</p>
           </div>
           <ul class="price-list">
-            <li>Everything in OSS</li>
-            <li>Shared team blocks UI</li>
-            <li>Basic monitoring dashboard</li>
-            <li>Email support (best-effort)</li>
-            <li>Hosted or self-hosted</li>
+            <li>Same OSS framework — we run it for you</li>
+            <li>Hosted infrastructure + automatic upgrades</li>
+            <li>Email support with priority queue</li>
+            <li>Onboarding session + best-practice templates</li>
+            <li>Backup, monitoring, and uptime handled by us</li>
           </ul>
           <p class="price-disclaimer">
             <strong>Currently in alpha</strong> — onboarding handled
-            individually via direct invoicing (bank transfer, JP) or Stripe
-            (international). Self-serve sign-up coming in Phase 2.
+            individually via direct invoicing or Stripe. Self-serve sign-up
+            arriving in Phase 2.
           </p>
           <a href="#contact" class="btn btn-primary btn-block">Contact us</a>
         </article>
@@ -821,24 +849,32 @@ P  = Praxia cost (license + infra)</code></pre>
           <div class="price-head">
             <h3>Enterprise</h3>
             <p class="price">Custom</p>
-            <p class="price-sub">unlimited seats</p>
+            <p class="price-sub">tailored deployment</p>
           </div>
           <ul class="price-list">
-            <li>SSO (OIDC + SAML)</li>
-            <li>Granular RBAC + audit export</li>
-            <li>On-prem / VPC deployment</li>
-            <li>Compliance-ready architecture (audit prep on request)</li>
-            <li>Dedicated CSM + custom SLA</li>
+            <li>Same OSS framework — deployed your way</li>
+            <li>On-prem / VPC / air-gapped deployment</li>
+            <li>Dedicated customer success manager</li>
+            <li>Custom SLA + named technical contact</li>
+            <li>Custom feature development on request</li>
+            <li>Compliance documentation for your auditors</li>
           </ul>
           <p class="price-disclaimer">
-            Compliance certifications (e.g., SOC2 Type II, ISO 27001) are
+            Compliance certifications (SOC2 Type II, ISO 27001) are
             <strong>not yet obtained</strong>. We provide architecture and
-            documentation suitable for your auditors; engagement-specific
-            compliance roadmaps are negotiated per contract.
+            audit-prep documentation; certification roadmaps negotiated per
+            engagement.
           </p>
           <a href="#contact" class="btn btn-ghost btn-block">Contact sales</a>
         </article>
       </div>
+      <p class="cta-line">
+        Looking for OSS license interpretation, embedded use, or revenue
+        share? See
+        <a href="https://github.com/genarch/praxia/blob/main/LICENSE">LICENSE</a>
+        and
+        <a href="https://github.com/genarch/praxia/blob/main/NOTICE.md">NOTICE</a>.
+      </p>
     </div>
   </section>
 

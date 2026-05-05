@@ -341,6 +341,15 @@ pre .str     { color: var(--accent-bright); }
   line-height: 1.18;
 }
 
+.section-subtitle {
+  max-width: 720px;
+  margin: 1rem auto 0;
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.section-subtitle strong { color: var(--text); }
+
 .grid {
   display: grid;
   gap: 1.25rem;

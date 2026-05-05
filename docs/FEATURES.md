@@ -34,6 +34,10 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 20. [Admin data exports](#20-admin-data-exports)
 21. [External connectors (Pull + Push)](#21-external-connectors)
 22. [Personal & organizational dashboards](#22-dashboards)
+23. [File parsers (PDF / Office / CSV / HTML / text)](#23-file-parsers-pdf--office--csv--html--text)
+24. [Audio I/O — voice input + voice output](#24-audio-io--voice-input--voice-output)
+25. [User-delegated OAuth](#25-user-delegated-oauth-per-user-external-system-access)
+26. [Legal templates](#26-legal-templates)
 
 ---
 
@@ -64,6 +68,8 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 | Personal & organizational dashboards | ✅ | Flow/skill counts, success rate, top users, promoted blocks |
 | File parsing (PDF / Word / PPT / Excel / CSV / HTML) | ✅ | Auto-dispatch parser by extension; pluggable via entry points |
 | Voice input / output (STT + TTS) | ✅ | OpenAI Whisper / TTS by default; ElevenLabs / local Whisper / Piper supported |
+| User-delegated OAuth (per-user connector auth) | ✅ | Box / Microsoft / Dropbox / Google / Salesforce — external ACL enforced per Praxia user |
+| Legal templates (Terms / Privacy / AUP / Cookies) | ✅ | Starter templates in docs/legal/ for portal sign-up + commercial use |
 | Default Streamlit UI | ✅ | 5-tab dashboard for non-technical users |
 | MCP / Claude Skills compatibility | ✅ | Skills serialize to standard `SKILL.md` format |
 | Outcome tracking | ✅ | `record_outcome()` for statistical promotion |
@@ -613,12 +619,12 @@ A simple model to estimate ROI before / during / after a Praxia rollout.
 | Variable | Symbol | Typical range |
 |---|---|---|
 | Knowledge workers in scope | N | 30–500 |
-| Average loaded cost / FTE / yr | C | ¥10–18M |
+| Average loaded cost / FTE / yr | C | $65k–120k |
 | Time on routine knowledge work | t | 30–60% |
 | Time savings per task (alpha rollout) | s₁ | 30–50% |
 | Time savings per task (after 12 mo, with org memory) | s₂ | 50–75% |
-| Quality lift (errors avoided, $ value) | Q | ¥5–50M / yr |
-| Praxia cost (license + infra + people) | P | ¥3–30M / yr |
+| Quality lift (errors avoided, $ value) | Q | $35k–330k / yr |
+| Praxia cost (license + infra + people) | P | $20k–200k / yr |
 
 ### Annual ROI formula
 
@@ -632,16 +638,16 @@ Year 2+ ROI = (N × C × t × s₂) + Q × growth − P
 | Variable | Value |
 |---|---|
 | N | 100 |
-| C | ¥14M |
+| C | $90k |
 | t | 40% |
 | s₁ | 35% (year 1) → s₂ 60% (year 2) |
-| Q | ¥10M (year 1) → ¥30M (year 2) |
-| P | ¥12M / yr |
+| Q | $65k (year 1) → $200k (year 2) |
+| P | $80k / yr |
 
-**Year 1**: 100 × 14M × 0.4 × 0.35 + 10M − 12M = **¥194M net benefit**
-**Year 2**: 100 × 14M × 0.4 × 0.60 + 30M − 12M = **¥354M net benefit**
+**Year 1**: 100 × $90k × 0.4 × 0.35 + $65k − $80k = **$1.25M net benefit**
+**Year 2**: 100 × $90k × 0.4 × 0.60 + $200k − $80k = **$2.30M net benefit**
 
-3-year cumulative net ≈ **¥800M**. Even after halving each parameter,
+3-year cumulative net ≈ **$5.2M**. Even after halving each parameter,
 ROI remains > 10×.
 
 ---
@@ -927,3 +933,135 @@ os_ = d.org_summary("default-org")
 
 The Streamlit UI's 📊 Dashboard tab displays both views with metrics and
 ranking tables.
+
+---
+
+## 23. File parsers (PDF / Office / CSV / HTML / text)
+
+Auto-dispatched by extension via `praxia.io.parsers`:
+
+| Extension | Parser | Optional dep |
+|---|---|---|
+| `.txt` `.md` `.rst` `.py` `.ts` `.js` | TextParser | (none) |
+| `.csv` `.tsv` | CsvParser → Markdown table | (stdlib) |
+| `.json` `.yaml` `.yml` | StructuredParser → pretty JSON | (core) |
+| `.html` `.xml` | HtmlParser → text only | (stdlib) |
+| `.pdf` | PdfParser → page-by-page text + metadata | `praxia[office]` |
+| `.docx` | DocxParser → heading-aware sections + tables | `praxia[office]` |
+| `.pptx` | PptxParser → slide titles + tables + speaker notes | `praxia[office]` |
+| `.xlsx` `.xlsm` | XlsxParser → sheet-by-sheet Markdown tables | `praxia[office]` |
+
+```python
+from praxia.io.parsers import parse_file
+
+doc = parse_file("contract.pdf")
+print(doc.content)         # LLM-ready text
+print(doc.metadata)        # {"page_count": 12, "title": ..., "author": ...}
+print(doc.sections)        # [(heading, text), ...]
+```
+
+Streamlit UI: Run Flow + Skill tabs both expose `st.file_uploader()` that
+auto-dispatches by extension. CLI: `praxia run logic --document file.pdf`
+auto-parses based on extension.
+
+Adding a custom parser is the same pattern as connectors — implement the
+`FileParser` protocol and register via decorator or entry-point group
+`praxia.parsers`. See [PLUGINS.md](PLUGINS.md).
+
+---
+
+## 24. Audio I/O — voice input + voice output
+
+```python
+from praxia.io.audio import STT, TTS
+
+# Speech-to-text (auto-picks provider from env vars)
+text = STT().transcribe(audio_bytes, filename="meeting.wav", language="ja")
+
+# Text-to-speech
+audio = TTS().synthesize("Hello world", voice="alloy", format="mp3")
+```
+
+| Provider | STT | TTS | Auth |
+|---|---|---|---|
+| **OpenAI** (default) | Whisper API | TTS-1 (6 voices) | `OPENAI_API_KEY` |
+| **ElevenLabs** | — | Premium voice cloning | `ELEVENLABS_API_KEY` |
+| **Local Whisper** | whisper-cpp | — | (none — `praxia[audio-local]`) |
+| **Local Piper** | — | Piper | (none — `praxia[audio-local]`) |
+
+Streamlit UI: Run Flow logic-checker + Skill tab both have a `🎙 Voice
+input` mode (records via `st.audio_input()`) and an optional `🔊 Read
+response aloud` toggle that plays TTS-generated audio inline.
+
+Install: `pip install "praxia[audio]"` (cloud) or `praxia[audio-local]`
+(on-prem).
+
+---
+
+## 25. User-delegated OAuth (per-user external system access)
+
+Each Praxia user authorizes external systems with **their own
+credentials**. The external system's native ACL is enforced per-user —
+alice can only see Box folders alice has access to, even on the same
+shared Praxia install as bob.
+
+Supported providers (5):
+
+| Provider | Scopes |
+|---|---|
+| Box | `root_readwrite` |
+| Microsoft (SharePoint / OneDrive) | `Files.ReadWrite.All`, `Sites.ReadWrite.All` |
+| Dropbox | `files.metadata.read`, `files.content.{read,write}` |
+| Google Drive | `https://www.googleapis.com/auth/drive` |
+| Salesforce | `api`, `refresh_token`, `offline_access` |
+
+Setup:
+
+```bash
+# Once: register OAuth app at the provider, get client credentials
+export PRAXIA_OAUTH_BOX_CLIENT_ID=...
+export PRAXIA_OAUTH_BOX_CLIENT_SECRET=...
+
+# Per user: authorize once
+praxia oauth start box --user-id alice
+# Open the URL → log in to Box → redirect captures code
+# Token saved encrypted to .praxia/auth/oauth_tokens.jsonl
+
+# From now on, alice's connector calls use her token
+praxia connector pull box 0 --user-id alice
+```
+
+```python
+from praxia.connectors import get_connector
+
+conn = get_connector("box", user_id="alice")
+items = conn.pull("0")  # alice's view of Box only
+```
+
+Implementation details:
+- Authorization Code + PKCE flow (CSRF-safe state, PKCE for public clients)
+- Tokens persisted with HMAC-derived symmetric encryption (KMS swap-out
+  recommended for production)
+- Auto-refresh when expired (provider must support `refresh_token`)
+- Per-user revocation: `praxia oauth revoke box --user-id alice`
+
+The legacy shared-credentials path (service-account / JWT) still works
+when user-delegated isn't appropriate (e.g., headless CI jobs).
+
+---
+
+## 26. Legal templates
+
+`docs/legal/` contains starter templates for:
+
+- **TERMS.md** — Terms of Service
+- **PRIVACY.md** — Privacy Policy (GDPR-aware)
+- **ACCEPTABLE_USE.md** — AUP
+- **COOKIES.md** — Cookie Policy
+
+All are explicitly marked as templates requiring legal review before
+relying on them in commercial contexts. The portal sign-up page links
+to all four; the landing footer has a `Legal` column.
+
+Refer to [docs/legal/README.md](legal/README.md) for the document
+inventory and "when you need each" matrix.

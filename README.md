@@ -266,17 +266,23 @@ CLI users get the same functionality with rich-formatted output:
 ## 🚀 Quickstart
 
 ```bash
-pip install praxia                   # Core
-pip install "praxia[ui]"             # + Streamlit UI
-pip install "praxia[connectors]"     # + Box / SharePoint / Dropbox / GDrive / kintone / Salesforce
-pip install "praxia[all]"            # Everything
+# 1. Install (pick the extras you actually need)
+pip install praxia                              # Core
+pip install "praxia[ui,connectors,office,audio]" # Common stack
+pip install "praxia[all]"                       # Everything
 
-# Initialize (creates personal memory + skill registry + admin user)
+# 2. Configure once — all keys live in one place
+praxia config init      # interactive walkthrough
+praxia config show      # display resolved config (secrets masked)
+praxia config path      # show key resolution order
+# Or: cp .env.example .env  and edit
+
+# 3. Initialize
 praxia init --backend json --model auto
 
-# Run a flow
+# 4. Run a flow (auto-parses .pdf / .docx / .xlsx / .pptx if attached)
 praxia run sales --customer-name "Acme" --product "BizFlow"
-praxia run logic --document path/to/doc.md
+praxia run logic --document spec.pdf
 praxia run rag --question "What license is Praxia released under?"
 
 # Run a business skill
@@ -507,14 +513,14 @@ Full guide with examples for all 4 plugin types: **[docs/PLUGINS.md](docs/PLUGIN
 | Variable | Year 1 | Year 2 |
 |---|---|---|
 | Workers in scope (N) | 100 | 100 |
-| Loaded cost / FTE (C) | ¥14M | ¥14M |
+| Loaded cost / FTE (C) | $90k | $90k |
 | Routine work share (t) | 40% | 40% |
 | Time savings (s) | 35% | 60% |
-| Quality lift (Q) | ¥10M | ¥30M |
-| Praxia cost (P) | ¥12M | ¥12M |
-| **Net benefit** | **¥194M** | **¥354M** |
+| Quality lift (Q) | $65k | $200k |
+| Praxia cost (P) | $80k | $80k |
+| **Net benefit** | **$1.25M** | **$2.30M** |
 
-3-year cumulative net ≈ **¥800M**. Even halving every parameter still produces > 10× ROI.
+3-year cumulative net ≈ **$5.2M**. Even halving every parameter still produces > 10× ROI.
 
 Full model + worked examples: [docs/FEATURES.md#roi-projection-model](docs/FEATURES.md#14-roi-projection-model).
 
