@@ -76,6 +76,22 @@ salesforce = ["simple-salesforce>=1.12"]
 connectors = [
     "praxia[box,sharepoint,dropbox,gdrive,kintone,salesforce]",
 ]
+# --- File format parsers (Office + PDF) ---
+office = [
+    "pypdf>=4.0",            # PDF parsing
+    "python-docx>=1.1",      # Word .docx
+    "python-pptx>=0.6",      # PowerPoint .pptx
+    "openpyxl>=3.1",         # Excel .xlsx
+]
+# --- Audio I/O (STT + TTS via cloud APIs) ---
+audio = [
+    "openai>=1.40",          # Whisper STT + OpenAI TTS
+    "elevenlabs>=1.0",       # ElevenLabs TTS (optional)
+]
+# --- Local audio (no API keys, larger install) ---
+audio-local = [
+    "openai-whisper>=20231117",  # Local Whisper for STT
+]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
@@ -83,7 +99,7 @@ dev = [
     "mypy>=1.11",
 ]
 all = [
-    "praxia[ui,graph,qwen-local,connectors,dev]",
+    "praxia[ui,graph,qwen-local,connectors,office,audio,dev]",
 ]
 
 [project.scripts]
@@ -121,6 +137,8 @@ Issues = "https://github.com/your-org/praxia/issues"
 [project.entry-points."praxia.skills"]
 
 [project.entry-points."praxia.flows"]
+
+[project.entry-points."praxia.parsers"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["praxia"]

@@ -132,6 +132,42 @@ LLM("qwen-local")    # Local Qwen via Ollama
 LLM("openai/gpt-4o") # Any LiteLLM-compatible model string
 ```
 
+### File parsing — PDF · Office · CSV · TXT · HTML · MD · code
+
+Auto-dispatched by extension:
+
+| Extension | Parser | Optional dep |
+|---|---|---|
+| `.txt` `.md` `.rst` `.py` `.ts` `.js` | TextParser | (none) |
+| `.csv` `.tsv` | CsvParser | (stdlib) |
+| `.json` `.yaml` `.yml` | StructuredParser | (core) |
+| `.html` `.xml` | HtmlParser | (stdlib) |
+| `.pdf` | PdfParser | `praxia[office]` |
+| `.docx` | DocxParser | `praxia[office]` |
+| `.pptx` | PptxParser | `praxia[office]` |
+| `.xlsx` `.xlsm` | XlsxParser | `praxia[office]` |
+
+```python
+from praxia.io.parsers import parse_file
+
+doc = parse_file("contract.pdf")          # works
+doc = parse_file("Q3_results.xlsx")       # also works
+print(doc.content)
+```
+
+Third-party formats register via `[project.entry-points."praxia.parsers"]` — no fork required.
+
+### Voice input / output
+
+```python
+from praxia.io.audio import STT, TTS
+
+text = STT().transcribe(audio_bytes, filename="meeting.wav", language="ja")
+audio = TTS().synthesize("Hello world", voice="alloy", format="mp3")
+```
+
+Both Streamlit UI tabs (Run Flow, Skill) include `🎙 Audio input` and `🔊 Read response aloud` toggles. Providers: OpenAI Whisper / TTS (default), ElevenLabs (premium voices), local Whisper / Piper (`praxia[audio-local]`).
+
 ### 6 Pluggable LTM Backends
 
 | Backend | Notes |

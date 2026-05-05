@@ -114,7 +114,18 @@ def run(
     elif flow_cls is LogicCheckerFlow:
         body = document
         if document and Path(document).is_file():
-            body = Path(document).read_text(encoding="utf-8")
+            # Use the unified parser → handles PDF / Word / PowerPoint /
+            # Excel / CSV / TXT / MD / HTML and more
+            from praxia.io.parsers import parse_file
+            try:
+                parsed = parse_file(document)
+                body = parsed.content
+                console.print(
+                    f"[dim]📄 Parsed {parsed.filename} · {len(body):,} chars · {parsed.metadata}[/dim]"
+                )
+            except Exception as e:
+                console.print(f"[yellow]Parser failed ({e}); falling back to raw read[/yellow]")
+                body = Path(document).read_text(encoding="utf-8", errors="replace")
         inputs = {"document": body}
     elif flow_cls is RAGOptimizationFlow:
         inputs = {"question": question, "retriever": None}

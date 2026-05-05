@@ -62,6 +62,8 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 | External connectors (Pull + Push) | ✅ | Box, SharePoint, Dropbox, Google Drive, kintone, Salesforce |
 | Custom prompts (per-user + admin distribute) | ✅ | Personal / org / distributed scopes with role targeting |
 | Personal & organizational dashboards | ✅ | Flow/skill counts, success rate, top users, promoted blocks |
+| File parsing (PDF / Word / PPT / Excel / CSV / HTML) | ✅ | Auto-dispatch parser by extension; pluggable via entry points |
+| Voice input / output (STT + TTS) | ✅ | OpenAI Whisper / TTS by default; ElevenLabs / local Whisper / Piper supported |
 | Default Streamlit UI | ✅ | 5-tab dashboard for non-technical users |
 | MCP / Claude Skills compatibility | ✅ | Skills serialize to standard `SKILL.md` format |
 | Outcome tracking | ✅ | `record_outcome()` for statistical promotion |

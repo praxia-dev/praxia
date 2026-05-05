@@ -96,45 +96,70 @@ with tab_run:
         options=["sales-agent", "logic-checker", "rag-optimizer"],
     )
 
+    # All registered parsers — drives the file_uploader type list
+    from praxia.io.parsers import parse_file as _parse, supported_extensions as _exts
+    SUPPORTED_EXT = _exts()  # [csv, docx, html, json, md, pdf, pptx, ...]
+
+    def _parse_uploaded(file) -> tuple[str, dict]:
+        """Run an uploaded Streamlit file through the unified parser."""
+        try:
+            parsed = _parse(file.getvalue() if hasattr(file, "getvalue") else file.read(), filename=file.name)
+            return parsed.content, parsed.metadata
+        except Exception as e:
+            return f"[Failed to parse {file.name}: {e}]", {"error": str(e)}
+
     flow_inputs: dict[str, Any] = {}
     if flow_name == "sales-agent":
         flow_inputs["customer_name"] = st.text_input("顧客名", placeholder="株式会社サンプル")
         flow_inputs["product"] = st.text_input("自社製品", placeholder="BizFlow")
         flow_inputs["additional_context"] = st.text_area("追加コンテキスト (任意)", height=100)
-        # Local file upload for additional context
         sales_files = st.file_uploader(
-            "📎 補助資料 (任意): IR / プレス / 議事録 などをアップロード",
-            type=["txt", "md", "pdf", "csv", "json"],
+            f"📎 補助資料 (任意): IR / プレス / 議事録 などをアップロード · 対応形式: {', '.join(SUPPORTED_EXT)}",
+            type=SUPPORTED_EXT,
             accept_multiple_files=True,
             key="sales_files",
         )
         if sales_files:
             extra_text = []
             for f in sales_files:
-                try:
-                    content = f.read().decode("utf-8", errors="replace")
-                except Exception:
-                    content = f"[binary {f.name}, {f.size} bytes — provide a text/PDF parser]"
-                extra_text.append(f"## File: {f.name}\n{content[:8000]}")
+                content, meta = _parse_uploaded(f)
+                extra_text.append(f"## File: {f.name}\n{content[:12000]}")
+                st.caption(f"📄 {f.name} · parsed {len(content):,} chars · {meta}")
             flow_inputs["additional_context"] += "\n\n" + "\n\n".join(extra_text)
-            st.success(f"📎 Attached {len(sales_files)} file(s)")
+            st.success(f"📎 Attached and parsed {len(sales_files)} file(s)")
         flow_cls: Any = SalesAgentFlow
     elif flow_name == "logic-checker":
-        # Allow either text paste OR file upload
-        upload_mode = st.radio("入力方法", ["テキスト貼り付け", "ファイルアップロード"], horizontal=True)
+        upload_mode = st.radio(
+            "入力方法",
+            ["テキスト貼り付け", "ファイルアップロード", "🎙 音声入力"],
+            horizontal=True,
+        )
         if upload_mode == "ファイルアップロード":
             uploaded = st.file_uploader(
-                "📎 レビュー対象ファイル (.md / .txt / .py / その他テキスト)",
-                type=["md", "txt", "py", "ts", "js", "rst", "html", "json", "yaml", "yml"],
+                f"📎 レビュー対象ファイル · 対応形式: {', '.join(SUPPORTED_EXT)}",
+                type=SUPPORTED_EXT,
                 key="logic_file",
             )
             if uploaded:
-                try:
-                    flow_inputs["document"] = uploaded.read().decode("utf-8", errors="replace")
-                    st.caption(f"📄 {uploaded.name} · {len(flow_inputs['document']):,} chars")
-                except Exception as e:
-                    st.error(f"Failed to read file: {e}")
-                    flow_inputs["document"] = ""
+                content, meta = _parse_uploaded(uploaded)
+                flow_inputs["document"] = content
+                st.caption(f"📄 {uploaded.name} · parsed {len(content):,} chars · {meta}")
+            else:
+                flow_inputs["document"] = ""
+        elif upload_mode == "🎙 音声入力":
+            audio = st.audio_input("マイクから録音 (ブラウザ許可必須)")
+            if audio:
+                from praxia.io.audio import STT
+                with st.spinner("音声を文字起こし中..."):
+                    try:
+                        flow_inputs["document"] = STT().transcribe(
+                            audio.getvalue(), filename="recording.wav", language="ja"
+                        )
+                        st.success(f"🎙 文字起こし完了: {len(flow_inputs['document']):,} chars")
+                        st.text(flow_inputs["document"][:500])
+                    except Exception as e:
+                        st.error(f"STT failed: {e}")
+                        flow_inputs["document"] = ""
             else:
                 flow_inputs["document"] = ""
         else:
@@ -178,25 +203,55 @@ with tab_skill:
     skill_cls = skill_options[label]
 
     st.caption(skill_cls.manifest.description)
-    user_input = st.text_area("入力", height=200, placeholder="エージェントへの依頼内容を記入")
 
-    # Optional file attachment(s)
-    skill_files = st.file_uploader(
-        "📎 ファイル添付 (任意): 契約書・仕様書・財務資料などを添付すると入力に追記されます",
-        type=["txt", "md", "pdf", "csv", "json", "yaml", "yml", "html"],
-        accept_multiple_files=True,
-        key="skill_files",
+    # Input mode: text / file / voice
+    from praxia.io.parsers import parse_file as _parse2, supported_extensions as _exts2
+    SKILL_EXTS = _exts2()
+
+    skill_input_mode = st.radio(
+        "入力方法",
+        ["テキスト", "📎 ファイル添付 (組合せ可)", "🎙 音声入力"],
+        horizontal=True,
+        key="skill_input_mode",
     )
-    if skill_files:
-        attached_text: list[str] = []
-        for f in skill_files:
-            try:
-                body = f.read().decode("utf-8", errors="replace")
-            except Exception:
-                body = f"[binary {f.name}, {f.size} bytes]"
-            attached_text.append(f"## Attached file: {f.name}\n{body[:8000]}")
-        user_input = (user_input or "") + "\n\n" + "\n\n".join(attached_text)
-        st.caption(f"📎 {len(skill_files)} file(s) attached, total {sum(len(t) for t in attached_text):,} chars")
+
+    user_input = ""
+    if skill_input_mode in ("テキスト", "📎 ファイル添付 (組合せ可)"):
+        user_input = st.text_area("入力", height=200, placeholder="エージェントへの依頼内容を記入")
+
+    if skill_input_mode == "📎 ファイル添付 (組合せ可)":
+        skill_files = st.file_uploader(
+            f"📎 ファイル添付: PDF / Word / PowerPoint / Excel / CSV / TXT / MD / HTML 等 · 対応: {', '.join(SKILL_EXTS)}",
+            type=SKILL_EXTS,
+            accept_multiple_files=True,
+            key="skill_files",
+        )
+        if skill_files:
+            attached_text: list[str] = []
+            for f in skill_files:
+                try:
+                    parsed = _parse2(f.getvalue(), filename=f.name)
+                    attached_text.append(f"## Attached file: {f.name}\n{parsed.content[:12000]}")
+                    st.caption(f"📄 {f.name} · {len(parsed.content):,} chars · {parsed.metadata}")
+                except Exception as e:
+                    st.error(f"Failed to parse {f.name}: {e}")
+            user_input = (user_input or "") + "\n\n" + "\n\n".join(attached_text)
+
+    if skill_input_mode == "🎙 音声入力":
+        audio = st.audio_input("マイクから録音", key="skill_audio")
+        if audio:
+            from praxia.io.audio import STT
+            with st.spinner("音声を文字起こし中..."):
+                try:
+                    user_input = STT().transcribe(
+                        audio.getvalue(), filename="skill_input.wav", language="ja"
+                    )
+                    st.success(f"🎙 文字起こし完了: {len(user_input):,} chars")
+                    st.text_area("文字起こし結果 (編集可)", value=user_input, height=120, key="stt_edit")
+                except Exception as e:
+                    st.error(f"STT failed: {e}")
+
+    enable_tts = st.checkbox("🔊 出力を音声で読み上げ (任意)", value=False, key="skill_tts")
 
     if st.button("▶ 実行", key="skill_run", type="primary", disabled=not user_input):
         llm = LLM(model_choice)
@@ -206,6 +261,14 @@ with tab_skill:
         st.markdown(output)
         if loom.skill_registry:
             loom.skill_registry.log_usage(skill_name=skill_obj.manifest.name, user_id=user_id)
+        if enable_tts:
+            from praxia.io.audio import TTS
+            try:
+                with st.spinner("音声合成中..."):
+                    audio_bytes = TTS().synthesize(output[:4000], voice="alloy", format="mp3")
+                st.audio(audio_bytes, format="audio/mp3")
+            except Exception as e:
+                st.warning(f"TTS unavailable: {e}")
 
 
 # Tab 3: Memory ------------------------------------------------------------

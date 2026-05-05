@@ -523,6 +523,87 @@ def test_third_party_skill_can_register_via_decorator() -> None:
     SKILLS.unregister("hr_recruiting_test")
 
 
+def test_parsers_registry_lists_all_formats() -> None:
+    """All built-in parsers register on import."""
+    from praxia.io.parsers import supported_extensions
+
+    exts = supported_extensions()
+    # Must include the formats the user explicitly asked for
+    for needed in ("pdf", "docx", "pptx", "xlsx", "csv", "txt", "md", "html"):
+        assert needed in exts, f"missing parser for .{needed}"
+
+
+def test_text_parser_handles_jp_encoding() -> None:
+    """TextParser falls back to Shift-JIS gracefully."""
+    from praxia.io.parsers.text import TextParser
+
+    sjis_bytes = "営業企画 第3四半期".encode("shift_jis")
+    out = TextParser().parse(sjis_bytes, filename="memo.txt")
+    assert "営業企画" in out.content
+    assert out.metadata["encoding"] == "shift_jis"
+
+
+def test_csv_parser_renders_markdown_table() -> None:
+    """CsvParser produces a Markdown-style table."""
+    from praxia.io.parsers.csv_parser import CsvParser
+
+    csv_data = b"name,age,role\nAlice,30,Operator\nBob,42,Admin\n"
+    out = CsvParser().parse(csv_data, filename="users.csv")
+    assert "| name | age | role |" in out.content
+    assert "| Alice | 30 | Operator |" in out.content
+    assert out.metadata["rows"] == 2
+
+
+def test_structured_parser_pretty_prints_json() -> None:
+    from praxia.io.parsers.structured import StructuredParser
+    import json as _json
+
+    data = b'{"foo":"bar","n":[1,2,3]}'
+    out = StructuredParser().parse(data, filename="config.json")
+    parsed_back = _json.loads(out.content)
+    assert parsed_back == {"foo": "bar", "n": [1, 2, 3]}
+    assert out.metadata["is_valid"] is True
+
+
+def test_html_parser_strips_tags() -> None:
+    from praxia.io.parsers.html import HtmlParser
+
+    html = b"""<html><head><title>Test</title></head>
+    <body><script>evil();</script><p>Hello <b>world</b>!</p></body></html>"""
+    out = HtmlParser().parse(html, filename="page.html")
+    assert "Hello world" in out.content
+    assert "evil()" not in out.content
+    assert "<p>" not in out.content
+    assert out.metadata["title"] == "Test"
+
+
+def test_parse_file_dispatches_by_extension() -> None:
+    """parse_file() picks the right parser from filename."""
+    from praxia.io.parsers import parse_file
+
+    out = parse_file(b"hello,world\n1,2", filename="data.csv")
+    assert "| hello | world |" in out.content
+
+
+def test_parse_file_unknown_extension_raises() -> None:
+    from praxia.io.parsers import parse_file
+    try:
+        parse_file(b"...", filename="weird.xyz")
+    except ValueError as e:
+        assert "xyz" in str(e)
+
+
+def test_audio_modules_import_clean() -> None:
+    """STT / TTS classes are importable without optional deps."""
+    from praxia.io.audio import STT, TTS
+
+    # Construction should not require API keys (auto-pick falls back)
+    stt = STT(provider="openai")
+    tts = TTS(provider="openai")
+    assert stt.provider == "openai"
+    assert tts.provider == "openai"
+
+
 def test_authmanager_has_policies_and_exports() -> None:
     """AuthManager exposes policies + exports as composed sub-services."""
     from praxia.auth import AuthManager
