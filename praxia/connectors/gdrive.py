@@ -15,10 +15,22 @@ class GoogleDriveConnector:
         *,
         service_account_file: str | None = None,
         oauth_credentials: Any = None,
+        user_id: str | None = None,
     ) -> None:
         _require("googleapiclient", 'pip install "praxia[gdrive]"')
         from googleapiclient.discovery import build
-        if service_account_file:
+        if user_id:
+            # User-delegated OAuth — fetch from token store
+            from google.oauth2.credentials import Credentials
+            from praxia.connectors.oauth import oauth_token_for
+            tok = oauth_token_for(user_id, "google")
+            creds = Credentials(
+                token=tok.access_token,
+                refresh_token=tok.refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                scopes=["https://www.googleapis.com/auth/drive"],
+            )
+        elif service_account_file:
             from google.oauth2 import service_account
             creds = service_account.Credentials.from_service_account_file(
                 service_account_file,
@@ -27,7 +39,10 @@ class GoogleDriveConnector:
         elif oauth_credentials is not None:
             creds = oauth_credentials
         else:
-            raise ValueError("Provide service_account_file or oauth_credentials")
+            raise ValueError(
+                "Provide user_id (with stored OAuth token), service_account_file, "
+                "or oauth_credentials"
+            )
         self._service = build("drive", "v3", credentials=creds, cache_discovery=False)
 
     def pull(self, path: str, *, limit: int = 100) -> list[ConnectorItem]:

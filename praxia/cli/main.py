@@ -996,5 +996,127 @@ def admin_export_shared_memory(
     console.print(f"💾 Exported shared memory → [bold]{path}[/bold]")
 
 
+# --- User-delegated OAuth ----------------------------------------------------
+
+oauth_app = typer.Typer(help="Per-user OAuth for connector access (Box / SharePoint / Drive / Dropbox / Salesforce)")
+app.add_typer(oauth_app, name="oauth")
+
+
+@oauth_app.command("start")
+def oauth_start(
+    provider: str = typer.Argument(..., help="box | microsoft | dropbox | google | salesforce"),
+    user_id: str = typer.Option(..., help="Praxia user_id this token belongs to"),
+    redirect_uri: str = typer.Option(
+        "http://localhost:8765/callback",
+        help="Redirect URI registered with the provider's OAuth app",
+    ),
+) -> None:
+    """Print the authorization URL for a user to authorize a connector.
+
+    Reads client credentials from
+        PRAXIA_OAUTH_<PROVIDER>_CLIENT_ID
+        PRAXIA_OAUTH_<PROVIDER>_CLIENT_SECRET
+    """
+    import os
+    from praxia.connectors.oauth import OAuthFlow
+
+    cid = os.environ.get(f"PRAXIA_OAUTH_{provider.upper()}_CLIENT_ID")
+    csec = os.environ.get(f"PRAXIA_OAUTH_{provider.upper()}_CLIENT_SECRET")
+    if not (cid and csec):
+        console.print(
+            f"[red]Set PRAXIA_OAUTH_{provider.upper()}_CLIENT_ID and "
+            f"PRAXIA_OAUTH_{provider.upper()}_CLIENT_SECRET first.[/red]"
+        )
+        raise typer.Exit(1)
+
+    flow = OAuthFlow.for_provider(
+        provider, client_id=cid, client_secret=csec, redirect_uri=redirect_uri
+    )
+    url, state = flow.authorization_url(user_id=user_id)
+    console.print(
+        Panel.fit(
+            f"Open this URL in a browser to authorize:\n\n"
+            f"[link]{url}[/link]\n\n"
+            f"After consent the provider will redirect to:\n  {redirect_uri}\n\n"
+            f"State (save this; needed for callback): [yellow]{state}[/yellow]",
+            title=f"OAuth start: {provider} ({user_id})",
+            border_style="cyan",
+        )
+    )
+
+
+@oauth_app.command("callback")
+def oauth_callback(
+    provider: str = typer.Argument(...),
+    code: str = typer.Argument(..., help="The 'code' query param from the redirect"),
+    state: str = typer.Argument(..., help="The state token returned by `oauth start`"),
+    redirect_uri: str = typer.Option("http://localhost:8765/callback"),
+) -> None:
+    """Complete the OAuth flow with the code returned by the provider.
+
+    NOTE: The state must match the one shown in `oauth start`. The flow
+    object holds the state in-memory; for production deployments use a
+    web server with persistent state storage.
+    """
+    console.print(
+        "[yellow]CLI callback is intended for local dev/test only. "
+        "For production use a real HTTP redirect handler.[/yellow]"
+    )
+    console.print(
+        "Use the SDK form for production:\n"
+        "  flow = OAuthFlow.for_provider(...)\n"
+        "  url, state = flow.authorization_url(user_id=...)\n"
+        "  # ... user authorizes ...\n"
+        "  token = flow.exchange_code(code=..., state=...)"
+    )
+
+
+@oauth_app.command("list")
+def oauth_list(user_id: str = typer.Option("", help="Filter to one user")) -> None:
+    """List authorized OAuth tokens (without revealing secrets)."""
+    import datetime
+    from praxia.connectors.oauth import OAuthTokenStore
+
+    store = OAuthTokenStore()
+    tokens = store.list_for_user(user_id) if user_id else store.list_all()
+    table = Table(title="OAuth tokens")
+    table.add_column("User")
+    table.add_column("Provider", style="cyan")
+    table.add_column("Expires")
+    table.add_column("Refresh?")
+    table.add_column("Scope")
+    for t in tokens:
+        expires = (
+            datetime.datetime.fromtimestamp(t.expires_at).strftime("%Y-%m-%d %H:%M")
+            if t.expires_at
+            else "—"
+        )
+        table.add_row(
+            t.user_id,
+            t.provider,
+            f"[red]{expires}[/red]" if t.is_expired() else expires,
+            "✓" if t.refresh_token else "—",
+            t.scope[:60],
+        )
+    console.print(table)
+
+
+@oauth_app.command("revoke")
+def oauth_revoke(
+    provider: str = typer.Argument(...),
+    user_id: str = typer.Option(...),
+    yes: bool = typer.Option(False, "--yes"),
+) -> None:
+    """Revoke a user's OAuth grant for a provider."""
+    if not yes and not typer.confirm(f"Revoke {provider} access for {user_id}?"):
+        raise typer.Exit(0)
+    from praxia.connectors.oauth import OAuthTokenStore
+    if OAuthTokenStore().delete(user_id, provider):
+        console.print(f"🗑  Revoked {provider} for {user_id}")
+    else:
+        console.print(f"[red]No token found for {user_id}/{provider}[/red]")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()

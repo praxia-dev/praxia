@@ -203,6 +203,27 @@ PersonalMemory(user_id="alice", backend="mem0")
 - Three scopes (personal / org / distributed) with merge precedence
 - Same model as the skill registry
 
+### Per-user OAuth for connectors
+
+Each Praxia user can authorize external systems with **their own credentials** — the external system's native ACL is enforced per-user.
+
+```bash
+# Set the OAuth app credentials once
+export PRAXIA_OAUTH_BOX_CLIENT_ID=...
+export PRAXIA_OAUTH_BOX_CLIENT_SECRET=...
+
+# Each user authorizes individually
+praxia oauth start box --user-id alice
+# → opens authorization URL → user logs in → redirect captures code
+# → token saved encrypted to .praxia/auth/oauth_tokens.jsonl
+
+# From now on, alice's connector calls use her token
+praxia connector pull box 0 --user-id alice
+# alice can only see Box folders alice has access to
+```
+
+Supported providers: Box, Microsoft (SharePoint/OneDrive), Dropbox, Google Drive, Salesforce. Tokens auto-refresh; access logged in audit log.
+
 ### External Connectors — 6 systems, Pull + Push
 | Connector | Pull | Push | Auth |
 |---|---|---|---|

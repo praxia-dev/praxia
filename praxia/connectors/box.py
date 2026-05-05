@@ -16,15 +16,30 @@ class BoxConnector:
         client_id: str | None = None,
         client_secret: str | None = None,
         enterprise_id: str | None = None,
+        user_id: str | None = None,
     ) -> None:
         boxsdk = _require("boxsdk", 'pip install "praxia[box]"')
+
+        # User-delegated OAuth: pull the user's stored token + auto-refresh
+        if user_id and not access_token:
+            from praxia.connectors.oauth import oauth_token_for
+            tok = oauth_token_for(user_id, "box")
+            access_token = tok.access_token
+
         if access_token:
-            self._client = boxsdk.Client(boxsdk.OAuth2(client_id=client_id, client_secret=client_secret, access_token=access_token))
+            self._client = boxsdk.Client(
+                boxsdk.OAuth2(
+                    client_id=client_id, client_secret=client_secret, access_token=access_token
+                )
+            )
         elif enterprise_id:  # pragma: no cover — JWT path
             auth = boxsdk.JWTAuth.from_settings_file("box_jwt.json")
             self._client = boxsdk.Client(auth)
         else:
-            raise ValueError("Provide access_token (or JWT settings + enterprise_id)")
+            raise ValueError(
+                "Provide access_token, user_id (with stored OAuth token), "
+                "or JWT settings + enterprise_id"
+            )
 
     def pull(self, path: str, *, limit: int = 100) -> list[ConnectorItem]:
         """`path` is the Box folder ID (e.g. "0" for root)."""

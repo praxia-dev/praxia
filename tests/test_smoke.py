@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -591,6 +592,99 @@ def test_parse_file_unknown_extension_raises() -> None:
         parse_file(b"...", filename="weird.xyz")
     except ValueError as e:
         assert "xyz" in str(e)
+
+
+def test_oauth_token_store_roundtrip() -> None:
+    """OAuthTokenStore saves/loads/refreshes per-user tokens."""
+    from praxia.connectors.oauth import OAuthToken, OAuthTokenStore
+
+    with tempfile.TemporaryDirectory() as d:
+        store = OAuthTokenStore(storage_dir=d, encryption_secret="test-secret")
+        token = OAuthToken(
+            user_id="alice",
+            provider="box",
+            access_token="abc123",
+            refresh_token="refresh-xyz",
+            expires_at=time.time() + 3600,
+            scope="root_readwrite",
+        )
+        store.save(token)
+
+        loaded = store.get("alice", "box")
+        assert loaded is not None
+        assert loaded.access_token == "abc123"
+        assert loaded.refresh_token == "refresh-xyz"
+        assert loaded.is_expired() is False
+
+        # User isolation — bob has no token even though alice does
+        assert store.get("bob", "box") is None
+
+        # List
+        assert len(store.list_for_user("alice")) == 1
+        assert len(store.list_all()) == 1
+
+        # Delete is idempotent
+        assert store.delete("alice", "box") is True
+        assert store.get("alice", "box") is None
+        assert store.delete("alice", "box") is False
+
+
+def test_oauth_flow_authorization_url() -> None:
+    """OAuthFlow generates valid authorization URLs with state + PKCE."""
+    import urllib.parse
+    from praxia.connectors.oauth import OAuthFlow, OAuthTokenStore, BOX_OAUTH
+
+    with tempfile.TemporaryDirectory() as d:
+        store = OAuthTokenStore(storage_dir=d, encryption_secret="test")
+        flow = OAuthFlow(
+            BOX_OAUTH,
+            client_id="cid-test",
+            client_secret="csec-test",
+            redirect_uri="http://localhost:8765/cb",
+            token_store=store,
+        )
+        url, state = flow.authorization_url(user_id="alice")
+        parsed = urllib.parse.urlparse(url)
+        params = dict(urllib.parse.parse_qsl(parsed.query))
+        assert params["client_id"] == "cid-test"
+        assert params["state"] == state
+        assert params["response_type"] == "code"
+        assert "redirect_uri" in params
+        assert len(state) > 16
+
+
+def test_oauth_token_for_raises_when_unauthorized() -> None:
+    """oauth_token_for() raises clear error when user has no token."""
+    from praxia.connectors.oauth import OAuthTokenStore, oauth_token_for
+
+    with tempfile.TemporaryDirectory() as d:
+        store = OAuthTokenStore(storage_dir=d, encryption_secret="test")
+        try:
+            oauth_token_for("alice", "box", store=store)
+        except PermissionError as e:
+            msg = str(e)
+            assert "alice" in msg
+            assert "box" in msg
+            assert "praxia oauth start" in msg
+        else:
+            raise AssertionError("Should have raised PermissionError")
+
+
+def test_oauth_providers_registered() -> None:
+    """All 5 OAuth providers are configured."""
+    from praxia.connectors.oauth import (
+        BOX_OAUTH,
+        DROPBOX_OAUTH,
+        GOOGLE_OAUTH,
+        MICROSOFT_OAUTH,
+        SALESFORCE_OAUTH,
+    )
+
+    for cfg in (BOX_OAUTH, MICROSOFT_OAUTH, DROPBOX_OAUTH, GOOGLE_OAUTH, SALESFORCE_OAUTH):
+        assert cfg.authorize_url.startswith("https://")
+        assert cfg.token_url.startswith("https://")
+        assert isinstance(cfg.default_scopes, list)
+        assert len(cfg.default_scopes) > 0
 
 
 def test_audio_modules_import_clean() -> None:

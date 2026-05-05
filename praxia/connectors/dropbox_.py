@@ -9,8 +9,13 @@ from praxia.connectors.base import Connector, ConnectorItem, _require
 class DropboxConnector:
     name = "dropbox"
 
-    def __init__(self, *, access_token: str) -> None:
+    def __init__(self, *, access_token: str | None = None, user_id: str | None = None) -> None:
         dropbox = _require("dropbox", 'pip install "praxia[dropbox]"')
+        if user_id and not access_token:
+            from praxia.connectors.oauth import oauth_token_for
+            access_token = oauth_token_for(user_id, "dropbox").access_token
+        if not access_token:
+            raise ValueError("Provide access_token or user_id with a stored OAuth token")
         self._client = dropbox.Dropbox(access_token)
 
     def pull(self, path: str, *, limit: int = 100) -> list[ConnectorItem]:

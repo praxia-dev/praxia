@@ -656,8 +656,8 @@ pre .str     { color: var(--accent-bright); }
 }
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 2.5rem;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 2rem;
   padding: 0 1.5rem;
 }
 .footer h4 {

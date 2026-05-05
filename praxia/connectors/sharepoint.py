@@ -12,25 +12,40 @@ class SharePointConnector:
     def __init__(
         self,
         *,
-        tenant_id: str,
-        client_id: str,
-        client_secret: str,
+        tenant_id: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
         site_id: str | None = None,
+        user_id: str | None = None,
     ) -> None:
-        msal = _require("msal", 'pip install "praxia[sharepoint]"')
         _require("requests", 'pip install requests')
         import requests
-        self._app = msal.ConfidentialClientApplication(
-            client_id,
-            authority=f"https://login.microsoftonline.com/{tenant_id}",
-            client_credential=client_secret,
-        )
-        result = self._app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
-        self._token = result.get("access_token")
-        if not self._token:
-            raise RuntimeError(f"SharePoint auth failed: {result.get('error_description')}")
-        self._site_id = site_id
         self._requests = requests
+
+        # User-delegated OAuth path — preferred for enterprise IS depts
+        if user_id:
+            from praxia.connectors.oauth import oauth_token_for
+            self._token = oauth_token_for(user_id, "microsoft").access_token
+        else:
+            # App-only client-credentials fallback (shared service account)
+            if not (tenant_id and client_id and client_secret):
+                raise ValueError(
+                    "Provide either user_id (with stored OAuth token) or "
+                    "tenant_id + client_id + client_secret for app-only auth"
+                )
+            msal = _require("msal", 'pip install "praxia[sharepoint]"')
+            self._app = msal.ConfidentialClientApplication(
+                client_id,
+                authority=f"https://login.microsoftonline.com/{tenant_id}",
+                client_credential=client_secret,
+            )
+            result = self._app.acquire_token_for_client(
+                scopes=["https://graph.microsoft.com/.default"]
+            )
+            self._token = result.get("access_token")
+            if not self._token:
+                raise RuntimeError(f"SharePoint auth failed: {result.get('error_description')}")
+        self._site_id = site_id
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self._token}"}

@@ -19,9 +19,18 @@ class SalesforceConnector:
         instance_url: str | None = None,
         access_token: str | None = None,
         domain: str = "login",
+        user_id: str | None = None,
     ) -> None:
         _require("simple_salesforce", 'pip install "praxia[salesforce]"')
         from simple_salesforce import Salesforce
+
+        # User-delegated OAuth — preferred
+        if user_id:
+            from praxia.connectors.oauth import oauth_token_for
+            tok = oauth_token_for(user_id, "salesforce")
+            access_token = tok.access_token
+            instance_url = tok.extra.get("instance_url") or instance_url
+
         if access_token and instance_url:
             self._sf = Salesforce(instance_url=instance_url, session_id=access_token)
         elif username and password and security_token:
@@ -32,7 +41,10 @@ class SalesforceConnector:
                 domain=domain,
             )
         else:
-            raise ValueError("Provide either (instance_url+access_token) or (username+password+security_token)")
+            raise ValueError(
+                "Provide one of: user_id (with stored OAuth token), "
+                "(instance_url + access_token), or (username + password + security_token)"
+            )
 
     def pull(self, path: str, *, limit: int = 100) -> list[ConnectorItem]:
         """`path` is a SOQL query, e.g. "SELECT Id, Name FROM Account WHERE Industry = 'Manufacturing'"."""
