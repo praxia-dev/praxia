@@ -286,6 +286,108 @@ def serve(
     uvicorn.run(fastapi_app, host=host, port=port, reload=reload)
 
 
+# --- MCP server -------------------------------------------------------------
+
+mcp_app = typer.Typer(help="Model Context Protocol server (Claude Desktop / Cursor)")
+app.add_typer(mcp_app, name="mcp")
+
+
+@mcp_app.command("serve")
+def mcp_serve() -> None:
+    """Run an MCP server on stdio. Connect from Claude Desktop / Cursor."""
+    from praxia.mcp import serve_stdio
+    serve_stdio()
+
+
+@mcp_app.command("tools")
+def mcp_tools() -> None:
+    """List the MCP tools Praxia exposes (skills + flows + utilities)."""
+    from praxia.mcp import build_tools
+    table = Table(title="MCP tools")
+    table.add_column("Name", style="cyan")
+    table.add_column("Description")
+    for t in build_tools():
+        table.add_row(t.name, t.description)
+    console.print(table)
+
+
+# --- Webhooks ---------------------------------------------------------------
+
+webhook_app = typer.Typer(help="Outgoing webhook subscriptions")
+app.add_typer(webhook_app, name="webhook")
+
+
+@webhook_app.command("add")
+def webhook_add(
+    url: str = typer.Argument(..., help="Receiver URL (e.g. Slack incoming webhook)"),
+    event: str = typer.Option("*", help="Event filter (e.g. 'flow.run.complete' or '*')"),
+    secret: str = typer.Option("", help="Optional HMAC secret (recommended)"),
+) -> None:
+    """Subscribe a URL to Praxia events."""
+    from praxia.webhooks import WebhookManager
+    mgr = WebhookManager()
+    sub = mgr.add(url=url, event=event, secret=secret)
+    console.print(f"✅ Subscribed [bold]{sub.id}[/bold] → {url} (event={event})")
+
+
+@webhook_app.command("list")
+def webhook_list() -> None:
+    from praxia.webhooks import WebhookManager
+    mgr = WebhookManager()
+    table = Table(title="Webhook subscriptions")
+    table.add_column("ID", style="cyan")
+    table.add_column("Event")
+    table.add_column("URL")
+    table.add_column("Active")
+    for s in mgr.list():
+        table.add_row(s.id[:8], s.event, s.url, "✓" if s.active else "✗")
+    console.print(table)
+
+
+@webhook_app.command("remove")
+def webhook_remove(
+    sub_id: str = typer.Argument(..., help="Subscription ID (or its first 8 chars)"),
+) -> None:
+    from praxia.webhooks import WebhookManager
+    mgr = WebhookManager()
+    # Accept partial ID
+    matches = [s for s in mgr.list() if s.id.startswith(sub_id)]
+    if not matches:
+        console.print(f"[red]No subscription matches: {sub_id}[/red]")
+        raise typer.Exit(1)
+    if len(matches) > 1:
+        console.print(f"[red]Ambiguous prefix; {len(matches)} matches[/red]")
+        raise typer.Exit(1)
+    mgr.remove(matches[0].id)
+    console.print(f"🗑  Removed {matches[0].id}")
+
+
+@webhook_app.command("test")
+def webhook_test(
+    sub_id: str = typer.Argument(...),
+) -> None:
+    """Fire a test event to a single subscription (sync, prints result)."""
+    from praxia.webhooks import WebhookManager
+    mgr = WebhookManager()
+    matches = [s for s in mgr.list() if s.id.startswith(sub_id)]
+    if not matches:
+        console.print(f"[red]No subscription matches: {sub_id}[/red]")
+        raise typer.Exit(1)
+    sub = matches[0]
+    # Temporarily filter to this one subscription by using .dispatch with sync=True
+    # but the manager dispatches to all matching subs — we cheat by creating
+    # a one-off temporary manager instance pointed at a hidden dir. Simpler:
+    # invoke the private _deliver method directly.
+    import json
+    body = json.dumps({"event": "test.ping", "payload": {"hello": "world"}}).encode()
+    delivery = mgr._deliver(sub, "test.ping", body)
+    console.print(
+        f"  status: {delivery.status_code}  success: {delivery.success}  "
+        f"duration: {delivery.duration_ms:.1f} ms\n"
+        f"  error: {delivery.error or '(none)'}"
+    )
+
+
 # --- Phase 4: Skill promotion ------------------------------------------------
 
 skill_app = typer.Typer(help="Skill registry commands")
@@ -720,12 +822,29 @@ def connector_list() -> None:
     table.add_column("Install extra")
     table.add_column("Auth method")
     rows = [
+        # v1.0
         ("box", "praxia[box]", "OAuth2 access token / JWT"),
-        ("sharepoint", "praxia[sharepoint]", "Microsoft Entra ID app (client credentials)"),
-        ("dropbox", "praxia[dropbox]", "OAuth2 access token"),
-        ("gdrive", "praxia[gdrive]", "Service account or OAuth credentials"),
-        ("kintone", "praxia[kintone]", "API token or basic auth"),
-        ("salesforce", "praxia[salesforce]", "Username/password+token or OAuth"),
+        ("sharepoint", "praxia[sharepoint]", "Microsoft Entra ID app"),
+        ("dropbox", "praxia[dropbox]", "OAuth2"),
+        ("gdrive", "praxia[gdrive]", "Service account or OAuth"),
+        ("kintone", "praxia[kintone]", "API token or basic"),
+        ("salesforce", "praxia[salesforce]", "Username+token or OAuth"),
+        # Tier 1 (v1.1)
+        ("notion", "praxia[notion]", "OAuth (Notion)"),
+        ("confluence", "(stdlib)", "OAuth (Atlassian)"),
+        ("jira", "(stdlib)", "OAuth (Atlassian)"),
+        ("slack", "(stdlib)", "OAuth (Slack)"),
+        ("teams", "(stdlib)", "OAuth (Microsoft, ChannelMessage scopes)"),
+        # Tier 2 (v1.1)
+        ("github", "praxia[github]", "OAuth (GitHub)"),
+        ("hubspot", "praxia[hubspot]", "OAuth (HubSpot)"),
+        ("zendesk", "(stdlib)", "OAuth or API token"),
+        ("linear", "(stdlib)", "OAuth or API key"),
+        ("s3", "praxia[s3]", "AWS IAM (boto3 chain)"),
+        ("azure-blob", "praxia[azure-blob]", "Azure DefaultAzureCredential / SAS / connstr"),
+        ("gcs", "praxia[gcs]", "GCP ADC / service account JSON"),
+        ("webdav", "(stdlib)", "HTTP Basic"),
+        ("email", "(stdlib + optional [gdrive] for gmail)", "IMAP/SMTP / OAuth"),
     ]
     for name, extra, auth in rows:
         table.add_row(name, extra, auth)

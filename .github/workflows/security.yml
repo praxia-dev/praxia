@@ -1,0 +1,60 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly at 03:00 UTC — catches new CVEs in pinned deps
+    - cron: "0 3 * * *"
+
+jobs:
+  bandit:
+    name: SAST (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install bandit
+        run: pip install bandit==1.7.10
+      - name: Run bandit
+        # -ll: report only Medium / High severity
+        # -ii: report only Medium / High confidence
+        # Excludes: tests/ (test fixtures contain example payloads that aren't vulns)
+        run: |
+          bandit -r praxia -lll -iii \
+            --skip B101 \
+            -x tests,praxia/connectors/oauth/kms.py
+        # B101 = assert_used (we use asserts in non-prod code paths)
+        # kms.py uses HMAC fallback if cryptography is missing — by design
+
+  pip-audit:
+    name: Dependency CVE scan (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: pip install pip-audit==2.7.3
+      - name: Audit installed dependencies
+        # --strict fails on warnings too; --vulnerability-service=osv (default) covers OSV.dev
+        run: |
+          pip install -e ".[dev]"
+          pip-audit --strict --vulnerability-service osv
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

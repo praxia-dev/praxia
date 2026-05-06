@@ -325,4 +325,14 @@ def create_app(
         deleted = token_store.delete(user.id, provider)
         return {"deleted": deleted}
 
+    # --- SCIM provisioning (optional) ---------------------------------------
+    # Mount only if PRAXIA_SCIM_TOKEN is set — keeps the surface area minimal
+    # for operators who don't need it.
+    if os.environ.get("PRAXIA_SCIM_TOKEN"):
+        try:
+            from praxia.scim import scim_router
+            app.include_router(scim_router(auth=auth), prefix="/scim/v2")
+        except ImportError:
+            pass  # SCIM module imports cleanly even without FastAPI
+
     return app

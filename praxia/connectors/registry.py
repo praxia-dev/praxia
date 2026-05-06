@@ -31,6 +31,23 @@ CONNECTORS.register("dropbox", lazy("praxia.connectors.dropbox_:DropboxConnector
 CONNECTORS.register("gdrive", lazy("praxia.connectors.gdrive:GoogleDriveConnector"))
 CONNECTORS.register("kintone", lazy("praxia.connectors.kintone:KintoneConnector"))
 CONNECTORS.register("salesforce", lazy("praxia.connectors.salesforce:SalesforceConnector"))
+# Tier 1
+CONNECTORS.register("notion", lazy("praxia.connectors.notion:NotionConnector"))
+CONNECTORS.register("confluence", lazy("praxia.connectors.confluence:ConfluenceConnector"))
+CONNECTORS.register("jira", lazy("praxia.connectors.jira:JiraConnector"))
+CONNECTORS.register("slack", lazy("praxia.connectors.slack:SlackConnector"))
+CONNECTORS.register("teams", lazy("praxia.connectors.teams:TeamsConnector"))
+# Tier 2
+CONNECTORS.register("github", lazy("praxia.connectors.github:GitHubConnector"))
+CONNECTORS.register("hubspot", lazy("praxia.connectors.hubspot:HubSpotConnector"))
+CONNECTORS.register("zendesk", lazy("praxia.connectors.zendesk:ZendeskConnector"))
+CONNECTORS.register("linear", lazy("praxia.connectors.linear:LinearConnector"))
+CONNECTORS.register("s3", lazy("praxia.connectors.s3:S3Connector"))
+CONNECTORS.register("azure-blob", lazy("praxia.connectors.azure_blob:AzureBlobConnector"))
+CONNECTORS.register("gcs", lazy("praxia.connectors.gcs:GcsConnector"))
+CONNECTORS.register("webdav", lazy("praxia.connectors.webdav:WebDAVConnector"))
+# Email (multi-backend: imap / gmail / outlook)
+CONNECTORS.register("email", lazy("praxia.connectors.email_:EmailConnector"))
 
 
 # --- Public API (kept for backwards compatibility) ---------------------------

@@ -89,7 +89,110 @@ SALESFORCE_OAUTH = OAuthProviderConfig(
     pkce=True,
 )
 
+# --- Notion -------------------------------------------------------------
+
+NOTION_OAUTH = OAuthProviderConfig(
+    name="notion",
+    authorize_url="https://api.notion.com/v1/oauth/authorize",
+    token_url="https://api.notion.com/v1/oauth/token",
+    default_scopes=[],   # Notion uses workspace-level grants, not scopes
+    extra_authorize_params={"owner": "user"},
+    pkce=False,           # Notion does not support PKCE; uses HTTP Basic auth at token endpoint
+)
+
+# --- Atlassian (Confluence + Jira share OAuth) -------------------------
+
+ATLASSIAN_OAUTH = OAuthProviderConfig(
+    name="atlassian",
+    authorize_url="https://auth.atlassian.com/authorize",
+    token_url="https://auth.atlassian.com/oauth/token",
+    default_scopes=[
+        "read:confluence-content.summary",
+        "read:confluence-content.all",
+        "write:confluence-content",
+        "read:jira-work",
+        "write:jira-work",
+        "offline_access",
+    ],
+    extra_authorize_params={"audience": "api.atlassian.com", "prompt": "consent"},
+    pkce=True,
+)
+
+# --- Slack -------------------------------------------------------------
+
+SLACK_OAUTH = OAuthProviderConfig(
+    name="slack",
+    authorize_url="https://slack.com/oauth/v2/authorize",
+    token_url="https://slack.com/api/oauth.v2.access",
+    revoke_url="https://slack.com/api/auth.revoke",
+    default_scopes=[
+        "channels:history",
+        "channels:read",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "files:read",
+        "files:write",
+        "chat:write",
+        "users:read",
+        "search:read",
+    ],
+    pkce=False,           # Slack v2 OAuth uses confidential client flow
+)
+
+# --- GitHub ------------------------------------------------------------
+
+GITHUB_OAUTH = OAuthProviderConfig(
+    name="github",
+    authorize_url="https://github.com/login/oauth/authorize",
+    token_url="https://github.com/login/oauth/access_token",
+    default_scopes=["repo", "read:org", "read:user"],
+    pkce=False,
+)
+
+# --- HubSpot -----------------------------------------------------------
+
+HUBSPOT_OAUTH = OAuthProviderConfig(
+    name="hubspot",
+    authorize_url="https://app.hubspot.com/oauth/authorize",
+    token_url="https://api.hubapi.com/oauth/v1/token",
+    default_scopes=[
+        "crm.objects.contacts.read",
+        "crm.objects.contacts.write",
+        "crm.objects.companies.read",
+        "crm.objects.deals.read",
+        "crm.objects.deals.write",
+    ],
+    pkce=False,
+)
+
+# --- Zendesk -----------------------------------------------------------
+
+ZENDESK_OAUTH = OAuthProviderConfig(
+    name="zendesk",
+    # Subdomain-specific. Operators must template the URL with their tenant
+    # subdomain at runtime (or set PRAXIA_ZENDESK_SUBDOMAIN env var).
+    authorize_url="https://{subdomain}.zendesk.com/oauth/authorizations/new",
+    token_url="https://{subdomain}.zendesk.com/oauth/tokens",
+    default_scopes=["read", "write"],
+    pkce=True,
+)
+
+# --- Linear -----------------------------------------------------------
+
+LINEAR_OAUTH = OAuthProviderConfig(
+    name="linear",
+    authorize_url="https://linear.app/oauth/authorize",
+    token_url="https://api.linear.app/oauth/token",
+    default_scopes=["read", "write"],
+    pkce=False,
+)
+
 
 PROVIDERS_BY_NAME: dict[str, OAuthProviderConfig] = {
-    p.name: p for p in (BOX_OAUTH, MICROSOFT_OAUTH, DROPBOX_OAUTH, GOOGLE_OAUTH, SALESFORCE_OAUTH)
+    p.name: p for p in (
+        BOX_OAUTH, MICROSOFT_OAUTH, DROPBOX_OAUTH, GOOGLE_OAUTH, SALESFORCE_OAUTH,
+        NOTION_OAUTH, ATLASSIAN_OAUTH, SLACK_OAUTH, GITHUB_OAUTH, HUBSPOT_OAUTH,
+        ZENDESK_OAUTH, LINEAR_OAUTH,
+    )
 }

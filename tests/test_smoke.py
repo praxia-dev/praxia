@@ -269,12 +269,15 @@ def test_dashboard_personal_summary() -> None:
         assert summary.success_rate == 1.0
 
 
-def test_connector_registry_lists_six() -> None:
-    """All six connectors are wired into the factory."""
+def test_connector_registry_includes_originals() -> None:
+    """The 6 v1.0 connectors are still registered alongside the v1.1 additions."""
     from praxia.connectors.registry import list_builtin
 
-    builtin = list_builtin()
-    assert set(builtin) == {"box", "sharepoint", "dropbox", "gdrive", "kintone", "salesforce"}
+    builtin = set(list_builtin())
+    # v1.0 originals must remain
+    assert {"box", "sharepoint", "dropbox", "gdrive", "kintone", "salesforce"}.issubset(builtin)
+    # v1.1 additions land
+    assert {"notion", "slack", "github", "s3"}.issubset(builtin)
 
 
 def test_connector_missing_dep_raises_clear_error() -> None:

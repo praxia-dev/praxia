@@ -28,11 +28,19 @@ from praxia.connectors.oauth.kms import (
     envelope_encrypt,
 )
 from praxia.connectors.oauth.providers import (
+    ATLASSIAN_OAUTH,
     BOX_OAUTH,
     DROPBOX_OAUTH,
+    GITHUB_OAUTH,
     GOOGLE_OAUTH,
+    HUBSPOT_OAUTH,
+    LINEAR_OAUTH,
     MICROSOFT_OAUTH,
+    NOTION_OAUTH,
+    PROVIDERS_BY_NAME,
     SALESFORCE_OAUTH,
+    SLACK_OAUTH,
+    ZENDESK_OAUTH,
     OAuthProviderConfig,
 )
 from praxia.connectors.oauth.token_store import (
@@ -54,6 +62,14 @@ __all__ = [
     "DROPBOX_OAUTH",
     "GOOGLE_OAUTH",
     "SALESFORCE_OAUTH",
+    "NOTION_OAUTH",
+    "ATLASSIAN_OAUTH",
+    "SLACK_OAUTH",
+    "GITHUB_OAUTH",
+    "HUBSPOT_OAUTH",
+    "ZENDESK_OAUTH",
+    "LINEAR_OAUTH",
+    "PROVIDERS_BY_NAME",
     # KMS
     "KmsAdapter",
     "KMS_ADAPTERS",

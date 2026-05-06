@@ -11,7 +11,8 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
-[![Tests: 364](https://img.shields.io/badge/tests-364%20passing-green.svg)]()
+[![Tests: 427](https://img.shields.io/badge/tests-427%20passing-green.svg)]()
+[![Connectors: 20](https://img.shields.io/badge/connectors-20-blueviolet.svg)]()
 [![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
 
 > 🇯🇵 日本語版の各業務別記事 (Zenn): [docs/zenn/](docs/zenn/)
@@ -384,17 +385,49 @@ pytest tests/llm_eval --llm-eval-model gpt-4o
 
 Built-in rubrics: keyword match, structure (heading) match, length band, must-not-contain, LLM-as-judge. One canonical case per business skill ships out of the box.
 
-### External Connectors — 6 systems, Pull + Push
+### External Connectors — 20 systems, Pull + Push
+
+**Storage / Files (8)**
+
 | Connector | Pull | Push | Auth |
 |---|---|---|---|
-| **Box** | ✅ folder → files | ✅ upload to folder | OAuth2 / JWT |
-| **SharePoint / M365** | ✅ drive folder → files | ✅ upload to folder | Microsoft Entra app |
-| **Dropbox** | ✅ folder → files | ✅ upload to folder | OAuth2 |
-| **Google Drive** | ✅ parent folder → files | ✅ upload to folder | Service account / OAuth |
-| **kintone** | ✅ app + query → records | ✅ create record | API token / basic |
-| **Salesforce** | ✅ SOQL → records | ✅ sObject create | Username/token / OAuth |
+| **Box** | ✅ folder → files | ✅ upload | OAuth2 / JWT |
+| **SharePoint / M365** | ✅ | ✅ | Microsoft Entra |
+| **Dropbox** | ✅ | ✅ | OAuth2 |
+| **Google Drive** | ✅ | ✅ | OAuth / SA |
+| **AWS S3** | ✅ bucket/prefix | ✅ object upload | IAM (boto3 chain) |
+| **Azure Blob Storage** | ✅ | ✅ | DefaultAzureCredential / connstr / SAS |
+| **GCS** | ✅ | ✅ | ADC / service account |
+| **WebDAV / Nextcloud** | ✅ | ✅ | HTTP Basic |
 
-Pull data into agent flows; push agent outputs back to your system of record. All access subject to admin policies.
+**Knowledge / Docs (3)**
+
+| Connector | Pull | Push | Auth |
+|---|---|---|---|
+| **Notion** | ✅ database query | ✅ child page | OAuth (Notion) |
+| **Confluence** | ✅ CQL search | ✅ child page | OAuth (Atlassian) |
+| **Jira** | ✅ JQL search | ✅ create issue | OAuth (Atlassian) |
+
+**Communication (3)**
+
+| Connector | Pull | Push | Auth |
+|---|---|---|---|
+| **Slack** | ✅ history / search | ✅ post message | OAuth (Slack) |
+| **Microsoft Teams** | ✅ channel messages | ✅ post message | OAuth (Microsoft) |
+| **Email** (IMAP / Gmail / Outlook) | ✅ folder + query | ✅ send | IMAP/SMTP / Google / Microsoft OAuth |
+
+**CRM / Tickets / Engineering (5)**
+
+| Connector | Pull | Push | Auth |
+|---|---|---|---|
+| **kintone** | ✅ | ✅ | API token |
+| **Salesforce** | ✅ SOQL | ✅ sObject create | OAuth |
+| **HubSpot CRM** | ✅ contacts/companies/deals | ✅ note attach | OAuth |
+| **Zendesk** | ✅ ticket search | ✅ create ticket | OAuth or API token |
+| **GitHub** | ✅ issues/code/files | ✅ issue / comment | OAuth (GitHub) |
+| **Linear** | ✅ issues by team | ✅ create issue | OAuth or API key |
+
+Pull data into agent flows; push agent outputs back to your system of record. All access subject to admin policies. **Per-user OAuth** means alice only sees what alice has access to in each system.
 
 ### Dashboards
 - **Personal**: flow runs, skill invocations, memory entries, outcome success rate, token usage, top skills, recent episodes

@@ -110,10 +110,13 @@ class TestPluginRegistries:
     def test_connectors_registry(self):
         from praxia.connectors.registry import CONNECTORS, list_builtin
 
-        builtins = list_builtin()
-        assert set(builtins) == {
-            "box", "sharepoint", "dropbox", "gdrive", "kintone", "salesforce",
-        }
+        builtins = set(list_builtin())
+        v10 = {"box", "sharepoint", "dropbox", "gdrive", "kintone", "salesforce"}
+        v11_tier1 = {"notion", "confluence", "jira", "slack", "teams"}
+        v11_tier2 = {"github", "hubspot", "zendesk", "linear", "s3", "azure-blob", "gcs", "webdav", "email"}
+        assert v10.issubset(builtins)
+        assert v11_tier1.issubset(builtins)
+        assert v11_tier2.issubset(builtins)
         for name in builtins:
             assert CONNECTORS.has(name)
 

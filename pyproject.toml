@@ -73,8 +73,23 @@ gdrive = [
 ]
 kintone = ["requests>=2.31"]
 salesforce = ["simple-salesforce>=1.12"]
+# --- Tier 1 connectors (added in v1.1) ---
+notion = ["notion-client>=2.2"]
+atlassian = []                # Confluence + Jira use stdlib urllib only
+slack = []                    # Slack uses stdlib urllib (slack-sdk optional, not required)
+teams = []                    # Microsoft Graph via stdlib + existing microsoft OAuth
+# --- Tier 2 connectors ---
+github = ["PyGithub>=2.3"]
+hubspot = ["hubspot-api-client>=10"]
+zendesk = []                  # uses stdlib
+linear = []                   # GraphQL via stdlib
+s3 = ["boto3>=1.30"]
+azure-blob = ["azure-storage-blob>=12.19", "azure-identity>=1.15"]
+gcs = ["google-cloud-storage>=2.18"]
+webdav = []                   # stdlib only
+email = []                    # IMAP/SMTP stdlib; gmail/outlook reuse google/microsoft extras
 connectors = [
-    "praxia[box,sharepoint,dropbox,gdrive,kintone,salesforce]",
+    "praxia[box,sharepoint,dropbox,gdrive,kintone,salesforce,notion,github,hubspot,s3,azure-blob,gcs]",
 ]
 # --- File format parsers (Office + PDF) ---
 office = [
@@ -113,6 +128,9 @@ dev = [
     "pytest-asyncio>=0.23",
     "ruff>=0.6",
     "mypy>=1.11",
+    # Security tooling
+    "bandit>=1.7",
+    "pip-audit>=2.7",
 ]
 all = [
     "praxia[ui,graph,qwen-local,connectors,office,audio,dev]",
