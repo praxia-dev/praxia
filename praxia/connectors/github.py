@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from praxia.connectors._helpers import resolve_oauth_token
 from praxia.connectors.base import Connector, ConnectorItem, _require
 
 
@@ -25,13 +26,7 @@ class GitHubConnector:
         user_id: str | None = None,
     ) -> None:
         gh = _require("github", "pip install PyGithub")
-        if user_id and not access_token:
-            from praxia.connectors.oauth import oauth_token_for
-            access_token = oauth_token_for(user_id, "github").access_token
-        if not access_token:
-            raise ValueError(
-                "Provide access_token or user_id (with a stored GitHub OAuth token)."
-            )
+        access_token = resolve_oauth_token(access_token, user_id, "github")
         self._gh = gh.Github(access_token)
 
     def pull(self, path: str, *, limit: int = 30) -> list[ConnectorItem]:

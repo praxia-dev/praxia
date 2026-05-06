@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from praxia.connectors._helpers import split_bucket_path
 from praxia.connectors.base import Connector, ConnectorItem, _require
 
 
@@ -48,7 +49,7 @@ class AzureBlobConnector:
             )
 
     def pull(self, path: str, *, limit: int = 20) -> list[ConnectorItem]:
-        container, prefix = self._split(path)
+        container, prefix = split_bucket_path(path)
         cc = self._client.get_container_client(container)
         out: list[ConnectorItem] = []
         for blob in cc.list_blobs(name_starts_with=prefix):
@@ -80,15 +81,8 @@ class AzureBlobConnector:
     def push(self, path: str, data: ConnectorItem | dict[str, Any]) -> dict[str, Any]:
         if isinstance(data, dict):
             data = ConnectorItem(**data)
-        container, blob_name = self._split(path)
+        container, blob_name = split_bucket_path(path)
         cc = self._client.get_container_client(container)
         body = data.content if isinstance(data.content, (bytes, bytearray)) else str(data.content).encode()
         cc.upload_blob(name=blob_name, data=body, overwrite=True)
         return {"container": container, "blob": blob_name, "size": len(body)}
-
-    @staticmethod
-    def _split(path: str) -> tuple[str, str]:
-        if "/" not in path:
-            return path, ""
-        container, _, rest = path.partition("/")
-        return container, rest

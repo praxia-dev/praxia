@@ -80,11 +80,8 @@ class EmailConnector:
             )
 
     def _init_gmail(self, access_token, user_id):
-        if user_id and not access_token:
-            from praxia.connectors.oauth import oauth_token_for
-            access_token = oauth_token_for(user_id, "google").access_token
-        if not access_token:
-            raise ValueError("Provide access_token or user_id (with Google OAuth token).")
+        from praxia.connectors._helpers import resolve_oauth_token
+        access_token = resolve_oauth_token(access_token, user_id, "google")
         # Lazy import to keep optional
         try:
             from googleapiclient.discovery import build  # type: ignore
@@ -98,12 +95,8 @@ class EmailConnector:
         self._gmail = build("gmail", "v1", credentials=creds, cache_discovery=False)
 
     def _init_outlook(self, access_token, user_id):
-        if user_id and not access_token:
-            from praxia.connectors.oauth import oauth_token_for
-            access_token = oauth_token_for(user_id, "microsoft").access_token
-        if not access_token:
-            raise ValueError("Provide access_token or user_id (with Microsoft OAuth token).")
-        self._outlook_token = access_token
+        from praxia.connectors._helpers import resolve_oauth_token
+        self._outlook_token = resolve_oauth_token(access_token, user_id, "microsoft")
 
     # --- Pull / Push ------------------------------------------------------
 

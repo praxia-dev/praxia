@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from praxia.connectors._helpers import resolve_oauth_token
 from praxia.connectors.base import Connector, ConnectorItem, _require
 
 
@@ -21,13 +22,7 @@ class NotionConnector:
         user_id: str | None = None,
     ) -> None:
         notion_client = _require("notion_client", "pip install notion-client")
-        if user_id and not api_key:
-            from praxia.connectors.oauth import oauth_token_for
-            api_key = oauth_token_for(user_id, "notion").access_token
-        if not api_key:
-            raise ValueError(
-                "Provide api_key or user_id (with a stored OAuth token)."
-            )
+        api_key = resolve_oauth_token(api_key, user_id, "notion")
         self._client = notion_client.Client(auth=api_key)
 
     def pull(self, path: str, *, limit: int = 100) -> list[ConnectorItem]:

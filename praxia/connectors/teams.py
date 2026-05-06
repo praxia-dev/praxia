@@ -18,6 +18,7 @@ import json
 from typing import Any
 from urllib import parse, request
 
+from praxia.connectors._helpers import resolve_oauth_token
 from praxia.connectors.base import Connector, ConnectorItem
 
 
@@ -33,15 +34,10 @@ class TeamsConnector:
         access_token: str | None = None,
         user_id: str | None = None,
     ) -> None:
-        if user_id and not access_token:
-            from praxia.connectors.oauth import oauth_token_for
-            access_token = oauth_token_for(user_id, "microsoft").access_token
-        if not access_token:
-            raise ValueError(
-                "Provide access_token or user_id (with a stored Microsoft OAuth token "
-                "containing ChannelMessage.* scopes)."
-            )
-        self._token = access_token
+        self._token = resolve_oauth_token(
+            access_token, user_id, "microsoft",
+            error_hint="Token must include ChannelMessage.* scopes for Teams.",
+        )
 
     def pull(self, path: str, *, limit: int = 50) -> list[ConnectorItem]:
         team_id, channel_id = self._split_path(path)

@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from praxia.connectors._helpers import split_bucket_path
 from praxia.connectors.base import Connector, ConnectorItem, _require
 
 
@@ -40,7 +41,7 @@ class GcsConnector:
             self._client = gcs.Client(project=project)
 
     def pull(self, path: str, *, limit: int = 20) -> list[ConnectorItem]:
-        bucket_name, prefix = self._split(path)
+        bucket_name, prefix = split_bucket_path(path)
         bucket = self._client.bucket(bucket_name)
         out: list[ConnectorItem] = []
         for blob in self._client.list_blobs(bucket, prefix=prefix, max_results=limit):
@@ -70,16 +71,9 @@ class GcsConnector:
     def push(self, path: str, data: ConnectorItem | dict[str, Any]) -> dict[str, Any]:
         if isinstance(data, dict):
             data = ConnectorItem(**data)
-        bucket_name, key = self._split(path)
+        bucket_name, key = split_bucket_path(path)
         bucket = self._client.bucket(bucket_name)
         blob = bucket.blob(key)
         body = data.content if isinstance(data.content, (bytes, bytearray)) else str(data.content).encode()
         blob.upload_from_string(body, content_type=data.mime_type or "application/octet-stream")
         return {"bucket": bucket_name, "key": key, "size": len(body)}
-
-    @staticmethod
-    def _split(path: str) -> tuple[str, str]:
-        if "/" not in path:
-            return path, ""
-        bucket, _, rest = path.partition("/")
-        return bucket, rest

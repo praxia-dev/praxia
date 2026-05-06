@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from praxia.connectors._helpers import split_bucket_path
 from praxia.connectors.base import Connector, ConnectorItem, _require
 
 
@@ -41,7 +42,7 @@ class S3Connector:
         self._s3 = boto3.client("s3", **kwargs)
 
     def pull(self, path: str, *, limit: int = 20) -> list[ConnectorItem]:
-        bucket, prefix = self._split(path)
+        bucket, prefix = split_bucket_path(path)
         resp = self._s3.list_objects_v2(
             Bucket=bucket, Prefix=prefix, MaxKeys=min(limit, 1000)
         )
@@ -76,7 +77,7 @@ class S3Connector:
     def push(self, path: str, data: ConnectorItem | dict[str, Any]) -> dict[str, Any]:
         if isinstance(data, dict):
             data = ConnectorItem(**data)
-        bucket, key = self._split(path)
+        bucket, key = split_bucket_path(path)
         body = data.content if isinstance(data.content, (bytes, bytearray)) else str(data.content).encode()
         kwargs: dict[str, Any] = {
             "Bucket": bucket,
@@ -89,10 +90,3 @@ class S3Connector:
             kwargs["Metadata"] = {str(k): str(v) for k, v in meta.items()}
         self._s3.put_object(**kwargs)
         return {"bucket": bucket, "key": key, "size": len(body)}
-
-    @staticmethod
-    def _split(path: str) -> tuple[str, str]:
-        if "/" not in path:
-            return path, ""
-        bucket, _, rest = path.partition("/")
-        return bucket, rest

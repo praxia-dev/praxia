@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from praxia.connectors._helpers import resolve_oauth_token
 from praxia.connectors.base import Connector, ConnectorItem, _require
 
 
@@ -24,13 +25,7 @@ class HubSpotConnector:
         user_id: str | None = None,
     ) -> None:
         hubspot = _require("hubspot", "pip install hubspot-api-client")
-        if user_id and not access_token:
-            from praxia.connectors.oauth import oauth_token_for
-            access_token = oauth_token_for(user_id, "hubspot").access_token
-        if not access_token:
-            raise ValueError(
-                "Provide access_token or user_id (with a stored HubSpot OAuth token)."
-            )
+        access_token = resolve_oauth_token(access_token, user_id, "hubspot")
         self._hs = hubspot.Client.create(access_token=access_token)
 
     def pull(self, path: str, *, limit: int = 50) -> list[ConnectorItem]:

@@ -13,6 +13,7 @@ import json
 from typing import Any
 from urllib import parse, request
 
+from praxia.connectors._helpers import resolve_oauth_token
 from praxia.connectors.base import Connector, ConnectorItem
 
 
@@ -27,14 +28,7 @@ class JiraConnector:
         site_url: str | None = None,
         user_id: str | None = None,
     ) -> None:
-        if user_id and not access_token:
-            from praxia.connectors.oauth import oauth_token_for
-            tok = oauth_token_for(user_id, "atlassian")
-            access_token = tok.access_token
-        if not access_token:
-            raise ValueError(
-                "Provide access_token or user_id (with a stored Atlassian OAuth token)."
-            )
+        access_token = resolve_oauth_token(access_token, user_id, "atlassian")
         if not (cloud_id or site_url):
             raise ValueError(
                 "Provide cloud_id OR site_url (e.g. https://yourcompany.atlassian.net)."
