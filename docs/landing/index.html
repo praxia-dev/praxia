@@ -41,6 +41,7 @@
       <span class="brand-name">Praxia</span>
     </a>
     <div class="nav-links">
+      <a href="#try-it">Try it</a>
       <a href="#features">Features</a>
       <a href="#who-its-for">Who it's for</a>
       <a href="#oss-edge">OSS edge</a>
@@ -248,6 +249,81 @@
           <h3>Formal design specs (EN + JA)</h3>
           <p>Basic design / I/F spec / detailed design as procurement-ready documents in both English and Japanese. Every public surface and plugin protocol covered.</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="try-it" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <span class="kicker">Try it — pick your scenario</span>
+        <h2>See exactly what Praxia does for <em>your</em> work.</h2>
+        <p class="section-subtitle">
+          Pick a role + use case to see the matching CLI command, sample
+          output, and concrete Before/After. Then click <strong>Run preview</strong>
+          to see a typed-out simulation in your browser — no install yet.
+        </p>
+      </div>
+
+      <div class="scenario-picker">
+        <div class="scenario-row">
+          <span class="scenario-label">I am</span>
+          <div class="scenario-chips" data-axis="role">
+            <button class="chip chip-active" data-value="sales">📈 Sales lead</button>
+            <button class="chip" data-value="legal">⚖️ Legal counsel</button>
+            <button class="chip" data-value="design">🏗️ Architect</button>
+            <button class="chip" data-value="purchasing">🛒 Procurement lead</button>
+            <button class="chip" data-value="patent">📑 Patent agent</button>
+            <button class="chip" data-value="investment">💰 VC analyst</button>
+            <button class="chip" data-value="it">🏢 IT lead</button>
+            <button class="chip" data-value="dev">🧪 OSS integrator</button>
+          </div>
+        </div>
+        <div class="scenario-row">
+          <span class="scenario-label">I want to</span>
+          <div class="scenario-chips" data-axis="task">
+            <!-- Populated by JS based on role -->
+          </div>
+        </div>
+      </div>
+
+      <div class="scenario-result">
+        <div class="scenario-pane scenario-summary">
+          <h3 id="sc-title">Pre-meeting research for a B2B account</h3>
+          <p id="sc-desc">
+            You're meeting Acme Manufacturing tomorrow at 14:00. Praxia ingests
+            their IR, recent press, and your past wins → produces top-3 pain
+            hypotheses, a 5-row FAQ with citations, and a proposal outline.
+          </p>
+          <div class="ba-grid">
+            <div class="ba-block ba-before">
+              <h4>Before</h4>
+              <ul id="sc-before"><li>6 hours of LinkedIn skim + 10-K reading</li><li>Hit-or-miss prep — CFO asks about a recent capex you didn't know about</li><li>Acceptance rate ≈ 55%</li></ul>
+            </div>
+            <div class="ba-block ba-after">
+              <h4>After</h4>
+              <ul id="sc-after"><li><strong>1 hour</strong> total prep</li><li>3-pain-hypotheses + 5-row FAQ + proposal outline</li><li>Acceptance rate <strong>+15–20pt</strong></li></ul>
+            </div>
+          </div>
+          <p class="scenario-extra" id="sc-extra">
+            Variation: attach .pdf board deck → Praxia auto-parses + cites it. Or pull straight from Salesforce → <code>praxia connector pull salesforce "SELECT Id,Name FROM Account WHERE Id='001..'"</code>.
+          </p>
+        </div>
+        <div class="scenario-pane scenario-demo">
+          <div class="demo-toolbar">
+            <span class="demo-prompt">~/your-project</span>
+            <span class="demo-label">terminal</span>
+          </div>
+          <pre class="demo-cmd"><code id="sc-cmd">praxia run sales \
+  --customer-name "Acme Manufacturing" \
+  --product "Praxia"</code></pre>
+          <div class="demo-controls">
+            <button id="sc-run-btn" class="btn btn-primary btn-sm">▶ Run preview</button>
+            <button id="sc-copy-btn" class="btn btn-ghost btn-sm">📋 Copy command</button>
+            <span class="demo-note">Preview runs locally in your browser — no install, no API key.</span>
+          </div>
+          <pre class="demo-output"><code id="sc-output"># Click ▶ Run preview to see a typed-out simulation</code></pre>
+        </div>
       </div>
     </div>
   </section>
@@ -1219,6 +1295,576 @@ P  = Praxia cost (license + infra)</code></pre>
           sessionStorage.setItem('praxia-mirror-dismissed', '1');
         });
       }
+    })();
+
+    // -------- Scenario picker + interactive demo --------
+    (function() {
+      // role × task → { title, desc, cmd, before[], after[], extra, output }
+      const SCENARIOS = {
+        sales: {
+          tasks: [
+            {value: 'b2b-prep', label: '🎯 Pre-meeting research'},
+            {value: 'proposal', label: '📝 Proposal draft'},
+            {value: 'crm-pull', label: '🔌 Pull from Salesforce'},
+          ],
+          'b2b-prep': {
+            title: 'Pre-meeting research for a B2B account',
+            desc: "You're meeting Acme Manufacturing tomorrow at 14:00. Praxia ingests their IR, recent press, and your past wins → produces top-3 pain hypotheses, a 5-row FAQ with citations, and a proposal outline.",
+            cmd: 'praxia run sales \\\n  --customer-name "Acme Manufacturing" \\\n  --product "Praxia"',
+            before: ['6 hours of LinkedIn skim + 10-K reading', 'Hit-or-miss prep — CFO asks about a recent capex you didn\'t know about', 'Acceptance rate ≈ 55%'],
+            after: ['<strong>1 hour</strong> total prep', '3 pain-hypotheses + 5-row FAQ + proposal outline', 'Acceptance rate <strong>+15–20pt</strong>'],
+            extra: 'Variation: attach .pdf board deck → Praxia auto-parses + cites it. Or pull straight from Salesforce → <code>praxia connector pull salesforce "SELECT Id,Name FROM Account WHERE Id=\'001..\'"</code>',
+            output: [
+              '🎬 Running flow: sales_agent_flow',
+              '  step 1/4 gather_context     ✓ (4.2s) — pulled IR + 12 press articles',
+              '  step 2/4 hypothesize_pains  ✓ (3.8s) — 3 candidates ranked',
+              '  step 3/4 generate_faq       ✓ (5.1s) — 5 Q&A with citations',
+              '  step 4/4 draft_proposal     ✓ (6.4s) — 4-section outline',
+              '',
+              '✓ Done in 19.5s · 14,210 tokens · saved to .praxia/runs/sales-2026-05-06-1432.md',
+              '',
+              '## Top pain hypotheses (in priority order)',
+              '1. ERP migration capex pressure — Q3 IR call mentioned 30B JPY DX',
+              '   investment with concerns about integration timeline.',
+              '2. Skilled-worker shortage — recent press flagged 30% of senior',
+              '   engineers retiring in 5 years.',
+              '3. Supply chain Japan-China decoupling — Reuters Apr 2026 article…',
+              '',
+              '## FAQ (with sources)',
+              'Q: Will Praxia integrate with our existing ERP?',
+              'A: Yes — via the Box / SharePoint / kintone / Salesforce connectors,',
+              '   plus a 50-line custom-connector path for proprietary systems.',
+              '   See: docs/CUSTOM_CONNECTORS.md',
+              '...',
+            ],
+          },
+          proposal: {
+            title: 'Proposal draft from a customer brief',
+            desc: 'Drop in the customer brief / call notes. Praxia produces a tailored proposal outline using your past wins as templates.',
+            cmd: 'praxia skill run sales "Draft a proposal for Acme: \\\n  manufacturing DX, 30B JPY budget, 18-month horizon"',
+            before: ['Reuse last proposal verbatim → low fit, looks lazy', 'Spend 2 days customizing manually', 'Quality varies by who drafted'],
+            after: ['<strong>15 minutes</strong> Praxia draft + 30 min review', 'Pulls best-fit fragments from past won deals (org memory)', 'Consistent quality, junior PM can lead'],
+            extra: 'Variation: <code>praxia skill run sales --output pptx</code> → PowerPoint slide deck instead of Markdown.',
+            output: [
+              '🛠 Running skill: sales_strategist',
+              '  searching org memory for "manufacturing DX" templates… 4 hits',
+              '  drafting 4-section proposal…',
+              '  ✓ done in 11.3s',
+              '',
+              '## Proposal: Acme Manufacturing — Praxia Adoption',
+              '',
+              '### 1. Situation',
+              "Acme's mid-term plan calls for 30B JPY DX investment with",
+              "particular focus on knowledge retention as 30% of senior",
+              "engineers approach retirement.",
+              '',
+              '### 2. Proposed approach',
+              '- Phase 1 (months 1-3): Praxia rollout for design + procurement',
+              '- Phase 2 (months 4-9): Personal → org memory loop activates',
+              '- Phase 3 (months 10-18): Frozen layer + cross-team distribution',
+              '...',
+            ],
+          },
+          'crm-pull': {
+            title: 'Pull a Salesforce account → run analysis',
+            desc: 'Per-user OAuth means Alice only sees Salesforce records Alice has access to — even when Bob is on the same Praxia install.',
+            cmd: 'praxia oauth start salesforce --user-id alice\npraxia connector pull salesforce \\\n  "SELECT Id, Name, Industry FROM Account LIMIT 5" \\\n  --user-id alice',
+            before: ['Manual CSV export from Salesforce', 'No record of who pulled what', 'Service account = bob can see alice\'s prospects'],
+            after: ['One-time <strong>OAuth authorization per user</strong>', 'Every pull <strong>audit-logged</strong> + ACL-checked', 'Alice only sees Alice\'s accounts (Salesforce-enforced)'],
+            extra: 'Tokens are encrypted at rest; in production swap in <code>PRAXIA_KMS_ADAPTER=aws</code> for KMS-backed envelope encryption.',
+            output: [
+              'Open this URL to authorize Salesforce:',
+              'https://login.salesforce.com/services/oauth2/authorize?...',
+              '',
+              '✓ Token saved (encrypted) to .praxia/auth/oauth_tokens.jsonl',
+              '',
+              '$ praxia connector pull salesforce …',
+              '  query: SELECT Id, Name, Industry FROM Account LIMIT 5',
+              '  user:  alice (OAuth token from 2026-05-06 14:32:11)',
+              '  ACL:   2 Praxia policies evaluated → allow',
+              '  fetched: 5 records in 1.2s',
+              '  audit:  recorded as connector.pull at 2026-05-06 14:32:14',
+              '',
+              '| Id        | Name                   | Industry      |',
+              '|-----------|------------------------|---------------|',
+              '| 001…aBc   | Acme Manufacturing     | Manufacturing |',
+              '| 001…dEf   | Beta Industries        | Manufacturing |',
+              '| 001…gHi   | Gamma Logistics        | Logistics     |',
+              '...',
+            ],
+          },
+        },
+        legal: {
+          tasks: [
+            {value: 'contract', label: '📄 Contract review'},
+            {value: 'sensitive', label: '🔒 Read-only mode'},
+          ],
+          contract: {
+            title: 'Review a service agreement (RACE framework)',
+            desc: 'Drop in the contract. LegalSkill applies RACE (Risk / Allocation / Compliance / Exit) with severity coloring.',
+            cmd: 'praxia skill run legal \\\n  --document services_agreement.pdf \\\n  --instruction "Focus on liability cap, IP, data return, anti-bribery"',
+            before: ['60-90 min per contract', 'Critical-risk miss rate 5-10% under deadline', 'Throughput: 50-80 contracts/month'],
+            after: ['<strong>10-15 min</strong> per contract', 'Critical-risk miss <strong>1-2%</strong>', 'Throughput <strong>200-300/mo</strong>'],
+            extra: 'Variation: <code>praxia memory mode --user-id you read_only</code> first → no episode is recorded for this sensitive review.',
+            output: [
+              '🛠 Running skill: legal_reviewer',
+              '  parsing services_agreement.pdf … 47 pages',
+              '  applying RACE framework…',
+              '  ✓ done in 14.7s',
+              '',
+              '## Contract review — RACE summary',
+              '',
+              '### 🔴 Critical risks (3)',
+              '- §7.2 Liability cap = 12 months fees → low compared to industry',
+              '  norm of 24-36 months. Recommend: negotiate to 24 months.',
+              '- §11.4 IP fully assigned to customer → conflicts with our',
+              '  default position. See template clause.',
+              '- §15.1 No anti-bribery clause → required by our compliance',
+              '  policy for any deal > $1M USD.',
+              '',
+              '### 🟡 Medium risks (2)',
+              '- §9.3 Data return within 30 days post-termination → standard',
+              '  but verify operational feasibility.',
+              '...',
+            ],
+          },
+          sensitive: {
+            title: 'Read-only mode for sensitive material',
+            desc: 'When reviewing a confidential contract, you don\'t want the assistant to record an episode in memory. Per-user toggle:',
+            cmd: 'praxia memory mode --user-id you read_only\npraxia skill run legal --document confidential.pdf\n# (writes silently dropped; reads still work)\npraxia memory mode --user-id you accumulate',
+            before: ['Sensitive doc accidentally enters org memory', 'Memory cycling promotes confidential phrases org-wide', 'No clean audit trail of "this session deliberately did not learn"'],
+            after: ['<code>read_only</code> drops every <code>record_*</code> call', 'Search still works on prior memories', '<code>memory.mode_change</code> audit event records the deliberate switch'],
+            extra: 'Admins can lock the mode tenant-wide: <code>praxia admin memory-policy-set --mode-locked</code> — useful for regulated industries.',
+            output: [
+              '$ praxia memory mode --user-id you read_only',
+              '✓ you\'s memory mode → read_only',
+              '  audit: memory.mode_change recorded',
+              '',
+              '$ praxia skill run legal --document confidential.pdf',
+              '  parsing confidential.pdf … 23 pages',
+              '  applying RACE framework…',
+              '  ✓ done in 9.3s',
+              '  ⚠ memory mode = read_only — episode NOT recorded',
+              '',
+              '## Contract review',
+              '...',
+              '',
+              '$ praxia memory show --user-id you',
+              '  backend       : mem0',
+              '  mode          : read_only',
+              '  locked_by_admin: false',
+              '  reason        : user pref mode=read_only',
+            ],
+          },
+        },
+        design: {
+          tasks: [
+            {value: 'spec-review', label: '📋 Spec review (DRAGON)'},
+            {value: 'multi-llm', label: '🧬 Multi-LTM ensemble'},
+          ],
+          'spec-review': {
+            title: 'DRAGON-framework architecture review',
+            desc: 'Drop the spec, get a 6-axis review (Data flow / Requirements / Architectural fit / Gaps / Operations / NFRs).',
+            cmd: 'praxia run logic --document spec.md\n# or:\npraxia skill run design "Review attached spec for the new payments microservice"',
+            before: ['Senior architect 16h/wk on PR-style design reviews', 'NFRs slip through under time pressure', 'Junior PM ramp 12-18 months'],
+            after: ['Senior load <strong>4h/wk</strong>', 'NFR coverage <strong>15-20 axes</strong> (was 5-7)', 'Junior PM ramp <strong>6-9 months</strong>'],
+            extra: 'Variation: <code>praxia run logic</code> uses 3 agents (structure / contradiction / reader-simulator) for long-doc reviews.',
+            output: [
+              '🎬 Running flow: logic_checker_flow',
+              '  parsing spec.md … 24 pages, 3,840 lines',
+              '  step 1/3 structure_reviewer       ✓ (5.1s)',
+              '  step 2/3 contradiction_detector   ✓ (4.7s)',
+              '  step 3/3 reader_simulator         ✓ (3.9s)',
+              '  ✓ done in 14.2s',
+              '',
+              '## Logic review — DRAGON summary',
+              '',
+              '### Data flow',
+              '✓ All 6 critical paths documented',
+              '⚠ Section 3.4 doesn\'t state retry policy — recommend adding',
+              '',
+              '### Requirements coverage',
+              '✓ Functional 24/24',
+              '⚠ Non-functional: missing latency budget for the /charge path',
+              '',
+              '### Architectural fit',
+              '...',
+            ],
+          },
+          'multi-llm': {
+            title: 'Run several memory backends in parallel',
+            desc: 'Need higher recall? Run Mem0 + Zep + HindSight in parallel and fuse with Reciprocal Rank Fusion. No commercial agent platform exposes this.',
+            cmd: '# Python\nfrom praxia.memory.composite import CompositeBackend, WeightedBackend\nfrom praxia.memory.backends import load_backend\n\ncomposite = CompositeBackend(\n    backends=[\n        WeightedBackend("mem0", load_backend("mem0"), weight=1.5),\n        WeightedBackend("zep",  load_backend("zep"),  weight=1.0),\n    ],\n    fusion="rrf",\n)\nPersonalMemory(user_id="alice", backend=composite)',
+            before: ['Pick a backend → live with its blind spots', 'Switching means migration', 'No way to cross-validate results'],
+            after: ['Run several backends in parallel — <strong>fused via RRF</strong>', 'Each backend\'s strengths combined (entity link / time-axis / vector)', 'One backend failing doesn\'t break the query'],
+            extra: 'Or use <code>RoutedBackend</code> with <code>RuleRouter</code> — temporal queries → Zep, audit queries → JSON, entity → Mem0. English + Japanese keyword detection.',
+            output: [
+              '>>> from praxia import PersonalMemory',
+              '>>> pm = PersonalMemory(user_id="alice", backend=composite)',
+              '>>> pm.search("manufacturing pain hypotheses last quarter")',
+              '',
+              '  fan-out across 2 backends (parallel)…',
+              '    mem0:    8 hits in 132ms',
+              '    zep:    11 hits in 187ms (KG temporal match)',
+              '  RRF fusion …',
+              '  → 12 unique results, top 5 returned',
+              '',
+              '[\'manufacturing pain Q1 2026: ERP migration capex…\',',
+              '  \'Acme manufacturing IR call Apr 12 — DX 30B JPY…\',',
+              '  \'design review note: skilled-worker shortage Q1…\',',
+              '  …]',
+            ],
+          },
+        },
+        purchasing: {
+          tasks: [{value: 'rfq', label: '📦 RFQ comparison'}],
+          rfq: {
+            title: 'Compare 5 supplier RFQs (QCD+S + TCO)',
+            desc: 'PurchasingSkill applies QCD+S (Quality / Cost / Delivery / Sustainability) plus full TCO + BCP risk + Subcontract Act compliance.',
+            cmd: 'praxia skill run purchasing \\\n  --document suppliers.csv \\\n  --instruction "Annual volume 2M units, ISO9001, no Russia/Belarus exposure"',
+            before: ['2-3 weeks for 5-supplier evaluation', 'Direct cost only — TCO ignored', 'Single-source detection ad-hoc'],
+            after: ['<strong>3-5 days</strong> for full evaluation', 'Full TCO matrix → hidden costs <strong>+30%</strong> surfaced', 'Single-source detection <strong>95%+</strong>'],
+            extra: 'Variation: <code>praxia connector pull kintone "42?status=\'active\'"</code> to pull supplier records straight from kintone.',
+            output: [
+              '🛠 Running skill: purchasing_analyst',
+              '  parsing suppliers.csv … 5 suppliers, 24 columns',
+              '  applying QCD+S framework…',
+              '  ✓ done in 8.4s',
+              '',
+              '## RFQ comparison — QCD+S + TCO',
+              '',
+              '### Recommendation',
+              '🥇 Supplier C (78/100) — best balance of cost + BCP',
+              '🥈 Supplier A (74/100) — lowest unit cost but Russia exposure ⚠',
+              '🥉 Supplier E (71/100) — fastest delivery, but quality risk',
+              '',
+              '### TCO breakdown (10-year horizon)',
+              '|  Supplier | Unit cost | Hidden | Risk | TCO   |',
+              '|-----------|-----------|--------|------|-------|',
+              '| A         | $1.20     | +28%   | high | $194M |',
+              '| B         | $1.35     | +12%   | low  | $179M |',
+              '| C         | $1.28     | +9%    | low  | $163M |',
+              '...',
+            ],
+          },
+        },
+        patent: {
+          tasks: [{value: 'prior-art', label: '🔍 Prior-art search'}],
+          'prior-art': {
+            title: 'Prior-art search (5-step framework)',
+            desc: 'Element decomposition → IPC/FI/F-term search formulae → hit analysis → novelty + inventive-step verdict.',
+            cmd: 'praxia skill run patent "Prior-art for solid-state battery \\\n  with three-layer ceramic electrolyte and Li-rich cathode"',
+            before: ['$3-5k per case to outside counsel for first-pass', '1-2 days per case', 'Cross-domain art often missed'],
+            after: ['Internal in <strong>2-4 hours</strong>', 'External fees <strong>−50-70%</strong>', 'Counsel reviews polished draft → faster turnaround'],
+            extra: 'Output ends with the standard "final verdict belongs to a qualified patent attorney" disclaimer.',
+            output: [
+              '🛠 Running skill: patent_analyst',
+              '  ✓ done in 11.8s',
+              '',
+              '## Prior-art search — 5-step',
+              '',
+              '### 1. Element decomposition',
+              '- Element 1: solid-state battery (anode/cathode/electrolyte)',
+              '- Element 2: three-layer ceramic electrolyte',
+              '- Element 3: Li-rich cathode (Li1+xMnyOz)',
+              '',
+              '### 2. Search strategy',
+              '- IPC: H01M 4/525, H01M 10/0562',
+              '- FI:  H01M 4/525,A · H01M 10/0562,A',
+              '- F-term: 5H050/AA08, 5H050/CB17',
+              '',
+              '### 3. Hit analysis (top 5)',
+              '...',
+              '',
+              '⚠ Final novelty + inventive-step verdict requires a qualified',
+              '  patent attorney.',
+            ],
+          },
+        },
+        investment: {
+          tasks: [{value: 'thesis', label: '💡 3-year thesis'}],
+          thesis: {
+            title: 'VC pre-screen — 3-year thesis on a target',
+            desc: '5-section memo (Profile / Quant / Qual / Risk / Decision) with bull/bear cases.',
+            cmd: 'praxia skill run investment "3-year thesis on \\\n  a hypothetical mid-cap consumer-electronics issuer"',
+            before: ['4-6h per deck reading IR + competitor research + DCF', '5-10 deals/wk capacity', 'Coverage: 3-5 competitors per deal'],
+            after: ['<strong>45-60 min</strong> per deck', '<strong>20-30 deals/wk</strong> capacity', 'Coverage: <strong>10-15 surrounding-domain peers</strong>'],
+            extra: 'Final investment decision is always the investor\'s — Praxia surfaces the analysis, not the call.',
+            output: [
+              '🛠 Running skill: investment_analyst',
+              '  ✓ done in 13.2s',
+              '',
+              '## Investment thesis — Hypothetical mid-cap CE issuer',
+              '',
+              '### Profile',
+              'JP-domiciled consumer electronics, ~150B JPY revenue, Tier-1',
+              'OEM supplier with growing direct-to-consumer channel.',
+              '',
+              '### Quant',
+              '- ROIC 11.2% (5-yr avg) vs sector 9.4%',
+              '- Net debt / EBITDA 1.4× — comfortable',
+              '- DCF (10% WACC, 2% terminal) → fair value range 1,800-2,200',
+              '...',
+              '',
+              '### Bull case',
+              '...',
+              '',
+              '### Bear case',
+              '...',
+              '',
+              '⚠ Final investment decision is the investor\'s responsibility.',
+            ],
+          },
+        },
+        it: {
+          tasks: [
+            {value: 'rollout', label: '🏢 Rollout to 100 users'},
+            {value: 'oauth-prod', label: '🔐 Production OAuth'},
+          ],
+          rollout: {
+            title: 'Roll Praxia out to 100 users with SSO',
+            desc: 'OIDC SSO (Google / Microsoft / Okta / GitHub / Keycloak), 4 RBAC roles, ACL policies, audit log — all in OSS.',
+            cmd: '# 1. SSO setup\npraxia config set PRAXIA_SSO_PROVIDER microsoft\npraxia config set PRAXIA_SSO_CLIENT_ID xxx\npraxia config set PRAXIA_SSO_CLIENT_SECRET xxx\n\n# 2. Create org policies\npraxia policy add deny connector "box:/Confidential/*" \\\n  --principals "role:member,role:viewer"\n\n# 3. Run\npraxia ui --port 8501',
+            before: ['Each team buys its own AI tool', 'No SSO without paying enterprise tier', 'No audit trail'],
+            after: ['<strong>One platform</strong>, SSO from day one', 'RBAC + ACL + audit log <strong>in the OSS</strong>', 'Same code as paid tier — read every line'],
+            extra: 'For multi-host HA: <code>praxia serve</code> behind nginx + shared NFS for <code>.praxia/</code>. Use <code>PRAXIA_KMS_ADAPTER=aws</code> for KMS-backed token encryption.',
+            output: [
+              '$ praxia config show',
+              '  PRAXIA_SSO_PROVIDER     microsoft',
+              '  PRAXIA_SSO_CLIENT_ID    xxx (masked)',
+              '  PRAXIA_SSO_CLIENT_SECRET ******** (masked)',
+              '  PRAXIA_SSO_TENANT_ID    xxx',
+              '  PRAXIA_KMS_ADAPTER      aws',
+              '',
+              '$ praxia policy list',
+              '  abc123  deny  connector  box:/Confidential/*',
+              '         actions: read,write',
+              '         principals: role:member, role:viewer',
+              '',
+              '$ praxia ui --port 8501',
+              '  ✓ Listening on http://0.0.0.0:8501',
+              '  ✓ SSO redirect URL: https://praxia.example.com/auth/callback',
+              '  ✓ 11 tabs available',
+            ],
+          },
+          'oauth-prod': {
+            title: 'Production OAuth callback handling',
+            desc: 'In production, run the FastAPI server and let it handle the IdP redirect properly — multi-host safe state cache, KMS-backed tokens.',
+            cmd: '# 1. Run the HTTP backend\npip install "praxia[server,kms-aws]"\nexport PRAXIA_KMS_ADAPTER=aws\nexport PRAXIA_PUBLIC_URL=https://praxia.example.com\npraxia serve --host 0.0.0.0 --port 8000\n\n# 2. Frontend triggers OAuth\ncurl -X POST -H "X-API-Key: $KEY" \\\n  https://praxia.example.com/api/v1/oauth/box/start',
+            before: ['CLI-only OAuth → loopback URL only works on dev laptops', 'In-memory state cache → multi-worker = broken redirects', 'Token encryption = local key on disk'],
+            after: ['<strong>Real HTTPS callback URL</strong> with PKCE', '<strong>File-backed state cache</strong> shared across workers', '<strong>KMS-wrapped DEK</strong> per token (master key never on host)'],
+            extra: '5 KMS adapters: <code>local</code> / <code>aws</code> / <code>azure</code> / <code>gcp</code> / <code>vault</code>. Pick by env var <code>PRAXIA_KMS_ADAPTER</code>.',
+            output: [
+              '$ praxia serve --host 0.0.0.0 --port 8000',
+              '  ✓ FastAPI app loaded',
+              '  ✓ /api/v1/auth/login',
+              '  ✓ /api/v1/oauth/{provider}/start',
+              '  ✓ /api/v1/oauth/{provider}/callback',
+              '  ✓ /api/v1/oauth/{provider}/status',
+              '  ✓ KMS adapter: aws (key arn:aws:kms:us-east-1:…)',
+              '  Listening on http://0.0.0.0:8000',
+              '',
+              '$ curl -X POST -H "X-API-Key: $KEY" \\',
+              '    https://praxia.example.com/api/v1/oauth/box/start',
+              '{',
+              '  "authorize_url": "https://account.box.com/api/oauth2/authorize?...",',
+              '  "state": "g7Z…(32-char)…",',
+              '  "provider": "box"',
+              '}',
+            ],
+          },
+        },
+        dev: {
+          tasks: [
+            {value: 'connector', label: '🔌 Custom connector'},
+            {value: 'ab-test', label: '⚖️ A/B test prompts'},
+            {value: 'eval', label: '🎯 LLM quality eval'},
+          ],
+          connector: {
+            title: 'Build a Notion connector in ~50 lines',
+            desc: 'Implement the 2-method <code>Connector</code> protocol (<code>pull</code> / <code>push</code>). Per-user OAuth + ACL + audit log plug in for free.',
+            cmd: '# my_pkg/notion_connector.py — full code in docs/CUSTOM_CONNECTORS.md\nclass NotionConnector:\n    name = "notion"\n    def __init__(self, *, api_key=None, user_id=None):\n        notion_client = _require("notion_client", "pip install notion-client")\n        if user_id and not api_key:\n            api_key = oauth_token_for(user_id, "notion").access_token\n        self._client = notion_client.Client(auth=api_key)\n    def pull(self, path, *, limit=100): ...\n    def push(self, path, data): ...',
+            before: ['Each connector reimplements auth + ACL + audit from scratch', 'Service-account designs leak data across users', 'No standard pattern → integrations rot'],
+            after: ['<strong>~50 lines of Python</strong> for the core', 'Per-user OAuth, ACL, and audit log <strong>plug in for free</strong>', 'Entry-point declaration → <code>pip install</code> → auto-discovered'],
+            extra: 'Same pattern works for memory backends, parsers, exporters, OAuth providers, skills, flows. Single primitive: <code>praxia.extensions.Registry</code>.',
+            output: [
+              '# pyproject.toml',
+              '[project.entry-points."praxia.connectors"]',
+              'notion = "my_pkg.notion_connector:NotionConnector"',
+              '',
+              '$ pip install -e .',
+              '$ praxia connector list',
+              '  box',
+              '  sharepoint',
+              '  dropbox',
+              '  gdrive',
+              '  kintone',
+              '  salesforce',
+              '  notion ◄ NEW',
+              '',
+              '$ praxia oauth start notion --user-id alice',
+              '  → https://api.notion.com/v1/oauth/authorize?...',
+              '',
+              '$ praxia connector pull notion <database-id> --user-id alice',
+              '  fetched: 12 pages from Notion',
+              '  audit:   recorded as connector.pull',
+            ],
+          },
+          'ab-test': {
+            title: 'A/B test two prompts on real users',
+            desc: 'Define an experiment with control / treatment prompts. Praxia assigns each user deterministically, tracks outcomes per variant.',
+            cmd: 'praxia experiment create proposal_v2 \\\n  --name "Proposal prompt: shorter vs longer" \\\n  --variants \'{"control":{"prompt":"800-word..."},"candidate":{"prompt":"400-word..."}}\' \\\n  --traffic-split "control=0.5,candidate=0.5"\npraxia experiment start proposal_v2',
+            before: ['Manually swap prompts → no rollback', 'No way to measure which variant wins', 'Junior PM tries new prompt → org-wide regression'],
+            after: ['<strong>Deterministic per-user assignment</strong> via hash', 'Outcomes auto-tracked alongside <code>record_outcome()</code>', 'Tentative winner detection from existing data'],
+            extra: 'Variants can be ANY payload — system prompt, LLM provider alias, memory backend choice, skill version. Calling code interprets.',
+            output: [
+              '$ praxia experiment list',
+              '  ID            Name                      Status   Variants',
+              '  proposal_v2   Proposal v2 test          running  control(50%), candidate(50%)',
+              '',
+              '# After 50 outcomes recorded:',
+              '$ praxia experiment results proposal_v2',
+              '  Variant   Outcomes  Successes  Success rate  Avg score',
+              '  control   24        14         58%           0.71',
+              '  candidate 26        19         73%           0.82',
+              '',
+              '🏆 Tentative winner: candidate (confidence 0.41)',
+              '  insufficient data for production decision (need 30+ per arm)',
+            ],
+          },
+          eval: {
+            title: 'Catch quality regressions before merge',
+            desc: 'pytest-based LLM-output eval. Each PR runs the cases vs the committed baseline; score drops > 5pt fail the build.',
+            cmd: '# tests/llm_eval/test_skill_quality.py — 6 cases (one per skill)\npytest tests/llm_eval -m llm_eval -v\n# To update the baseline (after a known-good change):\npytest tests/llm_eval --update-baselines',
+            before: ['Prompt change → silently degrades quality', 'No way to compare Claude vs GPT-4o on same task', 'Reviewers eyeball the output'],
+            after: ['Each PR scored vs <strong>committed baseline</strong>', 'Per-skill rubric: keywords + structure + length + must-not-contain', 'Optional <strong>LLM-as-judge</strong> rubric for nuanced quality'],
+            extra: 'Baselines are per-model — switch <code>--llm-eval-model claude</code> vs <code>qwen-local</code> to see model-specific differences.',
+            output: [
+              '$ pytest tests/llm_eval -m llm_eval -v',
+              '',
+              'tests/llm_eval/test_skill_quality.py::test_investment_q3_review',
+              '  [investment_q3_review] OK: score 0.82 (baseline 0.80, Δ +0.02)',
+              '    output: ## Profile\\n\\nJP mid-cap consumer electronics…',
+              '    sub-scores: {keywords: 0.80, structure: 1.00,',
+              '                 length: 1.00, must_not_contain: 1.00,',
+              '                 llm_judge: 0.70}',
+              'PASSED                                                 [16%]',
+              '',
+              'tests/llm_eval/test_skill_quality.py::test_legal_contract_review',
+              '  [legal_contract_review] REGRESSION on legal_contract_review:',
+              '    0.78 → 0.62 (Δ -0.16, tolerance ±0.05)',
+              'FAILED                                                 [33%]',
+              '',
+              '======================== 1 failed, 5 passed ========================',
+            ],
+          },
+        },
+      };
+
+      const roleChips = document.querySelector('.scenario-chips[data-axis="role"]');
+      const taskChips = document.querySelector('.scenario-chips[data-axis="task"]');
+      const titleEl = document.getElementById('sc-title');
+      const descEl = document.getElementById('sc-desc');
+      const beforeEl = document.getElementById('sc-before');
+      const afterEl = document.getElementById('sc-after');
+      const extraEl = document.getElementById('sc-extra');
+      const cmdEl = document.getElementById('sc-cmd');
+      const outputEl = document.getElementById('sc-output');
+      const runBtn = document.getElementById('sc-run-btn');
+      const copyBtn = document.getElementById('sc-copy-btn');
+
+      let currentRole = 'sales';
+      let currentTask = 'b2b-prep';
+      let typingCancel = null;
+
+      function renderTasks(role) {
+        const tasks = (SCENARIOS[role] || {}).tasks || [];
+        taskChips.innerHTML = '';
+        tasks.forEach((t, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'chip' + (i === 0 ? ' chip-active' : '');
+          btn.dataset.value = t.value;
+          btn.textContent = t.label;
+          btn.addEventListener('click', () => {
+            taskChips.querySelectorAll('.chip').forEach(c => c.classList.remove('chip-active'));
+            btn.classList.add('chip-active');
+            currentTask = t.value;
+            renderScenario();
+          });
+          taskChips.appendChild(btn);
+        });
+        currentTask = (tasks[0] || {}).value;
+      }
+
+      function renderScenario() {
+        const sc = (SCENARIOS[currentRole] || {})[currentTask];
+        if (!sc) return;
+        titleEl.textContent = sc.title;
+        descEl.innerHTML = sc.desc;
+        beforeEl.innerHTML = sc.before.map(b => `<li>${b}</li>`).join('');
+        afterEl.innerHTML = sc.after.map(a => `<li>${a}</li>`).join('');
+        extraEl.innerHTML = sc.extra;
+        cmdEl.textContent = sc.cmd;
+        outputEl.textContent = '# Click ▶ Run preview to see a typed-out simulation';
+        if (typingCancel) typingCancel();
+      }
+
+      roleChips.querySelectorAll('.chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          roleChips.querySelectorAll('.chip').forEach(c => c.classList.remove('chip-active'));
+          btn.classList.add('chip-active');
+          currentRole = btn.dataset.value;
+          renderTasks(currentRole);
+          renderScenario();
+        });
+      });
+
+      function typeOut(lines) {
+        if (typingCancel) typingCancel();
+        let cancelled = false;
+        typingCancel = () => { cancelled = true; };
+        outputEl.textContent = '';
+        let li = 0;
+        function nextLine() {
+          if (cancelled) return;
+          if (li >= lines.length) return;
+          let i = 0;
+          const line = lines[li];
+          function step() {
+            if (cancelled) return;
+            outputEl.textContent += line[i] || '';
+            i++;
+            if (i < line.length) {
+              setTimeout(step, line[i-1] === ' ' ? 4 : 8);
+            } else {
+              outputEl.textContent += '\n';
+              li++;
+              setTimeout(nextLine, 30);
+            }
+          }
+          step();
+        }
+        nextLine();
+      }
+
+      runBtn.addEventListener('click', () => {
+        const sc = (SCENARIOS[currentRole] || {})[currentTask];
+        if (!sc) return;
+        typeOut(sc.output);
+      });
+
+      copyBtn.addEventListener('click', () => {
+        const cmd = cmdEl.textContent;
+        navigator.clipboard.writeText(cmd).then(() => {
+          const orig = copyBtn.textContent;
+          copyBtn.textContent = '✓ Copied';
+          setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+        });
+      });
+
+      // Initial render
+      renderTasks('sales');
+      renderScenario();
     })();
   </script>
 </body>

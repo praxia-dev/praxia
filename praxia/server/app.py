@@ -190,4 +190,139 @@ def create_app(
         }.get(req.format, "application/octet-stream")
         return Response(content=result.bytes, media_type=media_type)
 
+    # --- OAuth web handler -------------------------------------------------
+    # OAuth-related imports are deferred so server users without OAuth
+    # configured don't pay the startup cost.
+
+    from fastapi import HTTPException, Request
+    from fastapi.responses import HTMLResponse, RedirectResponse
+
+    def _build_oauth_flow(provider_name: str, base_url: str):
+        from praxia.connectors.oauth import (
+            OAuthFlow,
+            OAuthTokenStore,
+            PersistentStateStore,
+        )
+        from praxia.connectors.oauth.providers import PROVIDERS_BY_NAME
+
+        if provider_name not in PROVIDERS_BY_NAME:
+            raise HTTPException(404, f"Unknown OAuth provider: {provider_name}")
+        cid = os.environ.get(f"PRAXIA_OAUTH_{provider_name.upper()}_CLIENT_ID")
+        csec = os.environ.get(f"PRAXIA_OAUTH_{provider_name.upper()}_CLIENT_SECRET")
+        if not (cid and csec):
+            raise HTTPException(
+                503,
+                f"OAuth client not configured for {provider_name}. "
+                f"Set PRAXIA_OAUTH_{provider_name.upper()}_CLIENT_ID and _CLIENT_SECRET.",
+            )
+        redirect_uri = f"{base_url}/api/v1/oauth/{provider_name}/callback"
+        return OAuthFlow(
+            PROVIDERS_BY_NAME[provider_name],
+            client_id=cid,
+            client_secret=csec,
+            redirect_uri=redirect_uri,
+            token_store=OAuthTokenStore(storage_dir=storage / "auth"),
+            state_store=PersistentStateStore(storage_dir=storage / "auth"),
+        )
+
+    @app.post("/api/v1/oauth/{provider}/start")
+    def oauth_start(
+        provider: str, request: Request, user=Depends(current_user)
+    ):
+        """Build the IdP authorization URL for the current user.
+
+        Returns the URL — the caller (frontend) issues the redirect.
+        Set `PRAXIA_PUBLIC_URL` in production so the redirect URI is
+        stable regardless of which worker handled this request.
+        """
+        base_url = os.environ.get("PRAXIA_PUBLIC_URL") or (
+            f"{request.url.scheme}://{request.url.netloc}"
+        )
+        flow = _build_oauth_flow(provider, base_url)
+        url, state = flow.authorization_url(user_id=user.id)
+        return {"authorize_url": url, "state": state, "provider": provider}
+
+    @app.get("/api/v1/oauth/{provider}/callback")
+    def oauth_callback(
+        provider: str,
+        request: Request,
+        code: str | None = None,
+        state: str | None = None,
+        error: str | None = None,
+    ):
+        """Handle the IdP redirect: exchange code → token, then redirect back.
+
+        Note this endpoint does NOT require an authenticated user — the
+        IdP sends the redirect directly. Authentication is implicit via
+        the `state` token, which is single-use and tied to a user_id at
+        `/start` time.
+        """
+        if error:
+            return HTMLResponse(
+                f"<h1>Authorization failed</h1><p>{error}</p>",
+                status_code=400,
+            )
+        if not (code and state):
+            return HTMLResponse(
+                "<h1>Authorization failed</h1><p>missing code or state</p>",
+                status_code=400,
+            )
+
+        base_url = os.environ.get("PRAXIA_PUBLIC_URL") or (
+            f"{request.url.scheme}://{request.url.netloc}"
+        )
+        flow = _build_oauth_flow(provider, base_url)
+        try:
+            token = flow.exchange_code(code=code, state=state)
+        except Exception as e:  # CSRF / IdP error / network
+            return HTMLResponse(
+                f"<h1>Authorization failed</h1><p>{type(e).__name__}: {e}</p>",
+                status_code=400,
+            )
+
+        # Optional redirect back to the frontend after success
+        redirect_to = os.environ.get("PRAXIA_OAUTH_SUCCESS_REDIRECT")
+        if redirect_to:
+            return RedirectResponse(redirect_to, status_code=302)
+        # Default: a tiny success page so the browser tab can be closed
+        return HTMLResponse(
+            f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Authorized</title></head>
+<body style="font-family:sans-serif;padding:2rem">
+  <h1>✅ Authorized</h1>
+  <p>{token.user_id} can now use the {provider} connector.</p>
+  <p>You can close this tab.</p>
+</body></html>""",
+            status_code=200,
+        )
+
+    @app.get("/api/v1/oauth/{provider}/status")
+    def oauth_status(provider: str, user=Depends(current_user)):
+        """Whether the current user has a valid token for this provider."""
+        from praxia.connectors.oauth import OAuthTokenStore
+        from praxia.connectors.oauth.providers import PROVIDERS_BY_NAME
+
+        if provider not in PROVIDERS_BY_NAME:
+            from fastapi import HTTPException
+            raise HTTPException(404, f"Unknown provider: {provider}")
+        token_store = OAuthTokenStore(storage_dir=storage / "auth")
+        token = token_store.get(user.id, provider)
+        if token is None:
+            return {"authorized": False, "expires_at": None}
+        return {
+            "authorized": True,
+            "expires_at": token.expires_at,
+            "is_expired": token.is_expired(),
+            "scope": token.scope,
+        }
+
+    @app.delete("/api/v1/oauth/{provider}")
+    def oauth_revoke(provider: str, user=Depends(current_user)):
+        """Revoke (locally) the user's token for `provider`."""
+        from praxia.connectors.oauth import OAuthTokenStore
+
+        token_store = OAuthTokenStore(storage_dir=storage / "auth")
+        deleted = token_store.delete(user.id, provider)
+        return {"deleted": deleted}
+
     return app

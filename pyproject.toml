@@ -92,6 +92,22 @@ audio = [
 audio-local = [
     "openai-whisper>=20231117",  # Local Whisper for STT
 ]
+# --- KMS adapters for OAuth token envelope encryption ---
+# Pick the one that matches your cloud. The local adapter (default)
+# needs no extras.
+kms-aws = ["boto3>=1.30"]
+kms-azure = [
+    "azure-identity>=1.15",
+    "azure-keyvault-keys>=4.9",
+]
+kms-gcp = ["google-cloud-kms>=2.20"]
+kms-vault = ["hvac>=2.0"]
+# --- HTTP server (FastAPI mode B) ---
+server = [
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+]
+# --- A/B experiments (no extra deps; built into core) ---
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
@@ -162,5 +178,6 @@ asyncio_mode = "auto"
 markers = [
     "evaluation: regression-prevention scenario tests (run with -m evaluation)",
     "integration: tests that hit real external services (skipped by default)",
+    "llm_eval: LLM output-quality evaluation (real API calls, run with -m llm_eval)",
     "slow: tests > 5s; usable as -m 'not slow' for fast iteration",
 ]

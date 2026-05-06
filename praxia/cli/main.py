@@ -1176,6 +1176,163 @@ def memory_show(
 
 # --- Output exporters --------------------------------------------------------
 
+# --- Experiments (A/B testing) ----------------------------------------------
+
+experiment_app = typer.Typer(help="A/B experiments for prompts / skills / LLMs")
+app.add_typer(experiment_app, name="experiment")
+
+
+@experiment_app.command("create")
+def experiment_create(
+    exp_id: str = typer.Argument(..., help="Stable identifier (don't change once running)"),
+    name: str = typer.Option(..., help="Human-readable name"),
+    variants_json: str = typer.Option(
+        ..., "--variants", help='JSON: {"control":{"prompt":"..."},"treatment":{"prompt":"..."}}'
+    ),
+    traffic_split: str = typer.Option(
+        "", help='Comma-separated name=fraction (e.g. "control=0.5,treatment=0.5")'
+    ),
+    description: str = typer.Option(""),
+    storage_dir: str = typer.Option(".praxia/experiments"),
+) -> None:
+    """Create a new experiment in DRAFT status."""
+    import json as _json
+    from praxia.experiments import Experiment, ExperimentRegistry, Variant
+
+    try:
+        var_dict = _json.loads(variants_json)
+    except _json.JSONDecodeError as e:
+        console.print(f"[red]Invalid --variants JSON: {e}[/red]")
+        raise typer.Exit(1)
+    variants = {n: Variant(name=n, payload=p) for n, p in var_dict.items()}
+
+    split: dict[str, float] = {}
+    if traffic_split:
+        for chunk in traffic_split.split(","):
+            k, _, v = chunk.partition("=")
+            split[k.strip()] = float(v)
+
+    reg = ExperimentRegistry(storage_dir=storage_dir)
+    exp = reg.create(Experiment(
+        id=exp_id,
+        name=name,
+        description=description,
+        variants=variants,
+        traffic_split=split or {},
+    ))
+    console.print(f"✅ Created experiment [bold]{exp.id}[/bold] (status: {exp.status})")
+    console.print(f"   Activate with: praxia experiment start {exp.id}")
+
+
+@experiment_app.command("list")
+def experiment_list(
+    storage_dir: str = typer.Option(".praxia/experiments"),
+) -> None:
+    """List all experiments."""
+    from praxia.experiments import ExperimentRegistry
+
+    reg = ExperimentRegistry(storage_dir=storage_dir)
+    table = Table(title="Experiments")
+    table.add_column("ID", style="cyan")
+    table.add_column("Name")
+    table.add_column("Status")
+    table.add_column("Variants")
+    for exp in reg.list():
+        table.add_row(
+            exp.id, exp.name, exp.status,
+            ", ".join(f"{n}({s:.0%})" for n, s in exp.traffic_split.items()),
+        )
+    console.print(table)
+
+
+@experiment_app.command("start")
+def experiment_start(
+    exp_id: str = typer.Argument(...),
+    storage_dir: str = typer.Option(".praxia/experiments"),
+) -> None:
+    """Set an experiment's status to RUNNING."""
+    from praxia.experiments import ExperimentRegistry, ExperimentStatus
+
+    reg = ExperimentRegistry(storage_dir=storage_dir)
+    exp = reg.set_status(exp_id, ExperimentStatus.RUNNING)
+    console.print(f"▶️  {exp.id} → running")
+
+
+@experiment_app.command("pause")
+def experiment_pause(
+    exp_id: str = typer.Argument(...),
+    storage_dir: str = typer.Option(".praxia/experiments"),
+) -> None:
+    """Pause a running experiment."""
+    from praxia.experiments import ExperimentRegistry, ExperimentStatus
+
+    reg = ExperimentRegistry(storage_dir=storage_dir)
+    exp = reg.set_status(exp_id, ExperimentStatus.PAUSED)
+    console.print(f"⏸  {exp.id} → paused")
+
+
+@experiment_app.command("finish")
+def experiment_finish(
+    exp_id: str = typer.Argument(...),
+    storage_dir: str = typer.Option(".praxia/experiments"),
+) -> None:
+    """Mark an experiment FINISHED (no further assignments)."""
+    from praxia.experiments import ExperimentRegistry, ExperimentStatus
+
+    reg = ExperimentRegistry(storage_dir=storage_dir)
+    exp = reg.set_status(exp_id, ExperimentStatus.FINISHED)
+    console.print(f"🏁 {exp.id} → finished")
+
+
+@experiment_app.command("results")
+def experiment_results(
+    exp_id: str = typer.Argument(...),
+    storage_dir: str = typer.Option(".praxia/experiments"),
+) -> None:
+    """Show outcome rollup + tentative winner."""
+    from praxia.experiments import ExperimentRegistry
+
+    reg = ExperimentRegistry(storage_dir=storage_dir)
+    results = reg.results(exp_id)
+    table = Table(title=f"Results: {exp_id}")
+    table.add_column("Variant", style="cyan")
+    table.add_column("Outcomes", justify="right")
+    table.add_column("Successes", justify="right")
+    table.add_column("Success rate", justify="right")
+    table.add_column("Avg score", justify="right")
+    for v in results.variants:
+        rate = (
+            f"{v.success_rate:.1%}" if v.success_rate is not None else "—"
+        )
+        avg = f"{v.avg_score:.2f}" if v.avg_score is not None else "—"
+        table.add_row(v.name, str(v.outcomes_recorded), str(v.successes), rate, avg)
+    console.print(table)
+    if results.winner:
+        console.print(
+            f"🏆 Tentative winner: [bold]{results.winner}[/bold] "
+            f"(confidence {results.confidence:.2f})"
+        )
+    console.print(f"[dim]{results.notes}[/dim]")
+
+
+@experiment_app.command("delete")
+def experiment_delete(
+    exp_id: str = typer.Argument(...),
+    storage_dir: str = typer.Option(".praxia/experiments"),
+) -> None:
+    """Delete an experiment definition (outcome log retained)."""
+    from praxia.experiments import ExperimentRegistry
+
+    reg = ExperimentRegistry(storage_dir=storage_dir)
+    if reg.delete(exp_id):
+        console.print(f"🗑  Deleted {exp_id}")
+    else:
+        console.print(f"[yellow]Not found: {exp_id}[/yellow]")
+        raise typer.Exit(1)
+
+
+# --- Output exporters --------------------------------------------------------
+
 @app.command("export")
 def export_command(
     input_path: str = typer.Argument(..., help="Input file (md/markdown)"),

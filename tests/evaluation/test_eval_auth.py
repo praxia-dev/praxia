@@ -85,8 +85,10 @@ class TestJwtAuth:
         auth = AuthManager(storage_dir=tmp_storage, bootstrap_admin=None)
         user, _ = auth.create_user("alice", role=Role.MEMBER)
         token = auth.issue_token(user.id)
-        # Flip the last char (which lives in the signature segment) to corrupt it
-        tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+        # Replace the entire signature segment with garbage so the verification
+        # cannot accidentally succeed.
+        head_payload, _, _signature = token.rpartition(".")
+        tampered = head_payload + ".invalid_signature_aaaa"
         assert auth.authenticate(token=tampered) is None
 
 

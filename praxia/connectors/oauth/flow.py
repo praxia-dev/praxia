@@ -62,14 +62,16 @@ class OAuthFlow:
         client_secret: str,
         redirect_uri: str,
         token_store: OAuthTokenStore | None = None,
+        state_store: Any = None,
     ) -> None:
         self.provider = provider
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
         self.store = token_store or OAuthTokenStore()
-        # In-memory state cache keyed by `state` string. For multi-process
-        # deployments, replace with Redis / database.
+        # State cache — defaults to in-memory dict (single process).
+        # Pass a `PersistentStateStore` for multi-process / multi-host.
+        self._state_store = state_store
         self._states: dict[str, OAuthState] = {}
 
     @classmethod
@@ -95,13 +97,17 @@ class OAuthFlow:
             .decode()
         )
 
-        self._states[state] = OAuthState(
+        state_obj = OAuthState(
             user_id=user_id,
             provider=self.provider.name,
             pkce_verifier=verifier,
             redirect_uri=self.redirect_uri,
             issued_at=time.time(),
         )
+        if self._state_store is not None:
+            self._state_store.put(state, state_obj)
+        else:
+            self._states[state] = state_obj
 
         params: dict[str, str] = {
             "response_type": "code",
@@ -126,7 +132,10 @@ class OAuthFlow:
 
     def exchange_code(self, *, code: str, state: str) -> OAuthToken:
         """Validate state, exchange code, persist token, return it."""
-        flow_state = self._states.pop(state, None)
+        if self._state_store is not None:
+            flow_state = self._state_store.pop(state)
+        else:
+            flow_state = self._states.pop(state, None)
         if not flow_state:
             raise ValueError("Unknown or expired state — possible CSRF")
         if flow_state.provider != self.provider.name:

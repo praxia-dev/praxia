@@ -44,7 +44,11 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 30. [Deployment modes (frontend-included vs backend-only)](#30-deployment-modes-frontend-included-vs-backend-only)
 31. [Custom connector guide](#31-custom-connector-guide)
 32. [Design specifications](#32-design-specifications)
-33. [Legal templates](#33-legal-templates)
+33. [KMS-backed token encryption](#33-kms-backed-token-encryption-production-oauth)
+34. [OAuth callback web handler](#34-oauth-callback-web-handler-production-http)
+35. [A/B experiments framework](#35-ab-experiments-framework-praxiaexperiments)
+36. [LLM output quality evaluation](#36-llm-output-quality-evaluation-testsllm_eval)
+37. [Legal templates](#37-legal-templates)
 
 ---
 
@@ -1249,7 +1253,108 @@ Formal documents in both English and Japanese — basic design / interface spec 
 
 ---
 
-## 33. Legal templates
+## 33. KMS-backed token encryption (production OAuth)
+
+`OAuthTokenStore` now uses **envelope encryption**: a fresh 256-bit data key per token, AES-GCM payload encryption, and the data key wrapped by a configurable `KmsAdapter`:
+
+| Adapter | Install | Use |
+|---|---|---|
+| `local` (default) | (none) | dev / single-host |
+| `aws` | `pip install 'praxia[kms-aws]'` | AWS KMS CMK |
+| `azure` | `pip install 'praxia[kms-azure]'` | Azure Key Vault Keys |
+| `gcp` | `pip install 'praxia[kms-gcp]'` | GCP Cloud KMS |
+| `vault` | `pip install 'praxia[kms-vault]'` | HashiCorp Vault Transit |
+
+```bash
+export PRAXIA_KMS_ADAPTER=aws
+export PRAXIA_KMS_KEY_ID=arn:aws:kms:us-east-1:111122223333:key/...
+```
+
+The master key never leaves the KMS / HSM. Legacy v0.1 token format is decoded transparently during upgrade.
+
+---
+
+## 34. OAuth callback web handler (production HTTP)
+
+The FastAPI app (`praxia serve`) now exposes:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/oauth/{provider}/start` | Build authorization URL for current user |
+| `GET /api/v1/oauth/{provider}/callback` | Handle IdP redirect → exchange code → save token |
+| `GET /api/v1/oauth/{provider}/status` | Whether user has a valid token + expiry |
+| `DELETE /api/v1/oauth/{provider}` | Revoke locally |
+
+State cache is **persistent across processes** (`PersistentStateStore` — JSON file with TTL pruning), so multi-worker deployments don't lose state mid-redirect. Set `PRAXIA_PUBLIC_URL` so the redirect URI is stable regardless of which worker handled the request.
+
+After success, optionally redirect back to your frontend via `PRAXIA_OAUTH_SUCCESS_REDIRECT`.
+
+---
+
+## 35. A/B experiments framework (`praxia.experiments`)
+
+Run controlled experiments on prompts, skills, LLM providers, or memory backends:
+
+```python
+from praxia.experiments import Experiment, ExperimentRegistry, Variant, ExperimentStatus
+
+reg = ExperimentRegistry(storage_dir=".praxia/experiments")
+exp = reg.create(Experiment(
+    id="proposal_prompt_v2",
+    name="Proposal: shorter vs longer system prompt",
+    variants={
+        "control": Variant(name="control", payload={"prompt": "<800-word>..."}),
+        "candidate": Variant(name="candidate", payload={"prompt": "<400-word>..."}),
+    },
+    traffic_split={"control": 0.5, "candidate": 0.5},
+    target_audience={"roles": ["member", "operator"]},
+    status=ExperimentStatus.RUNNING.value,
+))
+
+# In your skill / flow:
+variant = reg.assign("proposal_prompt_v2", user_id=user.id, role=user.role)
+prompt = variant.payload["prompt"] if variant else default_prompt
+# After the user's outcome is known:
+reg.record_outcome("proposal_prompt_v2", user_id=user.id, episode_id=ep.id, success=True, score=0.9)
+
+# Later:
+results = reg.results("proposal_prompt_v2")
+print(results.winner, results.confidence)
+```
+
+Assignment is **deterministic per user** (hash-based) — same user always sees the same variant during the experiment. CLI:
+
+```bash
+praxia experiment create proposal_prompt_v2 \
+    --name "Prompt v2" \
+    --variants '{"control":{"prompt":"..."},"candidate":{"prompt":"..."}}' \
+    --traffic-split "control=0.5,candidate=0.5"
+praxia experiment start proposal_prompt_v2
+praxia experiment results proposal_prompt_v2
+```
+
+---
+
+## 36. LLM output quality evaluation (`tests/llm_eval/`)
+
+Separate from the deterministic regression suite — these tests **call the LLM** and grade output against rubrics + a committed baseline. CI flags PRs where quality drops > 5 points.
+
+```bash
+# Skipped by default
+pytest tests/llm_eval -m llm_eval -v
+
+# Update baselines (after a known-good change)
+pytest tests/llm_eval --update-baselines
+
+# Compare a different provider on the same cases
+pytest tests/llm_eval --llm-eval-model gpt-4o
+```
+
+Built-in rubrics: keywords match, structure (heading) match, length band, must-not-contain, LLM-as-judge. Per-skill cases for all 6 business skills ship out of the box.
+
+---
+
+## 37. Legal templates
 
 `docs/legal/` contains starter templates for:
 

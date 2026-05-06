@@ -1,7 +1,11 @@
 """Per-user OAuth token storage with automatic refresh.
 
 Stores `OAuthToken` records keyed by `(user_id, provider)`. Tokens are
-encrypted at rest using a key derived from the configured secret.
+encrypted at rest with envelope encryption: a fresh 256-bit data key
+per write, AES-GCM payload encryption, and the data key wrapped by a
+configurable `KmsAdapter` (local / AWS KMS / Azure Key Vault / GCP KMS
+/ HashiCorp Vault).
+
 On read, expired tokens are refreshed transparently if a refresh_token
 is present.
 """
@@ -19,6 +23,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from praxia.connectors.oauth.kms import (
+    KmsAdapter,
+    build_adapter,
+    envelope_decrypt,
+    envelope_encrypt,
+)
 from praxia.connectors.oauth.providers import PROVIDERS_BY_NAME
 
 
@@ -46,10 +56,19 @@ class OAuthTokenStore:
 
     Storage layout:
         <storage_dir>/oauth_tokens.jsonl
-        Each line is one encrypted token blob.
+        Each line is one envelope-encrypted token blob (JSON).
 
-    Encryption is symmetric (HMAC-derived key) and intentionally simple.
-    Production deployments should swap in a KMS-backed encryptor.
+    Encryption: AES-GCM with a fresh 256-bit data key per write. The data
+    key is wrapped by the configured `KmsAdapter` — `local` (default,
+    HKDF from a secret), `aws` (KMS), `azure` (Key Vault), `gcp` (Cloud
+    KMS), or `vault` (HashiCorp Vault Transit).
+
+    Args:
+        storage_dir: where the encrypted JSONL lives.
+        encryption_secret: legacy — only used by the local adapter.
+        kms: an explicit `KmsAdapter` instance (production path). If
+             None, builds one from `PRAXIA_KMS_ADAPTER` (default
+             "local").
     """
 
     def __init__(
@@ -57,6 +76,7 @@ class OAuthTokenStore:
         storage_dir: Path | str = ".praxia/auth",
         *,
         encryption_secret: str | None = None,
+        kms: KmsAdapter | None = None,
     ) -> None:
         self.dir = Path(storage_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
@@ -66,6 +86,15 @@ class OAuthTokenStore:
             or os.getenv("PRAXIA_TOKEN_ENC_KEY")
             or os.getenv("PRAXIA_JWT_SECRET", "praxia-dev-only")
         ).encode()
+        # KMS adapter for envelope encryption. For local adapter, pass the
+        # secret through; other adapters take their own kwargs (see kms.py).
+        if kms is None:
+            adapter_name = os.getenv("PRAXIA_KMS_ADAPTER", "local").lower()
+            if adapter_name == "local":
+                kms = build_adapter("local", secret=self._secret.decode())
+            else:
+                kms = build_adapter(adapter_name)
+        self._kms = kms
 
     # --- CRUD --------------------------------------------------------------
 
@@ -145,42 +174,49 @@ class OAuthTokenStore:
         self.save(token)
         return token
 
-    # --- Encryption (intentionally minimal — swap with KMS in prod) -------
+    # --- Encryption (envelope; data key wrapped by KMS adapter) -----------
 
     def _encrypt_line(self, token: OAuthToken) -> str:
         plain = json.dumps(asdict(token), ensure_ascii=False).encode()
-        # XOR with HMAC-derived keystream of the same length, then base64
-        # (Salt is empty so encrypt/decrypt symmetry is guaranteed; secret
-        # is the only key. Production deployments should swap with KMS.)
-        keystream = self._keystream(len(plain), salt="")
-        ciphertext = bytes(p ^ k for p, k in zip(plain, keystream))
-        return base64.b64encode(ciphertext).decode()
+        envelope = envelope_encrypt(self._kms, plain)
+        return json.dumps(envelope, separators=(",", ":"))
 
     def _decrypt_line(self, line: str) -> OAuthToken | None:
         line = line.strip()
         if not line:
             return None
         try:
-            ciphertext = base64.b64decode(line)
-            # We don't know the salt without parsing — try every user/provider
-            # combo? Instead, store salt at start. For simplicity, prepend a
-            # short header. Refactor — store salt+ciphertext base64-joined.
-            # NOTE: simplification — encrypt without salt for v1; KMS in prod
-            keystream = self._keystream(len(ciphertext), salt="")
-            plain = bytes(c ^ k for c, k in zip(ciphertext, keystream))
-            data = json.loads(plain.decode())
-            return OAuthToken(**data)
+            # New format: JSON envelope
+            if line.startswith("{"):
+                envelope = json.loads(line)
+                plain = envelope_decrypt(self._kms, envelope)
+                return OAuthToken(**json.loads(plain.decode()))
+            # Legacy format: bare base64 from v0.1 — try the legacy decoder
+            return self._decrypt_legacy(line)
         except Exception:
             return None
 
-    def _keystream(self, length: int, *, salt: str) -> bytes:
+    def _decrypt_legacy(self, line: str) -> OAuthToken | None:
+        """Decode tokens written by the v0.1 (HMAC keystream) format.
+
+        Kept for backward compat so users upgrading don't have to
+        re-authorize. Re-saving any token rewrites it in the new envelope
+        format.
+        """
+        try:
+            ciphertext = base64.b64decode(line)
+            keystream = self._legacy_keystream(len(ciphertext))
+            plain = bytes(c ^ k for c, k in zip(ciphertext, keystream))
+            return OAuthToken(**json.loads(plain.decode()))
+        except Exception:
+            return None
+
+    def _legacy_keystream(self, length: int) -> bytes:
         out = bytearray()
         counter = 0
         while len(out) < length:
             block = hmac.new(
-                self._secret,
-                f"{salt}|{counter}".encode(),
-                hashlib.sha256,
+                self._secret, f"|{counter}".encode(), hashlib.sha256
             ).digest()
             out.extend(block)
             counter += 1
