@@ -248,12 +248,73 @@ praxia run incident_response --alert "..."
 
 ---
 
+## 5b. Adding a KMS adapter
+
+Praxia ships 5 KMS adapters for OAuth token envelope encryption (`local`, `aws`, `azure`, `gcp`, `vault`). To add another (HashiCorp Boundary, custom HSM, etc.):
+
+```python
+# my_pkg/kms.py
+from praxia.connectors.oauth.kms import KMS_ADAPTERS
+
+@KMS_ADAPTERS.register_decorator("my-hsm")
+class MyHsmAdapter:
+    name = "my-hsm"
+    def __init__(self, *, endpoint: str, slot: int) -> None:
+        # connect to your HSM
+        ...
+    def wrap(self, dek: bytes) -> bytes:
+        return self._hsm.encrypt(slot=self.slot, data=dek)
+    def unwrap(self, wrapped: bytes) -> bytes:
+        return self._hsm.decrypt(slot=self.slot, data=wrapped)
+```
+
+```toml
+# pyproject.toml
+[project.entry-points."praxia.kms_adapters"]
+my-hsm = "my_pkg.kms:MyHsmAdapter"
+```
+
+Then `PRAXIA_KMS_ADAPTER=my-hsm` activates it. The `OAuthTokenStore` uses `wrap` / `unwrap` to envelope-encrypt every token (DEK is generated per-write inside Praxia).
+
+---
+
+## 5c. Adding an output exporter
+
+`praxia.io.exporters` ships md / html / pptx / docx / json. To add a new format (LaTeX, Confluence Storage, RTF):
+
+```python
+from praxia.io.exporters import EXPORTERS
+
+@EXPORTERS.register_decorator("latex")
+class LatexExporter:
+    format = "latex"
+    extensions = ("tex",)
+    def __init__(self, *, title: str | None = None, **kwargs):
+        self.title = title
+    def export(self, content) -> bytes:
+        # render to bytes
+        return ...
+```
+
+```toml
+[project.entry-points."praxia.exporters"]
+latex = "my_pkg.exporters:LatexExporter"
+```
+
+Now `praxia export report.md report.tex` works, and `OutputFormatSkill` picks it up via heuristic.
+
+---
+
 ## 6. The full extension-point matrix
 
 | Plugin type | Base class / protocol | Registry | Entry-point group |
 |---|---|---|---|
 | **Connector** | `praxia.connectors.base.Connector` (Protocol) | `CONNECTORS` | `praxia.connectors` |
 | **Memory backend** | `praxia.memory.backends.base.MemoryBackend` (Protocol) | `BACKENDS` | `praxia.memory_backends` |
+| **File parser** | `Parser` (Protocol) | `PARSERS` | `praxia.parsers` |
+| **Output exporter** | `Exporter` (Protocol) | `EXPORTERS` | `praxia.exporters` |
+| **OAuth provider** | `OAuthProviderConfig` (instance) | (module-level) | `praxia.oauth_providers` |
+| **KMS adapter** | `KmsAdapter` (Protocol) | `KMS_ADAPTERS` | `praxia.kms_adapters` |
 | **Skill** | `praxia.skills.skill.Skill` | `SKILLS` | `praxia.skills` |
 | **Flow** | `praxia.core.flow.Flow` | `FLOWS` | `praxia.flows` |
 

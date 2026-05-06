@@ -175,6 +175,76 @@ praxia consolidate --threshold 0.75          # 本番閾値
 praxia freeze --block team_norms             # 安定したブロックを git 管理 Markdown に
 ```
 
+## 8a. 本番運用 OAuth + KMS 暗号化
+
+複数ワーカ / 複数ホスト構成では FastAPI サーバを稼動させ、KMS アダプタを構成:
+
+```bash
+# server + KMS extras を install
+pip install "praxia[server,kms-aws]"   # kms-azure / kms-gcp / kms-vault も可
+
+# redirect URI を安定化
+export PRAXIA_PUBLIC_URL=https://praxia.example.com
+
+# KMS 包絡暗号化を有効化
+export PRAXIA_KMS_ADAPTER=aws
+export PRAXIA_KMS_KEY_ID=arn:aws:kms:us-east-1:111122223333:key/...
+
+praxia serve --host 0.0.0.0 --port 8000
+```
+
+`/api/v1/oauth/{provider}/` 配下で以下を提供:
+- `POST /start` — 現在ユーザの authorize URL を構築
+- `GET /callback` — IdP redirect 受信、code 交換、トークン保存
+- `GET /status` — トークン保有状況 + 有効期限
+- `DELETE` — ローカル失効
+
+state は TTL 付き JSON でワーカ間共有されるため、redirect はどの replica に届いても OK。
+
+## 8b. A/B 実験
+
+```bash
+# 実験定義 (DRAFT)
+praxia experiment create proposal_v2 \
+    --name "提案文プロンプト: 短/長 比較" \
+    --variants '{"control":{"prompt":"<800字>"},"candidate":{"prompt":"<400字>"}}' \
+    --traffic-split "control=0.5,candidate=0.5"
+
+# 開始
+praxia experiment start proposal_v2
+
+# 一定数のアウトカム記録後に結果確認
+praxia experiment results proposal_v2
+# → 🏆 暫定 winner: candidate (confidence 0.41)
+```
+
+スキル / フロー内でユーザの variant を取得:
+
+```python
+from praxia.experiments import ExperimentRegistry
+
+reg = ExperimentRegistry()
+variant = reg.assign("proposal_v2", user_id="alice", role="member")
+prompt = variant.payload["prompt"] if variant else default_prompt
+```
+
+同ユーザは実験期間中常に同 variant を見ます (SHA-256 バケット)。アウトカムは `record_outcome()` 経由で記録 → variant 別に集計。
+
+## 8c. LLM 出力品質評価
+
+```bash
+# 既定スキップ (実 API キー + トークン消費)
+pytest tests/llm_eval -m llm_eval -v
+
+# 既知良好状態でベースライン更新
+pytest tests/llm_eval --update-baselines
+
+# 別モデルで比較
+pytest tests/llm_eval --llm-eval-model gpt-4o
+```
+
+各 PR がベースラインと比較され、5pt 超のスコア低下で CI が落ちます。詳細: [docs/EVALUATION.ja.md](EVALUATION.ja.md)
+
 ## 9. ユーザ委譲 OAuth (エンタープライズ推奨)
 
 各 Praxia ユーザが **自身の認証情報で** 外部システムを認可。連携先システムの ACL がユーザ単位で適用されます:

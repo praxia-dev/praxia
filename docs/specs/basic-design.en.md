@@ -29,6 +29,10 @@ The system is designed to be:
 | Output exporters (HTML / PPTX / DOCX / MD / JSON) | |
 | Audio I/O (STT + TTS) | |
 | Optional FastAPI HTTP server (`praxia serve`) | |
+| KMS-backed OAuth token encryption (5 adapters) | |
+| Production OAuth callback handler (multi-worker safe) | |
+| A/B experiments framework | |
+| LLM output-quality evaluation framework | |
 
 ## 3. System context
 
@@ -86,6 +90,8 @@ The system is designed to be:
 | 5 | `praxia.connectors` | Storage / SaaS connectors + per-user OAuth |
 | 6 | `praxia.io` | File parsers + audio I/O + output exporters |
 | 7 | `praxia.cli` / `praxia.ui` / `praxia.server` | Frontends — CLI, Streamlit, FastAPI |
+| 8 | `praxia.experiments` | A/B experiments — variant assignment + outcome rollup |
+| 9 | `tests/llm_eval` | LLM-output quality evaluation framework (CI gate) |
 
 Layers are uni-directional (lower numbered layers do not import higher ones). Plugin discovery uses `praxia.extensions.Registry` at every extensible boundary.
 

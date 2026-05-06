@@ -11,6 +11,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
+[![Tests: 342](https://img.shields.io/badge/tests-342%20passing-green.svg)]()
 
 > 🇯🇵 日本語版の各業務別記事 (Zenn): [docs/zenn/](docs/zenn/)
 > 🔍 Complete feature reference: [docs/FEATURES.md](docs/FEATURES.md)
@@ -56,6 +57,8 @@ The capabilities you typically pay enterprise tier for — already in the Apache
 - **Multi-LTM ensembles, not single-vendor.** Run Mem0 + Zep + HindSight in parallel, fuse with RRF, or route per query. No commercial agent platform exposes this — they pick a backend and lock you in.
 - **Per-user OAuth respects external ACL.** When Alice pulls from Box, Box's own ACL applies — Alice only sees what Alice can see. Service-account designs (typical SaaS shortcut) leak data across users.
 - **Air-gapped operation.** `PRAXIA_LOCAL_MODEL=gemma`, Ollama, `backend=json` — no cloud LLM, no cloud vector DB, no telemetry. Same code as cloud customers.
+- **Production-grade OAuth + KMS in OSS.** Multi-worker safe state cache, 5 KMS adapters (AWS / Azure / GCP / Vault / local). Most agent platforms paywall this; Praxia ships it.
+- **A/B experiments + quality eval included.** Test prompt variants on real users with deterministic assignment; catch LLM output quality regressions in CI.
 
 ---
 
@@ -313,7 +316,7 @@ Each Praxia user can authorize external systems with **their own credentials** �
 export PRAXIA_OAUTH_BOX_CLIENT_ID=...
 export PRAXIA_OAUTH_BOX_CLIENT_SECRET=...
 
-# Each user authorizes individually
+# Each user authorizes individually (CLI loopback)
 praxia oauth start box --user-id alice
 # → opens authorization URL → user logs in → redirect captures code
 # → token saved encrypted to .praxia/auth/oauth_tokens.jsonl
@@ -324,6 +327,61 @@ praxia connector pull box 0 --user-id alice
 ```
 
 Supported providers: Box, Microsoft (SharePoint/OneDrive), Dropbox, Google Drive, Salesforce. Tokens auto-refresh; access logged in audit log.
+
+**Production HTTP callback** (`praxia serve`): four endpoints under `/api/v1/oauth/{provider}/`: `start`, `callback`, `status`, `revoke` (DELETE). State cache is multi-worker-safe (`PersistentStateStore` — TTL-pruned JSON), so the IdP redirect can land on any FastAPI worker. Set `PRAXIA_PUBLIC_URL` to pin the redirect URI.
+
+### KMS-backed token encryption (production)
+
+OAuth tokens use **envelope encryption**: a fresh 256-bit data key per write, AES-GCM payload encryption, and the data key wrapped by a configurable `KmsAdapter`. The master key never lives on the application host:
+
+| Adapter | Install | Use |
+|---|---|---|
+| `local` (default) | (none) | dev / single-host |
+| `aws` | `pip install 'praxia[kms-aws]'` | AWS KMS CMK |
+| `azure` | `pip install 'praxia[kms-azure]'` | Azure Key Vault Keys |
+| `gcp` | `pip install 'praxia[kms-gcp]'` | GCP Cloud KMS |
+| `vault` | `pip install 'praxia[kms-vault]'` | HashiCorp Vault Transit |
+
+```bash
+export PRAXIA_KMS_ADAPTER=aws
+export PRAXIA_KMS_KEY_ID=arn:aws:kms:us-east-1:111122223333:key/...
+```
+
+Legacy v0.1 tokens decode transparently — re-saving rewrites in the new envelope format.
+
+### A/B experiments — prompts / skills / LLMs
+
+Test variants of any payload (system prompt, LLM provider, memory backend) with deterministic per-user assignment + outcome tracking:
+
+```bash
+praxia experiment create proposal_v2 \
+    --name "Proposal: shorter vs longer prompt" \
+    --variants '{"control":{"prompt":"<800-word>"},"candidate":{"prompt":"<400-word>"}}' \
+    --traffic-split "control=0.5,candidate=0.5"
+praxia experiment start proposal_v2
+# ...users run flows; outcomes recorded automatically...
+praxia experiment results proposal_v2
+# → 🏆 Tentative winner: candidate (confidence 0.41)
+```
+
+Same user always sees the same variant during the experiment (SHA-256 bucket). Audience filter (roles / users / time window). See [`praxia.experiments`](praxia/experiments/).
+
+### LLM output quality evaluation
+
+Separate from the deterministic regression suite — `tests/llm_eval/` runs **real LLM calls** and grades output against rubrics + a committed baseline. CI flags PRs where quality drops > 5 points:
+
+```bash
+# Skipped by default (requires API keys + costs tokens)
+pytest tests/llm_eval -m llm_eval -v
+
+# Update baselines after a known-good change
+pytest tests/llm_eval --update-baselines
+
+# Compare providers on the same cases
+pytest tests/llm_eval --llm-eval-model gpt-4o
+```
+
+Built-in rubrics: keyword match, structure (heading) match, length band, must-not-contain, LLM-as-judge. One canonical case per business skill ships out of the box.
 
 ### External Connectors — 6 systems, Pull + Push
 | Connector | Pull | Push | Auth |
@@ -537,6 +595,10 @@ Detailed Before/After tables for each domain are in **[docs/use-cases.md](docs/u
 | Memory mode toggle (accumulate / read-only) | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Output exporters (HTML / PPTX / DOCX) | ❌ | ❌ | ❌ | ❌ | ✅ |
 | HTTP API + your-own-frontend mode | ❌ | ❌ | △ | (hosted) | ✅ |
+| KMS-backed token encryption (5 adapters) | ❌ | ❌ | ❌ | (hosted) | ✅ |
+| OAuth callback web handler (production) | ❌ | ❌ | ❌ | (hosted) | ✅ |
+| Built-in A/B experiments | ❌ | ❌ | ❌ | ❌ | ✅ |
+| LLM-output quality eval framework | ❌ | ❌ | ❌ | ❌ | ✅ |
 | MCP / Claude Skills compatible | △ | △ | △ | ❌ | ✅ |
 | License | MIT | MIT | MIT | Commercial | Apache 2.0 |
 
@@ -630,6 +692,7 @@ Praxia uses a **single extensibility primitive** (`praxia.extensions.Registry`) 
 | File parser | `Parser` protocol | `PARSERS` | `praxia.parsers` | ~30 |
 | Output exporter | `Exporter` protocol | `EXPORTERS` | `praxia.exporters` | ~40 |
 | OAuth provider | `OAuthProviderConfig` | (instance) | `praxia.oauth_providers` | ~10 |
+| KMS adapter | `KmsAdapter` protocol | `KMS_ADAPTERS` | `praxia.kms_adapters` | ~30 |
 | Business skill | `Skill` | `SKILLS` | `praxia.skills` | ~20 |
 | Multi-agent flow | `Flow` | `FLOWS` | `praxia.flows` | ~30 |
 | Industry recipe | Markdown | n/a | — | n/a |

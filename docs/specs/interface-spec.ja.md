@@ -234,20 +234,58 @@ receipt = conn.push(path: str, data: ConnectorItem | dict)
 ### 1.12 `praxia.connectors.oauth`
 
 ```python
-OAuthFlow(provider_config, *, client_id, client_secret, redirect_uri, token_store)
+OAuthFlow(
+    provider_config, *,
+    client_id, client_secret, redirect_uri,
+    token_store=None,    # OAuthTokenStore
+    state_store=None,    # PersistentStateStore — multi-worker 必須
+)
 flow.authorization_url(user_id) -> tuple[url, state]
 flow.exchange_code(code, state) -> OAuthToken
 
-OAuthTokenStore(storage_dir, *, encryption_secret)
+OAuthTokenStore(
+    storage_dir, *,
+    encryption_secret=None,
+    kms=None,           # KmsAdapter; 既定 = build_adapter(PRAXIA_KMS_ADAPTER or "local")
+)
 store.save(token: OAuthToken) -> None
 store.get(user_id, provider) -> OAuthToken | None
 store.list_for_user(user_id) -> list[OAuthToken]
 store.delete(user_id, provider) -> bool
 
+PersistentStateStore(storage_dir, *, ttl_seconds=600)
+state_store.put(state_token, OAuthState) -> None
+state_store.pop(state_token) -> OAuthState | None
+state_store.clear() -> None
+
 oauth_token_for(user_id, provider, *, store=None) -> OAuthToken
 ```
 
 事前登録プロバイダ: `BOX_OAUTH`, `MICROSOFT_OAUTH`, `DROPBOX_OAUTH`, `GOOGLE_OAUTH`, `SALESFORCE_OAUTH`.
+
+### 1.12.1 `praxia.connectors.oauth.kms` — KMS アダプタ
+
+```python
+class KmsAdapter(Protocol):
+    name: str
+    def wrap(self, dek: bytes) -> bytes: ...    # 32 byte DEK 暗号化
+    def unwrap(self, wrapped: bytes) -> bytes:  # 復号 → 32 byte DEK
+
+KMS_ADAPTERS: Registry[KmsAdapter]   # entry-point グループ: praxia.kms_adapters
+
+build_adapter(name=None, **kwargs) -> KmsAdapter
+# name 解決順: 引数 > PRAXIA_KMS_ADAPTER 環境変数 > "local"
+
+envelope_encrypt(adapter, plaintext: bytes) -> dict
+envelope_decrypt(adapter, envelope: dict) -> bytes
+```
+
+組込アダプタ:
+- `LocalKmsAdapter(secret=...)` — HKDF / AES-GCM、開発のみ
+- `AwsKmsAdapter(key_id=..., region=...)` — boto3
+- `AzureKeyVaultAdapter(vault_url=..., key_name=..., key_version=...)`
+- `GcpKmsAdapter(project_id=..., location=..., key_ring=..., key_name=...)`
+- `VaultTransitAdapter(vault_url=..., key_name=..., token=..., mount_point="transit")`
 
 ### 1.13 `praxia.io.parsers`
 
@@ -270,7 +308,49 @@ TTS(provider: "openai" | "elevenlabs" | "piper-local" = "openai")
 tts.synthesize(text: str, *, voice="alloy", format="mp3") -> bytes
 ```
 
-### 1.15 `praxia.extensions.Registry` (プラグインコア)
+### 1.15 `praxia.experiments`
+
+```python
+class ExperimentStatus(str, Enum):
+    DRAFT = "draft"; RUNNING = "running"; PAUSED = "paused"; FINISHED = "finished"
+
+@dataclass
+class Variant:
+    name: str
+    payload: dict[str, Any] = {}
+
+@dataclass
+class Experiment:
+    id: str
+    name: str
+    variants: dict[str, Variant] = {}
+    traffic_split: dict[str, float] = {}      # 省略時は均等分割
+    description: str = ""
+    status: str = "draft"
+    target_audience: dict[str, Any] = {}      # {"roles": [...], "users": [...]} or {} で全員
+    start_at: float = 0.0
+    end_at: float = 0.0
+
+ExperimentRegistry(storage_dir=".praxia/experiments")
+reg.create(exp: Experiment) -> Experiment
+reg.get(exp_id: str) -> Experiment | None
+reg.list(*, status=None) -> list[Experiment]
+reg.update(exp: Experiment) -> Experiment
+reg.set_status(exp_id, status) -> Experiment
+reg.delete(exp_id: str) -> bool
+
+reg.assign(exp_id, *, user_id, role="member") -> Variant | None
+reg.record_outcome(exp_id, *, user_id, episode_id, success, score=None, notes="", role="member") -> ExperimentOutcome | None
+reg.outcomes(exp_id: str) -> list[ExperimentOutcome]
+reg.results(exp_id, *, users=None, role="member") -> ExperimentResults
+
+# 純関数アサインメント (ストレージ無し)
+assign_variant(exp: Experiment, *, user_id: str) -> Variant | None
+```
+
+アサインメントは決定論的: `SHA-256(experiment_id + ":" + user_id)` mod traffic_split。
+
+### 1.16 `praxia.extensions.Registry` (プラグインコア)
 
 ```python
 reg: Registry[T] = Registry(name: str, entry_point_group: str | None = None)
@@ -349,6 +429,12 @@ reg.items() -> list[tuple[str, type[T]]]
 ### 2.10 出力エクスポータ
 - `praxia export <input.md> <output.html|.pptx|.docx|.json> [--format] [--title]`
 
+### 2.10b A/B 実験
+- `praxia experiment create <id> --name N --variants '{...}' [--traffic-split "..."]`
+- `praxia experiment list`
+- `praxia experiment {start|pause|finish|delete} <id>`
+- `praxia experiment results <id>`
+
 ### 2.11 管理者エクスポート (コンプライアンス / SIEM)
 - `praxia admin export-audit OUTFILE --format csv|json|jsonl --since-days N --actor USER`
 - `praxia admin export-users OUTFILE --format json|csv`
@@ -372,6 +458,10 @@ reg.items() -> list[tuple[str, type[T]]]
 | PUT | `/api/v1/memory/mode` | `{"mode": "accumulate" \| "read_only"}` | `{"ok", "mode"}` |
 | GET | `/api/v1/memory/show` | — | `{"backend", "mode", "locked_by_admin", "reason"}` |
 | POST | `/api/v1/export` | `{"content", "format", "title"}` | `application/octet-stream` (binary) |
+| POST | `/api/v1/oauth/{provider}/start` | — | `{"authorize_url", "state", "provider"}` |
+| GET | `/api/v1/oauth/{provider}/callback` | (query: code, state) | HTML 成功画面または 302 リダイレクト |
+| GET | `/api/v1/oauth/{provider}/status` | — | `{"authorized", "expires_at", "is_expired", "scope"}` |
+| DELETE | `/api/v1/oauth/{provider}` | — | `{"deleted": bool}` |
 
 CORS: `--cors-origin URL` (繰り返し可) で設定。
 
@@ -386,6 +476,8 @@ CORS: `--cors-origin URL` (繰り返し可) で設定。
 | LLM | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DASHSCOPE_API_KEY`, `OPENROUTER_API_KEY`, `OLLAMA_API_BASE` |
 | Memory | `PRAXIA_MEMORY_BACKEND`, `PRAXIA_MEMORY_MODE`, `QDRANT_URL` |
 | Auth | `PRAXIA_JWT_SECRET`, `PRAXIA_TOKEN_ENC_KEY`, `PRAXIA_LOCAL_MODEL` |
+| KMS (トークン暗号化) | `PRAXIA_KMS_ADAPTER` (`local`/`aws`/`azure`/`gcp`/`vault`) + アダプタ別 kwargs |
+| HTTP server | `PRAXIA_PUBLIC_URL` (redirect URI 固定), `PRAXIA_OAUTH_SUCCESS_REDIRECT` |
 | SSO | `PRAXIA_SSO_PROVIDER`, `PRAXIA_SSO_CLIENT_ID`, `PRAXIA_SSO_CLIENT_SECRET`, `PRAXIA_SSO_REDIRECT_URI`, `PRAXIA_SSO_TENANT_ID`, `PRAXIA_SSO_OKTA_DOMAIN`, `PRAXIA_SSO_KEYCLOAK_BASE_URL`, `PRAXIA_SSO_KEYCLOAK_REALM`, `PRAXIA_SSO_ISSUER_URL` |
 | OAuth | `PRAXIA_OAUTH_BOX_CLIENT_ID/SECRET`, `PRAXIA_OAUTH_MICROSOFT_*`, `PRAXIA_OAUTH_DROPBOX_*`, `PRAXIA_OAUTH_GOOGLE_*`, `PRAXIA_OAUTH_SALESFORCE_*` |
 | Connectors | `PRAXIA_CONN_<NAME>_<UPPERCASE_KEY>` (legacy / service-account fallback) |
@@ -406,6 +498,7 @@ CORS: `--cors-origin URL` (繰り返し可) で設定。
 | `praxia.oauth_providers` | `OAuthProviderConfig` インスタンス | 5 |
 | `praxia.skills` | `Skill` サブクラス + `manifest` | 6 (+1 utility) |
 | `praxia.flows` | `Flow` サブクラス + `name`, `description`, `run()` | 3 |
+| `praxia.kms_adapters` | `KmsAdapter` (`name`, `wrap`, `unwrap`) | 5 (local + 4 cloud) |
 
 詳細: [`docs/PLUGINS.md`](../PLUGINS.md), [`docs/CUSTOM_CONNECTORS.ja.md`](../CUSTOM_CONNECTORS.ja.md).
 

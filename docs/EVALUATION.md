@@ -6,7 +6,7 @@ Regression-prevention test suite that runs on every code change.
 
 ## What it covers
 
-342+ deterministic tests + 6 LLM quality tests across 11 feature areas:
+342 deterministic regression tests + 6 LLM quality tests across 11 feature areas:
 
 | File | Area | Tests |
 |---|---|---|

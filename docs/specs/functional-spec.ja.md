@@ -2226,6 +2226,250 @@ praxia config init           # 対話ウィザード
 
 ---
 
+## 20a. KMS / HSM ベースのトークン暗号化
+
+ユーザ委譲 OAuth トークンは **envelope encryption** で保管:
+1. 書込ごとに **256-bit のデータ暗号化鍵 (DEK)** を新規生成
+2. DEK で本体を **AES-GCM** 暗号化
+3. DEK を `KmsAdapter` で wrap (KMS / HSM 内のマスター鍵で暗号化)
+4. ファイルには `{nonce, ciphertext, wrapped_dek, alg, kms}` を JSON で保存
+
+**マスター鍵はアプリケーションホストに存在しません。**
+
+### 20a.1 5 アダプタの選択
+
+```bash
+export PRAXIA_KMS_ADAPTER=aws  # local / aws / azure / gcp / vault
+```
+
+| アダプタ | パッケージ | 推奨用途 |
+|---|---|---|
+| `local` | (組込) | 開発 / 単一ホスト |
+| `aws` | `praxia[kms-aws]` (boto3) | AWS 環境 |
+| `azure` | `praxia[kms-azure]` | Azure 環境 (RSA-OAEP wrap) |
+| `gcp` | `praxia[kms-gcp]` | GCP 環境 |
+| `vault` | `praxia[kms-vault]` (hvac) | HashiCorp Vault Transit |
+
+### 20a.2 アダプタ別設定例
+
+```python
+# AWS KMS
+from praxia.connectors.oauth.kms import AwsKmsAdapter
+from praxia.connectors.oauth import OAuthTokenStore
+
+adapter = AwsKmsAdapter(
+    key_id="arn:aws:kms:us-east-1:111122223333:key/...",
+    region="us-east-1",
+)
+store = OAuthTokenStore(storage_dir=".praxia/auth", kms=adapter)
+
+# HashiCorp Vault Transit
+from praxia.connectors.oauth.kms import VaultTransitAdapter
+adapter = VaultTransitAdapter(
+    vault_url="https://vault.example.com:8200",
+    key_name="praxia-tokens",
+    token=os.environ["VAULT_TOKEN"],
+)
+```
+
+### 20a.3 旧形式との互換性
+
+v0.1 の HMAC keystream 形式トークンは `_decrypt_legacy()` で透過的に復号 → 再保存時に新 envelope 形式へ自動移行。ユーザの再認可不要。
+
+### 20a.4 カスタムアダプタの追加
+
+```python
+class MyKmsAdapter:
+    name = "my-kms"
+    def wrap(self, dek: bytes) -> bytes: ...
+    def unwrap(self, wrapped: bytes) -> bytes: ...
+
+# entry-point で発見可能化
+[project.entry-points."praxia.kms_adapters"]
+my-kms = "my_pkg.kms:MyKmsAdapter"
+```
+
+---
+
+## 20b. 本番 OAuth コールバック ハンドラ
+
+CLI ベースの `praxia oauth start` は loopback 動作のため本番で使えません。本番では `praxia serve` (FastAPI) を起動し以下の endpoint を利用:
+
+| エンドポイント | 概要 |
+|---|---|
+| `POST /api/v1/oauth/{provider}/start` | 現在ユーザの authorize URL を返却 |
+| `GET /api/v1/oauth/{provider}/callback` | IdP redirect 受信、code 交換、トークン保存 |
+| `GET /api/v1/oauth/{provider}/status` | トークン保有 + 有効期限 |
+| `DELETE /api/v1/oauth/{provider}` | ローカル失効 |
+
+### 20b.1 multi-worker 安全な state cache
+
+`PersistentStateStore` は state を `.praxia/auth/oauth_states.json` に書出 (TTL 既定 600 秒)。複数ワーカ / 複数ホスト間で共有されるため、redirect がどの replica に届いても正しく処理される。
+
+### 20b.2 必須環境変数
+
+```bash
+export PRAXIA_PUBLIC_URL=https://praxia.example.com  # redirect URI 固定化
+export PRAXIA_OAUTH_BOX_CLIENT_ID=...
+export PRAXIA_OAUTH_BOX_CLIENT_SECRET=...
+export PRAXIA_KMS_ADAPTER=aws                         # 推奨
+```
+
+### 20b.3 成功時の動作
+
+`PRAXIA_OAUTH_SUCCESS_REDIRECT` 設定時 → 当 URL へ 302。未設定時 → 「✅ Authorized」HTML を返却。
+
+---
+
+## 20c. A/B 実験フレーム (`praxia.experiments`)
+
+プロンプト / スキル / LLM プロバイダ / メモリバックエンドのいずれも **opaque payload として** バリアント化可能。
+
+### 20c.1 構成要素
+
+| クラス | 役割 |
+|---|---|
+| `Experiment` | id / name / variants / traffic_split / target_audience / start_at / end_at / status |
+| `Variant` | name + payload (任意 JSON) |
+| `ExperimentStatus` | `draft` / `running` / `paused` / `finished` |
+| `ExperimentRegistry` | CRUD + assign + record_outcome + results |
+| `Assignment` / `ExperimentOutcome` / `ExperimentResults` | データクラス |
+
+### 20c.2 アサインメントアルゴリズム
+
+```python
+# 純関数 — 同一 (experiment_id, user_id) は常に同 variant へマップ
+hash = SHA256(f"{experiment.id}:{user_id}".encode())
+bucket = int.from_bytes(hash[:8], "big") / 2**64    # [0.0, 1.0)
+cumulative = 0.0
+for name, share in traffic_split.items():
+    cumulative += share
+    if bucket < cumulative:
+        return variants[name]
+```
+
+特性:
+- **決定論的** — 実験 ID + user_id が同じなら結果も同じ
+- **再現可能** — テストや障害解析で再現容易
+- **新ユーザに即時適用** — 集計済テーブル不要
+- **実験 ID を変えるとリシャッフル** — 意図的な再無作為化が可能
+
+### 20c.3 オーディエンスフィルタ
+
+```python
+target_audience={
+    "roles": ["operator", "member"],   # ロール限定
+    "users": ["alice", "bob"],          # ユーザ限定
+    # "*" でワイルドカード
+}
+# start_at / end_at で時間窓も指定可能
+```
+
+ロール / ユーザに該当しない、もしくは時間窓外、もしくは status != RUNNING の場合 `assign()` は `None` を返却。
+
+### 20c.4 アウトカム計測
+
+```python
+# スキル / フロー実行結果から:
+reg.record_outcome(
+    "proposal_v2",
+    user_id="alice",
+    episode_id=ep.id,
+    success=True,
+    score=0.92,
+    notes="closed-won",
+    role="member",
+)
+```
+
+variant 別に `.praxia/experiments/outcomes/<exp_id>.jsonl` へ追記。
+
+### 20c.5 結果集計 + 暫定 winner 検出
+
+```python
+results = reg.results("proposal_v2")
+# results.variants  : list[VariantSummary]
+#   .name / .outcomes_recorded / .successes / .success_rate / .avg_score
+# results.winner    : str | None (5pt 以上の差 + 30 outcome 以上で確定)
+# results.confidence: float (margin × √n / 5、上限 1.0)
+```
+
+**注意**: 暫定 winner は本番投入判断には不十分。本格的検定 (proportion test / Bayesian) は別途実施推奨。
+
+### 20c.6 利用パターン
+
+```python
+# 1. プロンプトの A/B
+variant = reg.assign("prompt_v2", user_id=user.id, role=user.role)
+prompt = variant.payload["prompt"] if variant else default_prompt
+
+# 2. LLM プロバイダの A/B
+model_alias = variant.payload.get("model", "claude") if variant else "claude"
+llm = LLM(model_alias)
+
+# 3. メモリバックエンドの A/B
+backend_name = variant.payload["backend"] if variant else "json"
+pm = PersonalMemory(user_id=user.id, backend=backend_name)
+```
+
+---
+
+## 20d. LLM 出力品質評価フレーム (`tests/llm_eval/`)
+
+決定論的な機能テスト (`tests/evaluation/`) とは別に、**実際に LLM を呼んで** 品質をルーブリック採点 → ベースラインと比較してデグレを検知。
+
+### 20d.1 ルーブリック (組込)
+
+| 名称 | 評価対象 |
+|---|---|
+| `EXACT_MATCH` | 完全一致 |
+| `KEYWORDS` | 期待キーワードのカバー率 |
+| `STRUCTURE` | Markdown 見出しの一致率 |
+| `STRUCTURE_PLUS_KEYWORDS` | 上記 2 つの加重平均 |
+| `LENGTH_BAND` | 長さが [min_length, max_length] 内か |
+| `HALLUCINATION_LOW` | (将来拡張用) ハルシネーション率 |
+| `LLM_JUDGE` | 別 LLM が 0-10 スコアリング (0..1 に正規化) |
+
+### 20d.2 ベースライン管理
+
+```bash
+# 現状を採点
+pytest tests/llm_eval -m llm_eval -v
+
+# ベースライン更新 (既知良好状態で)
+pytest tests/llm_eval --update-baselines
+
+# 別モデルで採点
+pytest tests/llm_eval --llm-eval-model gpt-4o
+```
+
+`tests/llm_eval/baselines.json` を git 管理。各 PR でスコアが **5pt 超低下** すると CI 失敗。モデル別に独立 (claude のベースラインと gpt-4o のベースラインは別行)。
+
+### 20d.3 同梱ケース (各業務スキル 1 件)
+
+| ケース ID | スキル | 主要ルーブリック |
+|---|---|---|
+| `investment_q3_review` | InvestmentSkill | STRUCTURE_PLUS_KEYWORDS (5 セクション) |
+| `sales_b2b_prep` | SalesSkill | STRUCTURE_PLUS_KEYWORDS (3 セクション) |
+| `design_review_dragon` | DesignSkill | STRUCTURE_PLUS_KEYWORDS (DRAGON 6 軸) |
+| `purchasing_rfq_compare` | PurchasingSkill | STRUCTURE_PLUS_KEYWORDS (QCD+S) |
+| `patent_prior_art` | PatentSkill | STRUCTURE_PLUS_KEYWORDS (5 ステップ) |
+| `legal_contract_review` | LegalSkill | STRUCTURE_PLUS_KEYWORDS (RACE) |
+
+加えて `must_not_contain` で「投資判断は投資家自身」「弁護士確認を」等のガードレール文言確認。
+
+### 20d.4 LLM-as-judge の注意点
+
+`LLM_JUDGE` ルーブリックを使う際、**評価対象 LLM と判定 LLM を別モデルにすべき** (self-preference bias 回避)。例: Claude を評価する判定は GPT-4o、GPT-4o を評価する判定は Claude。
+
+```bash
+pytest tests/llm_eval \
+    --llm-eval-model claude \
+    --llm-eval-judge gpt-4o
+```
+
+---
+
 ## 21. デモデータ免責
 
 業務スキルのデモ・チュートリアル・サンプルコードに登場する企業名 (Acme Manufacturing, AcmeAuto Inc. 等)、財務数値、業務シナリオは **架空** であり実在の企業を指すものではありません。

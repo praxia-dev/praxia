@@ -179,6 +179,76 @@ praxia consolidate --threshold 0.75          # production threshold
 praxia freeze --block team_norms             # freeze a stable block to git-tracked Markdown
 ```
 
+## 8a. Production-grade OAuth + KMS encryption
+
+For multi-worker / multi-host deployments, run the FastAPI server and configure a KMS adapter:
+
+```bash
+# Install with server + KMS extras
+pip install "praxia[server,kms-aws]"   # or kms-azure / kms-gcp / kms-vault
+
+# Pin the public URL so the redirect URI is stable
+export PRAXIA_PUBLIC_URL=https://praxia.example.com
+
+# Switch to KMS-backed envelope encryption
+export PRAXIA_KMS_ADAPTER=aws
+export PRAXIA_KMS_KEY_ID=arn:aws:kms:us-east-1:111122223333:key/...
+
+praxia serve --host 0.0.0.0 --port 8000
+```
+
+OAuth endpoints exposed under `/api/v1/oauth/{provider}/`:
+- `POST /start` — build authorization URL for current user
+- `GET /callback` — handle IdP redirect, exchange code, save token
+- `GET /status` — token presence + expiry
+- `DELETE` — revoke locally
+
+State is shared across workers via a TTL-pruned JSON file, so the redirect can land on any replica.
+
+## 8b. A/B experiments
+
+```bash
+# Define an experiment (DRAFT)
+praxia experiment create proposal_v2 \
+    --name "Proposal: shorter vs longer prompt" \
+    --variants '{"control":{"prompt":"<800-word>"},"candidate":{"prompt":"<400-word>"}}' \
+    --traffic-split "control=0.5,candidate=0.5"
+
+# Activate
+praxia experiment start proposal_v2
+
+# Inspect results once enough outcomes are recorded
+praxia experiment results proposal_v2
+# → 🏆 Tentative winner: candidate (confidence 0.41)
+```
+
+In your skill / flow, retrieve the variant for the current user:
+
+```python
+from praxia.experiments import ExperimentRegistry
+
+reg = ExperimentRegistry()
+variant = reg.assign("proposal_v2", user_id="alice", role="member")
+prompt = variant.payload["prompt"] if variant else default_prompt
+```
+
+The same user always sees the same variant during the experiment (SHA-256 bucket). Outcomes are recorded via `record_outcome()` and rolled up per variant.
+
+## 8c. LLM output quality evaluation
+
+```bash
+# Skipped by default (requires real API keys + costs tokens)
+pytest tests/llm_eval -m llm_eval -v
+
+# Update baselines after a known-good change
+pytest tests/llm_eval --update-baselines
+
+# Compare a different model on the same cases
+pytest tests/llm_eval --llm-eval-model gpt-4o
+```
+
+Each PR is graded against a committed baseline; a > 5pt score drop fails CI. See [docs/EVALUATION.md](EVALUATION.md).
+
 ## 9. Per-user OAuth (recommended for enterprise)
 
 Each Praxia user authorizes external systems with **their own credentials** —

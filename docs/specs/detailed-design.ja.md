@@ -38,13 +38,21 @@ praxia/
 │   ├── base.py          # Connector Protocol, ConnectorItem, MissingDependencyError
 │   ├── registry.py      # CONNECTORS レジストリ
 │   ├── box.py / sharepoint.py / dropbox_.py / gdrive.py / kintone.py / salesforce.py
-│   └── oauth/           # OAuthFlow + OAuthTokenStore (暗号化)
+│   └── oauth/           # OAuthFlow + OAuthTokenStore (envelope-encrypted via KMS)
+│       ├── flow.py      # OAuthFlow + PKCE
+│       ├── token_store.py
+│       ├── state_store.py # PersistentStateStore (multi-worker 安全)
+│       ├── kms.py       # KmsAdapter + 5 実装 (local/aws/azure/gcp/vault)
+│       └── providers.py
 ├── io/
 │   ├── parsers/         # PDF / Office / CSV / HTML / TXT / MD / structured
 │   ├── audio/           # STT, TTS
 │   └── exporters/       # md, html, json, pptx, docx
 ├── eval/                # ハルシネーション検出、retrieval メトリクス
 ├── analytics/           # Dashboard, 利用統計
+├── experiments/         # A/B variant アサインメント + アウトカム集計
+│   ├── __init__.py
+│   └── framework.py     # Experiment, Variant, ExperimentRegistry, results()
 ├── extensions.py        # Registry, lazy()
 ├── cli/main.py          # Typer CLI
 ├── ui/                  # Streamlit UI (モード A)

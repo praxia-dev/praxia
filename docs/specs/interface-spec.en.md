@@ -234,20 +234,58 @@ Built-in: `box`, `sharepoint`, `dropbox`, `gdrive`, `kintone`, `salesforce`. Per
 ### 1.12 `praxia.connectors.oauth`
 
 ```python
-OAuthFlow(provider_config, *, client_id, client_secret, redirect_uri, token_store)
+OAuthFlow(
+    provider_config, *,
+    client_id, client_secret, redirect_uri,
+    token_store=None,    # OAuthTokenStore
+    state_store=None,    # PersistentStateStore — required for multi-worker
+)
 flow.authorization_url(user_id) -> tuple[url, state]
 flow.exchange_code(code, state) -> OAuthToken
 
-OAuthTokenStore(storage_dir, *, encryption_secret)
+OAuthTokenStore(
+    storage_dir, *,
+    encryption_secret=None,
+    kms=None,           # KmsAdapter; default = build_adapter(PRAXIA_KMS_ADAPTER or "local")
+)
 store.save(token: OAuthToken) -> None
 store.get(user_id, provider) -> OAuthToken | None
 store.list_for_user(user_id) -> list[OAuthToken]
 store.delete(user_id, provider) -> bool
 
+PersistentStateStore(storage_dir, *, ttl_seconds=600)
+state_store.put(state_token, OAuthState) -> None
+state_store.pop(state_token) -> OAuthState | None
+state_store.clear() -> None
+
 oauth_token_for(user_id, provider, *, store=None) -> OAuthToken
 ```
 
 Pre-registered providers: `BOX_OAUTH`, `MICROSOFT_OAUTH`, `DROPBOX_OAUTH`, `GOOGLE_OAUTH`, `SALESFORCE_OAUTH`.
+
+### 1.12.1 `praxia.connectors.oauth.kms` — KMS adapters
+
+```python
+class KmsAdapter(Protocol):
+    name: str
+    def wrap(self, dek: bytes) -> bytes: ...    # encrypt 32-byte DEK
+    def unwrap(self, wrapped: bytes) -> bytes:  # decrypt → 32-byte DEK
+
+KMS_ADAPTERS: Registry[KmsAdapter]   # entry-point group: praxia.kms_adapters
+
+build_adapter(name=None, **kwargs) -> KmsAdapter
+# name resolution: arg > PRAXIA_KMS_ADAPTER env > "local"
+
+envelope_encrypt(adapter, plaintext: bytes) -> dict
+envelope_decrypt(adapter, envelope: dict) -> bytes
+```
+
+Built-in adapters:
+- `LocalKmsAdapter(secret=...)` — HKDF / AES-GCM, dev only
+- `AwsKmsAdapter(key_id=..., region=...)` — boto3
+- `AzureKeyVaultAdapter(vault_url=..., key_name=..., key_version=...)`
+- `GcpKmsAdapter(project_id=..., location=..., key_ring=..., key_name=...)`
+- `VaultTransitAdapter(vault_url=..., key_name=..., token=..., mount_point="transit")`
 
 ### 1.13 `praxia.io.parsers`
 
@@ -270,7 +308,49 @@ TTS(provider: "openai" | "elevenlabs" | "piper-local" = "openai")
 tts.synthesize(text: str, *, voice="alloy", format="mp3") -> bytes
 ```
 
-### 1.15 `praxia.extensions.Registry` (plugin core)
+### 1.15 `praxia.experiments`
+
+```python
+class ExperimentStatus(str, Enum):
+    DRAFT = "draft"; RUNNING = "running"; PAUSED = "paused"; FINISHED = "finished"
+
+@dataclass
+class Variant:
+    name: str
+    payload: dict[str, Any] = {}
+
+@dataclass
+class Experiment:
+    id: str
+    name: str
+    variants: dict[str, Variant] = {}
+    traffic_split: dict[str, float] = {}      # auto-uniform if omitted
+    description: str = ""
+    status: str = "draft"
+    target_audience: dict[str, Any] = {}      # {"roles": [...], "users": [...]} or {} for all
+    start_at: float = 0.0
+    end_at: float = 0.0
+
+ExperimentRegistry(storage_dir=".praxia/experiments")
+reg.create(exp: Experiment) -> Experiment
+reg.get(exp_id: str) -> Experiment | None
+reg.list(*, status=None) -> list[Experiment]
+reg.update(exp: Experiment) -> Experiment
+reg.set_status(exp_id, status) -> Experiment
+reg.delete(exp_id: str) -> bool
+
+reg.assign(exp_id, *, user_id, role="member") -> Variant | None
+reg.record_outcome(exp_id, *, user_id, episode_id, success, score=None, notes="", role="member") -> ExperimentOutcome | None
+reg.outcomes(exp_id: str) -> list[ExperimentOutcome]
+reg.results(exp_id, *, users=None, role="member") -> ExperimentResults
+
+# Pure assignment (no storage)
+assign_variant(exp: Experiment, *, user_id: str) -> Variant | None
+```
+
+Assignment is deterministic: `SHA-256(experiment_id + ":" + user_id)` mod traffic_split.
+
+### 1.16 `praxia.extensions.Registry` (plugin core)
 
 ```python
 reg: Registry[T] = Registry(name: str, entry_point_group: str | None = None)
@@ -349,6 +429,12 @@ All commands accept `--help` for full args. Categories below.
 ### 2.10 Output exporters
 - `praxia export <input.md> <output.html|.pptx|.docx|.json> [--format] [--title]`
 
+### 2.10b A/B experiments
+- `praxia experiment create <id> --name N --variants '{...}' [--traffic-split "..."]`
+- `praxia experiment list`
+- `praxia experiment {start|pause|finish|delete} <id>`
+- `praxia experiment results <id>`
+
 ### 2.11 Admin exports (compliance / SIEM)
 - `praxia admin export-audit OUTFILE --format csv|json|jsonl --since-days N --actor USER`
 - `praxia admin export-users OUTFILE --format json|csv`
@@ -372,6 +458,10 @@ Versioned under `/api/v1`. All endpoints except `/auth/login` require either `X-
 | PUT | `/api/v1/memory/mode` | `{"mode": "accumulate" \| "read_only"}` | `{"ok", "mode"}` |
 | GET | `/api/v1/memory/show` | — | `{"backend", "mode", "locked_by_admin", "reason"}` |
 | POST | `/api/v1/export` | `{"content", "format", "title"}` | `application/octet-stream` (binary) |
+| POST | `/api/v1/oauth/{provider}/start` | — | `{"authorize_url", "state", "provider"}` |
+| GET | `/api/v1/oauth/{provider}/callback` | (query: code, state) | HTML success page or 302 redirect |
+| GET | `/api/v1/oauth/{provider}/status` | — | `{"authorized", "expires_at", "is_expired", "scope"}` |
+| DELETE | `/api/v1/oauth/{provider}` | — | `{"deleted": bool}` |
 
 CORS: configure with `--cors-origin URL` (repeatable).
 
@@ -386,6 +476,8 @@ Resolution: env > `.env` > `.praxia/config.toml`. Canonical key list in `.env.ex
 | LLM | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DASHSCOPE_API_KEY`, `OPENROUTER_API_KEY`, `OLLAMA_API_BASE` |
 | Memory | `PRAXIA_MEMORY_BACKEND`, `PRAXIA_MEMORY_MODE`, `QDRANT_URL` |
 | Auth | `PRAXIA_JWT_SECRET`, `PRAXIA_TOKEN_ENC_KEY`, `PRAXIA_LOCAL_MODEL` |
+| KMS (token encryption) | `PRAXIA_KMS_ADAPTER` (`local`/`aws`/`azure`/`gcp`/`vault`) + adapter-specific kwargs |
+| HTTP server | `PRAXIA_PUBLIC_URL` (pin redirect URI), `PRAXIA_OAUTH_SUCCESS_REDIRECT` |
 | SSO | `PRAXIA_SSO_PROVIDER`, `PRAXIA_SSO_CLIENT_ID`, `PRAXIA_SSO_CLIENT_SECRET`, `PRAXIA_SSO_REDIRECT_URI`, `PRAXIA_SSO_TENANT_ID`, `PRAXIA_SSO_OKTA_DOMAIN`, `PRAXIA_SSO_KEYCLOAK_BASE_URL`, `PRAXIA_SSO_KEYCLOAK_REALM`, `PRAXIA_SSO_ISSUER_URL` |
 | OAuth | `PRAXIA_OAUTH_BOX_CLIENT_ID/SECRET`, `PRAXIA_OAUTH_MICROSOFT_*`, `PRAXIA_OAUTH_DROPBOX_*`, `PRAXIA_OAUTH_GOOGLE_*`, `PRAXIA_OAUTH_SALESFORCE_*` |
 | Connectors | `PRAXIA_CONN_<NAME>_<UPPERCASE_KEY>` (legacy / service-account fallback) |
@@ -406,6 +498,7 @@ Each is a discoverable extension point. Implement, declare, install — no edit 
 | `praxia.oauth_providers` | `OAuthProviderConfig` instance | 5 |
 | `praxia.skills` | `Skill` subclass with `manifest` | 6 (+1 utility) |
 | `praxia.flows` | `Flow` subclass with `name`, `description`, `run()` | 3 |
+| `praxia.kms_adapters` | `KmsAdapter` (`name`, `wrap`, `unwrap`) | 5 (local + 4 cloud) |
 
 See [`docs/PLUGINS.md`](../PLUGINS.md) and [`docs/CUSTOM_CONNECTORS.md`](../CUSTOM_CONNECTORS.md).
 

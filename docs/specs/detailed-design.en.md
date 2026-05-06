@@ -53,7 +53,9 @@ praxia/
 │   ├── box.py / sharepoint.py / dropbox_.py / gdrive.py / kintone.py / salesforce.py
 │   └── oauth/
 │       ├── flow.py      # OAuthFlow + PKCE
-│       ├── token_store.py # OAuthTokenStore (encrypted)
+│       ├── token_store.py # OAuthTokenStore (envelope-encrypted via KMS)
+│       ├── state_store.py # PersistentStateStore (multi-worker safe)
+│       ├── kms.py       # KmsAdapter + 5 implementations (local/aws/azure/gcp/vault)
 │       └── providers.py # 5 pre-registered OAuth providers
 ├── io/
 │   ├── parsers/         # PDF / Office / CSV / HTML / TXT / MD / structured
@@ -61,6 +63,9 @@ praxia/
 │   └── exporters/       # md, html, json, pptx, docx
 ├── eval/                # Hallucination detection, retrieval metrics
 ├── analytics/           # Dashboard, usage stats
+├── experiments/         # A/B variant assignment + outcome rollup
+│   ├── __init__.py
+│   └── framework.py     # Experiment, Variant, ExperimentRegistry, results()
 ├── extensions.py        # Registry, lazy()
 ├── cli/main.py          # Typer-based CLI
 ├── ui/                  # Streamlit UI (mode A)

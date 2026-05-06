@@ -93,6 +93,9 @@
         <span>🎙 Voice in / out (STT + TTS)</span>
         <span>🪪 Memory mode (accumulate / read-only)</span>
         <span>🌐 SDK · Streamlit UI · FastAPI HTTP</span>
+        <span>🔑 KMS-backed encryption (AWS / Azure / GCP / Vault)</span>
+        <span>⚖️ A/B experiments + LLM-quality eval</span>
+        <span>✅ 342 regression tests</span>
       </div>
     </div>
   </header>
@@ -101,7 +104,7 @@
     <div class="container">
       <div class="section-head">
         <span class="kicker">Why Praxia</span>
-        <h2>27+ advantages no other framework offers in one package.</h2>
+        <h2>33+ advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
@@ -248,6 +251,31 @@
           <div class="card-icon">📐</div>
           <h3>Formal design specs (EN + JA)</h3>
           <p>Basic design / I/F spec / detailed design as procurement-ready documents in both English and Japanese. Every public surface and plugin protocol covered.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔑</div>
+          <h3>KMS-backed token encryption</h3>
+          <p>OAuth tokens use envelope encryption — fresh DEK per write, AES-GCM payload, DEK wrapped by your KMS. 5 adapters: <code>local</code> / <code>aws</code> / <code>azure</code> / <code>gcp</code> / <code>vault</code>. Master key never lives on the application host.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🌐</div>
+          <h3>Production OAuth callback (HTTP)</h3>
+          <p><code>praxia serve</code> exposes <code>/api/v1/oauth/{provider}/{start,callback,status}</code>. Multi-worker safe state cache (TTL-pruned JSON), pinned redirect URI via <code>PRAXIA_PUBLIC_URL</code>, optional success-redirect to your frontend.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">⚖️</div>
+          <h3>A/B experiments built in</h3>
+          <p>Test prompt variants on real users with deterministic per-user assignment (SHA-256 bucket). Audience filter (roles / users / window). Outcome rollup + tentative winner detection. CLI + SDK.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🎯</div>
+          <h3>LLM output quality eval (CI gate)</h3>
+          <p>Catch quality regressions before merge. <code>tests/llm_eval/</code> grades real LLM output against rubrics + a committed baseline. Score drop &gt; 5pt fails the build. Per-skill cases ship for all 6 skills.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🧮</div>
+          <h3>342 regression tests</h3>
+          <p>Auth / memory / fusion / exporters / OAuth / parsers / CLI / extensions / experiments — every public surface has a hermetic test. CI runs on every PR. Add features without breaking existing ones.</p>
         </article>
       </div>
     </div>
@@ -470,6 +498,29 @@
           no telemetry. Air-gapped customers run identical code as
           cloud customers.</p>
         </article>
+        <article class="card">
+          <h3>KMS-backed token encryption (5 adapters)</h3>
+          <p>OAuth tokens are envelope-encrypted with the master key in
+          AWS KMS, Azure Key Vault, GCP KMS, HashiCorp Vault — or
+          locally for dev. Most agent frameworks store tokens with a
+          local symmetric key; Praxia treats KMS as a first-class
+          concern in the OSS.</p>
+        </article>
+        <article class="card">
+          <h3>Production OAuth callback handler</h3>
+          <p>Multi-worker safe — state cache survives across
+          processes (TTL-pruned JSON file), redirect URI pinned via
+          env var. Run <code>praxia serve</code> behind nginx and the
+          callback works correctly with N replicas. Most OSS
+          competitors only support CLI loopback.</p>
+        </article>
+        <article class="card">
+          <h3>A/B testing + LLM quality eval included</h3>
+          <p>Run controlled experiments on prompts / skills / LLMs with
+          deterministic assignment + outcome tracking. CI-gate quality
+          regressions with a baseline-flagging eval framework. Both in
+          the OSS — no separate "experimentation platform" subscription.</p>
+        </article>
       </div>
     </div>
   </section>
@@ -645,6 +696,18 @@ praxia export report.md slides.pptx --title <span class="str">"Q3 Review"</span>
 <span class="comment"># Memory mode — accumulate (default) or read-only per user</span>
 praxia memory mode --user-id alice read_only
 praxia admin memory-policy-set --enforced-backend mem0 --allowed mem0,zep
+
+<span class="comment"># A/B experiments — test prompt variants with deterministic assignment</span>
+praxia experiment create proposal_v2 --name <span class="str">"Prompt v2"</span> \
+  --variants <span class="str">'{"control":{"prompt":"..."},"candidate":{"prompt":"..."}}'</span> \
+  --traffic-split <span class="str">"control=0.5,candidate=0.5"</span>
+praxia experiment start proposal_v2
+
+<span class="comment"># Production-grade OAuth + KMS-encrypted tokens</span>
+export PRAXIA_KMS_ADAPTER=aws
+export PRAXIA_KMS_KEY_ID=arn:aws:kms:...
+pip install <span class="str">"praxia[server,kms-aws]"</span>
+praxia serve --host 0.0.0.0 --port 8000
 
 <span class="comment"># Personal → org memory distillation</span>
 praxia consolidate
@@ -1103,6 +1166,18 @@ P  = Praxia cost (license + infra)</code></pre>
         <details>
           <summary>Is Gemma supported?</summary>
           <p>Yes. <code>gemma</code> / <code>gemma-2b</code> / <code>gemma-9b</code> / <code>gemma-27b</code> via local Ollama; <code>gemma-cloud</code> via Google Vertex AI. <code>PRAXIA_LOCAL_MODEL=gemma</code> makes <code>auto_detect()</code> fall back to Gemma instead of Qwen-local when no cloud key is set.</p>
+        </details>
+        <details>
+          <summary>How are OAuth tokens protected at rest?</summary>
+          <p>Envelope encryption: a fresh 256-bit DEK per token, AES-GCM payload encryption, and the DEK wrapped by a configurable <code>KmsAdapter</code>. 5 adapters ship: <code>local</code> (HKDF, dev), <code>aws</code> (AWS KMS CMK), <code>azure</code> (Key Vault Keys), <code>gcp</code> (Cloud KMS), <code>vault</code> (HashiCorp Transit). Master key never leaves the KMS / HSM. Switch with <code>PRAXIA_KMS_ADAPTER=aws</code>.</p>
+        </details>
+        <details>
+          <summary>Can I A/B test a new prompt before rolling it out?</summary>
+          <p>Yes — built into the OSS. Define an experiment with control / treatment variants, set traffic split, restrict the audience (roles / users / time window). Each user's assignment is deterministic (SHA-256 hash) so they always see the same variant during the experiment. Outcomes auto-track via the existing <code>record_outcome()</code> API. <code>praxia experiment results &lt;id&gt;</code> shows tentative winner.</p>
+        </details>
+        <details>
+          <summary>How do I prevent prompt changes from silently degrading quality?</summary>
+          <p>Run <code>tests/llm_eval/</code> in CI. Each PR runs 6 canonical cases (one per business skill) against the configured LLM and grades output with rubrics (keyword / structure / length / must-not-contain / LLM-as-judge). Scores below the committed baseline minus 5pt fail the build. Update the baseline with <code>--update-baselines</code> after a known-good change.</p>
         </details>
       </div>
     </div>
