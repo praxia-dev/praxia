@@ -294,6 +294,50 @@ praxia prompt distribute semiconductor_search_template tmpl.md \
 praxia skill distribute patent_analyst --target-roles operator
 ```
 
+## 自律エージェント (AutonomousAgent) で「先行技術調査」を半自動化
+
+`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。研究者が「この発明、出願可能性ある?」と発明提案書を投げるだけで、エージェントが類似発明メモ → ベテランの検索式テンプレ → 発明提案フォルダ → PatentSkill を自律順序で回します。
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(
+    user_id="dave",             # 研究者 Dave の個人メモリ
+    role="member",
+    org_id="acme-ip",
+    llm=LLM("claude"),
+    max_steps=12,
+    connector_configs={
+        "box": {"access_token": "<dave の box トークン>"},
+    },
+)
+result = agent.run(
+    "ID#2026-0042 の発明提案について、先行技術調査と予備判断を依頼。"
+    "私の過去の半導体分野の検索観点と、知財部の検索式テンプレ を踏まえて、"
+    "発明要素マップ / 検索式案 / 対比表 / BUY/HOLD/SELL の予備判断 を作成して。"
+)
+print(result.final_text)
+```
+
+エージェントが内部で行うこと:
+
+1. `search_personal_memory(query="半導体 過去 先行技術")` — dave 自身の過去の検索観点を取得
+2. `search_org_memory(query="知財部 検索式 半導体")` — 組織共有のベテラン検索式テンプレを取得
+3. `search_frozen_layer(query="特許 出願判断 ガイドライン")` — 凍結された判断基準を取得
+4. `pull_from_connector(name="box", path="/IP/InventionForms/2026-0042/")` — 発明提案書とドラフト図面を取得 (ACL チェック)
+5. `list_skills(domain="patent")` → `run_skill(name="patent_analyst", input=...)` で発明要素マップ + 対比表 + 予備判断
+6. `record_fact("Dave の発明はメモリ階層構造の高速化が中心傾向")` — 研究者の発明傾向を学習
+7. `final_answer("予備判断: BUY (出願推奨)。根拠: ...")` で完了
+
+**ガバナンス効果**: 出願前発明情報は最高機密のため、ACL で「IP 部門 + 該当研究者のみ」に絞り、`record_fact` も発明本体は保存せずに「観察された傾向」のみ。**弁理士法 72 条遵守** のため `run_skill(patent_analyst)` 内のガードレールが「これは予備判断であり弁理士相当の助言ではない」を必ず明記。全アクセスが監査ログ化。
+
+CLI でも 1 行:
+
+```bash
+praxia agent run "発明 #2026-0042 の先行技術調査と予備判断" --user-id dave --org-id acme-ip --max-steps 12
+```
+
 ## まとめ
 
 Praxia の特許業務での価値:

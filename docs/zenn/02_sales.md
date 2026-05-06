@@ -268,6 +268,51 @@ praxia prompt distribute b2b_rfp_template rfp_template.md \
 praxia skill distribute sales_strategist --target-roles member
 ```
 
+## 自律エージェント (AutonomousAgent) で「商談準備」を 1 行に
+
+`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。営業が「Acme との来週の MTG 準備して」と一言投げるだけで、エージェントが Salesforce 取得 → 過去案件メモ検索 → 組織プレイブック確認 → SalesSkill 実行を自律的に回します。
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(
+    user_id="alice",            # 営業 Alice の個人メモリ
+    role="member",
+    org_id="acme-sales",
+    llm=LLM("claude"),
+    max_steps=12,
+    connector_configs={
+        "salesforce": {"access_token": "<alice の SF トークン>"},
+        "kintone": {"subdomain": "acme", "api_token": "..."},
+    },
+)
+result = agent.run(
+    "Acme コーポレーション との来週月曜の MTG 準備をお願い。"
+    "私の過去の商談観点と、当社の B2B 営業プレイブック を踏まえて、"
+    "仮説課題 TOP3 / FAQ / 提案アウトラインを作成して。"
+)
+print(result.final_text)
+```
+
+エージェントが内部で行うこと:
+
+1. `search_personal_memory(query="Acme 過去商談")` — alice の Acme 関連メモを検索
+2. `search_org_memory(query="B2B 営業プレイブック")` — 組織共有のプレイブックを取得
+3. `pull_from_connector(name="salesforce", path="Account/Acme")` — 過去案件 / オープン案件を取得 (ACL チェック)
+4. `pull_from_connector(name="kintone", path="商談履歴 query=Acme")` — 商談履歴を取得
+5. `list_skills(domain="sales")` → `run_skill(name="sales_strategist", input=...)` で仮説課題 + FAQ 生成
+6. `record_fact("Acme は SaaS の従量課金モデルへの移行を検討中 (2026 Q1 IR より)")` — 観察事項を記録
+7. `final_answer("仮説課題 TOP3:\n1. ...")` で完了
+
+**ガバナンス効果**: Salesforce / kintone への pull は **ユーザ委譲 OAuth + ACL** で alice の権限内に閉じ、全ツール呼出が監査ログに残ります。営業マネージャは「誰が・どの顧客情報に・なぜ触れたか」を完全再現可能。
+
+CLI でも 1 行:
+
+```bash
+praxia agent run "Acme との来週の MTG 準備" --user-id alice --org-id acme-sales --max-steps 12
+```
+
 ## まとめ
 
 Praxia の営業業務での価値:

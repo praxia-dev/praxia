@@ -300,6 +300,52 @@ praxia prompt distribute electronics_supplier_eval frame.md \
 praxia skill distribute purchasing_analyst --target-roles member
 ```
 
+## 自律エージェント (AutonomousAgent) で「サプライヤー評価」を半自動化
+
+`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。「○社の見積評価して」と一言投げるだけで、エージェントが過去取引履歴 → ベテラン評価フレーム → kintone サプライヤー DB → PurchasingSkill を自律順序で回します。
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(
+    user_id="carol",            # 購買担当 Carol の個人メモリ
+    role="member",
+    org_id="acme-procurement",
+    llm=LLM("claude"),
+    max_steps=12,
+    connector_configs={
+        "kintone": {"subdomain": "acme", "api_token": "..."},
+        "sharepoint": {"access_token": "<carol の SP トークン>"},
+    },
+)
+result = agent.run(
+    "電子部品メーカー A 社・B 社・C 社 の見積を評価。"
+    "山田部長の評価フレーム、過去の品質トラブル履歴、ESG / 地政学リスク観点を踏まえて、"
+    "TCO で再ランキングして推奨サプライヤーを 1 社決定して。"
+)
+print(result.final_text)
+```
+
+エージェントが内部で行うこと:
+
+1. `search_personal_memory(query="A社 B社 C社 過去")` — 過去の取引時の観点を取得
+2. `search_org_memory(query="電子部品 サプライヤー 品質")` — 組織共有の品質トラブル履歴を取得
+3. `search_frozen_layer(query="山田 評価フレーム")` — 凍結されたベテランのフレームを取得
+4. `pull_from_connector(name="kintone", path="サプライヤー query=A社")` — DB から取引実績取得
+5. `pull_from_connector(name="sharepoint", path="/RFQ/2026Q1/responses.xlsx")` — 見積回答書を取得
+6. `list_skills(domain="purchasing")` → `run_skill(name="purchasing_analyst", input=...)` で TCO + ESG + 地政学評価
+7. `record_fact("Carol is currently de-risking China-only supply chain for 2026 H2")` — 戦略観察を記録
+8. `final_answer("推奨: B 社 (TCO ¥2.8B、ESG B+、地政学 中)")` で完了
+
+**ガバナンス効果**: 戦略的サプライヤー情報は ACL で「購買部門のみ」「役員のみ」と層別保護、下請法 / 独禁法チェックも `run_skill` 経由で組込済み。全 pull / skill 呼出が監査ログに残るため、コンプラ / 内部統制部門は完全に再現可能。
+
+CLI でも 1 行:
+
+```bash
+praxia agent run "A/B/C 社の見積評価と推奨" --user-id carol --org-id acme-procurement --max-steps 12
+```
+
 ## まとめ
 
 Praxia の購買業務での価値:

@@ -286,6 +286,50 @@ praxia prompt distribute architecture_anti_patterns anti.md \
 
 新人アーキトの最初の design review で、自動的にこの観点が組み込まれます。
 
+## 自律エージェント (AutonomousAgent) で「設計レビュー」を半自動化
+
+`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。新人アーキトが「この設計書レビューして」と投げるだけで、エージェントが過去類似事例の失敗メモを検索 → 凍結層 (アンチパターン集) を参照 → DesignSkill 実行を自律的に判断します。
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(
+    user_id="bob",              # 新人アーキト Bob の個人メモリ
+    role="member",
+    org_id="acme-engineering",
+    llm=LLM("claude"),
+    max_steps=12,
+    connector_configs={
+        "sharepoint": {"access_token": "<bob の SP トークン>"},
+    },
+)
+result = agent.run(
+    "/specs/payment-service/v3-design.md の設計書を DRAGON 6 軸でレビュー。"
+    "過去の決済系プロジェクトの失敗事例と、当社のアンチパターン集 を必ず参照して、"
+    "Critical / Major / Minor で観点別に整理して。"
+)
+print(result.final_text)
+```
+
+エージェントが内部で行うこと:
+
+1. `search_personal_memory(query="決済 設計レビュー 過去")` — bob 自身の過去観点を検索
+2. `search_org_memory(query="payment failure 障害事例")` — 組織が共有する障害パターンを取得
+3. `search_frozen_layer(query="アンチパターン")` — 凍結された「やってはいけない」集を取得
+4. `pull_from_connector(name="sharepoint", path="/specs/payment-service/v3-design.md")` — 設計書本体を取得
+5. `list_skills(domain="design")` → `run_skill(name="design_reviewer", input=...)` で DRAGON 6 軸レビュー
+6. `record_fact("Bob は分散トランザクションの整合性チェックを最優先する傾向")` — 嗜好を学習
+7. `final_answer("Critical: 1. ... / Major: 2. ...")` で完了
+
+**ガバナンス効果**: 設計書は機密度が高いため、`pull_from_connector` の ACL ルールで「役員直下プロジェクトは pre-IPO で非公開」「決済系は SOC2 認定者のみ」といった隔離が可能。全アクセスは監査ログに残るため、設計レビュー漏洩のフォレンジック対応も可能。
+
+CLI でも 1 行:
+
+```bash
+praxia agent run "v3-design.md を DRAGON でレビュー" --user-id bob --org-id acme-engineering --max-steps 12
+```
+
 ## まとめ
 
 Praxia の設計業務での価値:

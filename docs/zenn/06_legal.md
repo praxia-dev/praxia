@@ -384,6 +384,54 @@ auth.get_sso("microsoft").config.role_mapping = {
 }
 ```
 
+## 自律エージェント (AutonomousAgent) で「契約レビュー」を半自動化
+
+`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。法務担当が「この NDA レビューして」と Box の URL を投げるだけで、エージェントが過去の交渉経緯メモ → 凍結済み法務ガイドライン → 契約書本体取得 → LegalSkill を自律順序で回します。
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(
+    user_id="erin",             # 法務担当 Erin の個人メモリ
+    role="operator",            # 弁護士法上、社内弁護士相当のロール
+    org_id="acme-legal",
+    llm=LLM("claude"),
+    max_steps=12,
+    memory_backend="json",      # 機微情報のためベクトル DB を避け JSON のみ
+    connector_configs={
+        "box": {"access_token": "<erin の Box トークン>"},
+    },
+)
+result = agent.run(
+    "/Legal/Inbound/Acme-NDA-2026.docx の NDA をレビュー。"
+    "過去の Acme との取引履歴と、当社の NDA 標準ガイドライン を踏まえて、"
+    "RACE フレーム (Risk / Ambiguity / Compliance / Effectiveness) で整理し、"
+    "Critical / Major / Minor のリスクテーブルと交渉ポイント TOP3 を提示して。"
+)
+print(result.final_text)
+```
+
+エージェントが内部で行うこと:
+
+1. `search_personal_memory(query="Acme NDA 過去")` — Acme との過去交渉履歴を取得
+2. `search_org_memory(query="NDA 標準ガイドライン 当社方針")` — 組織共有の標準条項を取得
+3. `search_frozen_layer(query="GDPR データ越境 禁止条項")` — 凍結された GDPR 遵守ルールを取得
+4. `pull_from_connector(name="box", path="/Legal/Inbound/Acme-NDA-2026.docx")` — NDA 本文取得 (ACL チェック)
+5. `list_skills(domain="legal")` → `run_skill(name="legal_analyst", input=...)` で RACE 4 軸レビュー
+6. (`record_fact` は **read_only モード** で意図的に no-op — 機微案件で「足跡を残さない」)
+7. `final_answer("Critical: 第7条データ越境... / Major: 損害賠償上限...")` で完了
+
+**ガバナンス効果**: 法務情報は最高機密のため、(a) `memory_backend="json"` でベクトル DB に痕跡を残さず、(b) `mode="read_only"` (admin がロック可能) で record_fact 系を全部 no-op、(c) ACL で「弁護士法 72 条遵守 — 社内弁護士のみがアクセス可」を強制、(d) 全 pull / skill 呼出が監査ログに残るため、**弁護士法 72 条遵守 / 監査対応** が監査人に対して再現可能。`run_skill(legal_analyst)` のガードレールが「これは予備判断であり弁護士相当の助言ではない」を必ず最終回答に付与。
+
+CLI でも 1 行:
+
+```bash
+PRAXIA_MEMORY_MODE=read_only praxia agent run \
+    "Acme NDA 2026 の RACE レビュー" --user-id erin --role operator \
+    --org-id acme-legal --max-steps 12
+```
+
 ## まとめ
 
 Praxia の法務業務での価値:

@@ -269,6 +269,52 @@ praxia skill distribute investment_analyst --target-roles member,operator
 
 新人アソシエイトの UI / CLI に自動的に出現します。
 
+## 自律エージェント (AutonomousAgent) で「投資判断の前準備」を半自動化
+
+`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。アナリストが「○○株について見て」と一言投げるだけで、エージェントが自分でメモリ検索 → セクター方針確認 → IR 取得 → スキル実行を順序判断します。
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(
+    user_id="alice",            # 個人メモリ namespace
+    role="member",
+    org_id="acme-research",
+    llm=LLM("claude"),
+    max_steps=12,
+    connector_configs={
+        "box": {"access_token": "<alice の box トークン>"},
+    },
+)
+result = agent.run(
+    "ソニー (6758) について 1H 決算後の投資ポジションを再検討。"
+    "私の過去の銘柄観点と、当社のテックセクター方針を踏まえて、"
+    "BUY/HOLD/SELL の推奨と根拠を 5 行で。"
+)
+print(result.final_text)
+```
+
+エージェントが内部で行うこと (実際にログから観察できる典型例):
+
+1. `search_personal_memory(query="ソニー 過去観点")` — alice の過去メモを検索
+2. `search_org_memory(query="テックセクター 方針")` — 共有メモリから組織方針を取得
+3. `search_frozen_layer(query="バリュエーション基準")` — 組織で凍結された判断ルールを参照
+4. `list_skills(domain="investment")` → `run_skill(name="investment_analyst", input=...)` でドメイン分析
+5. `pull_from_connector(name="box", path="/Research/Sony/2026Q1/")` — IR 資料を取得 (ACL チェック)
+6. `record_fact("alice prefers FCF-based valuation over EV/EBITDA for tech")` — 観察した嗜好を記録
+7. `final_answer("BUY — 根拠: …")` で完了
+
+**ガバナンス効果**: コネクタ呼出は `auth.policies.require()` で **ACL チェック**、全ツール呼出が監査ログに残るため、コンプラ部門は「アナリストがどの IR にアクセスして、どのスキルを使ったか」を後から完全再現できます。`record_fact` は read_only モードでは no-op になるので、機微案件では「足跡を残さない」運用に切替えられます。
+
+CLI でも 1 行:
+
+```bash
+praxia agent run "ソニーの 1H 決算後ポジション再検討" --user-id alice --org-id acme-research --max-steps 12
+```
+
+MCP メタツール `autonomous_agent` として Claude Desktop / Cursor からも委任可能。
+
 ## まとめ
 
 Praxia の投資業務での価値:
