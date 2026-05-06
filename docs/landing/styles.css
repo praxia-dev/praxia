@@ -396,6 +396,52 @@ pre .str     { color: var(--accent-bright); }
   margin-bottom: 0.5rem;
 }
 
+/* --- i18n: language switcher + translation notice ----------------- */
+.lang-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(201,164,86,0.2);
+  font-size: 0.78rem;
+  max-width: 360px;
+}
+.lang-switcher .lang-option {
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  transition: all 0.15s;
+}
+.lang-switcher .lang-option:hover {
+  color: rgba(255,255,255,0.95);
+  background: rgba(201,164,86,0.08);
+}
+.lang-switcher .lang-option.lang-active {
+  background: rgba(201,164,86,0.25);
+  color: #fff;
+}
+@media (max-width: 880px) {
+  .lang-switcher {
+    order: 99;
+    margin-top: 0.5rem;
+    width: 100%;
+    justify-content: center;
+  }
+}
+.i18n-notice {
+  margin-top: 1rem;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.55);
+  font-style: italic;
+}
+
 .persona-card { padding: 1.5rem; }
 .persona-icon { font-size: 32px; margin-bottom: 0.5rem; }
 .persona-card .persona-need { color: rgba(255,255,255,0.85); }

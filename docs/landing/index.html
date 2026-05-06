@@ -11,6 +11,13 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪡%3C/text%3E%3C/svg%3E" />
   <link rel="canonical" href="https://praxia.pages.dev/" />
   <link rel="alternate" href="https://genarch.github.io/praxia/" hreflang="en" />
+  <link rel="alternate" href="https://praxia.pages.dev/?lang=ja" hreflang="ja" />
+  <link rel="alternate" href="https://praxia.pages.dev/?lang=zh-CN" hreflang="zh-CN" />
+  <link rel="alternate" href="https://praxia.pages.dev/?lang=ko" hreflang="ko" />
+  <link rel="alternate" href="https://praxia.pages.dev/?lang=es" hreflang="es" />
+  <link rel="alternate" href="https://praxia.pages.dev/?lang=fr" hreflang="fr" />
+  <link rel="alternate" href="https://praxia.pages.dev/?lang=de" hreflang="de" />
+  <link rel="alternate" href="https://praxia.pages.dev/?lang=pt-BR" hreflang="pt-BR" />
   <link rel="stylesheet" href="styles.css" />
   <script>
     // Cross-mirror awareness — show the OTHER mirror's URL in the banner
@@ -41,21 +48,22 @@
       <span class="brand-name">Praxia</span>
     </a>
     <div class="nav-links">
-      <a href="#try-it">Try it</a>
-      <a href="#features">Features</a>
-      <a href="#who-its-for">Who it's for</a>
-      <a href="#oss-edge">OSS edge</a>
-      <a href="#how-it-works">How it works</a>
-      <a href="#examples">Examples</a>
-      <a href="#roi">ROI</a>
-      <a href="#extending">Extend</a>
-      <a href="#faq">FAQ</a>
-      <a href="#pricing">Pricing</a>
+      <a href="#try-it" data-i18n="nav.try">Try it</a>
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#who-its-for" data-i18n="nav.who">Who it's for</a>
+      <a href="#oss-edge" data-i18n="nav.oss">OSS edge</a>
+      <a href="#how-it-works" data-i18n="nav.how">How it works</a>
+      <a href="#examples" data-i18n="nav.examples">Examples</a>
+      <a href="#roi" data-i18n="nav.roi">ROI</a>
+      <a href="#extending" data-i18n="nav.extend">Extend</a>
+      <a href="#faq" data-i18n="nav.faq">FAQ</a>
+      <a href="#pricing" data-i18n="nav.pricing">Pricing</a>
+      <div class="lang-switcher" id="lang-switcher" aria-label="Language"></div>
       <a id="mirror-link" href="#" target="_blank" rel="noopener" class="nav-mirror" title="Switch to the other mirror">
         <span class="mirror-dot"></span>
         <span class="mirror-label">Mirror</span>
       </a>
-      <a href="portal/index.html" class="nav-cta">Open Portal</a>
+      <a href="portal/index.html" class="nav-cta" data-i18n="nav.portal">Open Portal</a>
       <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="nav-github">GitHub →</a>
     </div>
   </nav>
@@ -70,17 +78,18 @@
   <header class="hero">
     <div class="hero-grid"></div>
     <div class="hero-content">
-      <span class="kicker">Open Source · Apache 2.0 · Alpha</span>
-      <h1>The multi-agent layer that <em>learns</em> with your team.</h1>
-      <p class="hero-sub">
+      <span class="kicker" data-i18n="hero.kicker">Open Source · Apache 2.0 · Alpha</span>
+      <h1 data-i18n="hero.h1">The multi-agent layer that <em>learns</em> with your team.</h1>
+      <p class="hero-sub" data-i18n="hero.sub">
         Praxia is a workflow-specialized multi-agent orchestrator with a built-in
         <strong>personal-to-organizational memory loop</strong>. Your senior engineers'
         tacit knowledge promotes itself into shared best practices — automatically.
       </p>
       <div class="hero-cta">
-        <a href="#install" class="btn btn-primary">Get started</a>
-        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-ghost">★ Star on GitHub</a>
+        <a href="#install" class="btn btn-primary" data-i18n="hero.cta_get_started">Get started</a>
+        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-ghost" data-i18n="hero.cta_star">★ Star on GitHub</a>
       </div>
+      <p id="i18n-notice" class="i18n-notice" hidden></p>
       <div class="hero-meta">
         <span>🐍 Python 3.11+</span>
         <span>🧠 6 LTM backends + multi-LTM fusion</span>
@@ -103,8 +112,8 @@
   <section id="features" class="section">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Why Praxia</span>
-        <h2>33+ advantages no other framework offers in one package.</h2>
+        <span class="kicker" data-i18n="features.kicker">Why Praxia</span>
+        <h2 data-i18n="features.h2">33+ advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
@@ -284,8 +293,8 @@
   <section id="try-it" class="section section-dark">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Try it — pick your scenario</span>
-        <h2>See exactly what Praxia does for <em>your</em> work.</h2>
+        <span class="kicker" data-i18n="tryit.kicker">Try it — pick your scenario</span>
+        <h2 data-i18n="tryit.h2">See exactly what Praxia does for <em>your</em> work.</h2>
         <p class="section-subtitle">
           Pick a role + use case to see the matching CLI command, sample
           output, and concrete Before/After. Then click <strong>Run preview</strong>
@@ -295,7 +304,7 @@
 
       <div class="scenario-picker">
         <div class="scenario-row">
-          <span class="scenario-label">I am</span>
+          <span class="scenario-label" data-i18n="tryit.label_role">I am</span>
           <div class="scenario-chips" data-axis="role">
             <button class="chip chip-active" data-value="sales">📈 Sales lead</button>
             <button class="chip" data-value="legal">⚖️ Legal counsel</button>
@@ -308,7 +317,7 @@
           </div>
         </div>
         <div class="scenario-row">
-          <span class="scenario-label">I want to</span>
+          <span class="scenario-label" data-i18n="tryit.label_task">I want to</span>
           <div class="scenario-chips" data-axis="task">
             <!-- Populated by JS based on role -->
           </div>
@@ -346,9 +355,9 @@
   --customer-name "Acme Manufacturing" \
   --product "Praxia"</code></pre>
           <div class="demo-controls">
-            <button id="sc-run-btn" class="btn btn-primary btn-sm">▶ Run preview</button>
-            <button id="sc-copy-btn" class="btn btn-ghost btn-sm">📋 Copy command</button>
-            <span class="demo-note">Preview runs locally in your browser — no install, no API key.</span>
+            <button id="sc-run-btn" class="btn btn-primary btn-sm" data-i18n="tryit.run">▶ Run preview</button>
+            <button id="sc-copy-btn" class="btn btn-ghost btn-sm" data-i18n="tryit.copy">📋 Copy command</button>
+            <span class="demo-note" data-i18n="tryit.note">Preview runs locally in your browser — no install, no API key.</span>
           </div>
           <pre class="demo-output"><code id="sc-output"># Click ▶ Run preview to see a typed-out simulation</code></pre>
         </div>
@@ -359,8 +368,8 @@
   <section id="who-its-for" class="section">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Who it's for</span>
-        <h2>Four target personas, one platform.</h2>
+        <span class="kicker" data-i18n="who.kicker">Who it's for</span>
+        <h2 data-i18n="who.h2">Four target personas, one platform.</h2>
         <p class="section-subtitle">
           Praxia is opinionated about <em>where</em> it shines —
           mid-cap to large enterprises with senior staff whose tacit
@@ -456,8 +465,8 @@
   <section id="oss-edge" class="section section-dark">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Why OSS matters here</span>
-        <h2>The capabilities you typically pay for — already in the package.</h2>
+        <span class="kicker" data-i18n="oss.kicker">Why OSS matters here</span>
+        <h2 data-i18n="oss.h2">The capabilities you typically pay for — already in the package.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
@@ -1103,8 +1112,8 @@ P  = Praxia cost (license + infra)</code></pre>
   <section id="faq" class="section">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">FAQ</span>
-        <h2>The questions everyone asks.</h2>
+        <span class="kicker" data-i18n="faq.kicker">FAQ</span>
+        <h2 data-i18n="faq.h2">The questions everyone asks.</h2>
       </div>
       <div class="faq-list">
         <details>
@@ -1283,10 +1292,10 @@ P  = Praxia cost (license + infra)</code></pre>
           <span class="brand-mark">▣</span>
           <span class="brand-name">Praxia</span>
         </a>
-        <p class="footer-tag">Bridging individual brilliance and organizational continuity.</p>
+        <p class="footer-tag" data-i18n="footer.tag">Bridging individual brilliance and organizational continuity.</p>
       </div>
       <div>
-        <h4>Product</h4>
+        <h4 data-i18n="footer.product">Product</h4>
         <ul>
           <li><a href="#features">Features</a></li>
           <li><a href="#flows">Flows</a></li>
@@ -1295,7 +1304,7 @@ P  = Praxia cost (license + infra)</code></pre>
         </ul>
       </div>
       <div>
-        <h4>Resources</h4>
+        <h4 data-i18n="footer.resources">Resources</h4>
         <ul>
           <li><a href="https://github.com/genarch/praxia">GitHub</a></li>
           <li><a href="https://github.com/genarch/praxia/blob/main/docs/quickstart.md">Quickstart</a></li>
@@ -1307,7 +1316,7 @@ P  = Praxia cost (license + infra)</code></pre>
         </ul>
       </div>
       <div>
-        <h4>Community</h4>
+        <h4 data-i18n="footer.community">Community</h4>
         <ul>
           <li><a href="https://github.com/genarch/praxia/discussions">Discussions</a></li>
           <li><a href="https://github.com/genarch/praxia/issues">Issues</a></li>
@@ -1316,7 +1325,7 @@ P  = Praxia cost (license + infra)</code></pre>
         </ul>
       </div>
       <div>
-        <h4>Legal</h4>
+        <h4 data-i18n="footer.legal">Legal</h4>
         <ul>
           <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/TERMS.md">Terms of Service</a></li>
           <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md">Privacy Policy</a></li>
@@ -1335,6 +1344,7 @@ P  = Praxia cost (license + infra)</code></pre>
     </div>
   </footer>
 
+  <script src="i18n.js"></script>
   <script>
     // Tab switching for #examples section
     document.querySelectorAll('.tab-btn').forEach(btn => {

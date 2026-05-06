@@ -6,7 +6,7 @@ Regression-prevention test suite that runs on every code change.
 
 ## What it covers
 
-342 deterministic regression tests + 6 LLM quality tests across 11 feature areas:
+364 deterministic regression tests + 6 LLM quality tests across 12 feature areas:
 
 | File | Area | Tests |
 |---|---|---|
@@ -21,6 +21,7 @@ Regression-prevention test suite that runs on every code change.
 | `tests/evaluation/test_eval_cli.py` | CLI command surface | ~50 |
 | `tests/evaluation/test_eval_extensions.py` | Registry + entry-point discovery | ~15 |
 | `tests/evaluation/test_eval_experiments.py` | A/B experiment lifecycle + assignment + outcomes | ~17 |
+| `tests/evaluation/test_eval_i18n.py` | UI i18n: 8 languages, browser detection, key completeness | ~22 |
 | `tests/llm_eval/test_framework.py` | LLM eval framework self-tests (no LLM call) | ~14 |
 | `tests/llm_eval/test_skill_quality.py` | LLM output quality (real API; `-m llm_eval`) | 6 |
 

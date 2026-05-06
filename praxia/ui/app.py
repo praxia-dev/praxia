@@ -18,36 +18,37 @@ from praxia import Praxia, LLM
 from praxia.core.llm import DEFAULT_ALIASES
 from praxia.flows import LogicCheckerFlow, RAGOptimizationFlow, SalesAgentFlow
 from praxia.skills import BUSINESS_SKILLS
+from praxia.ui.i18n import t, language_selector_in_sidebar
 
 st.set_page_config(page_title="Praxia", page_icon="🪡", layout="wide")
 
 # --- Sidebar: settings -----------------------------------------------------
 
-st.sidebar.title("🪡 Praxia")
-st.sidebar.caption("Multi-agent orchestrator with cyclic memory")
+# Language selector first so all subsequent labels use the chosen language
+language_selector_in_sidebar()
+
+st.sidebar.title(t("app.title"))
+st.sidebar.caption(t("app.tagline"))
 
 user_id = st.sidebar.text_input(
-    "User ID",
+    t("sidebar.user"),
     value=os.getenv("PRAXIA_USER_ID", "default-user"),
-    help="個人メモリの namespace",
 )
-org_id = st.sidebar.text_input("Org ID", value="default-org")
+org_id = st.sidebar.text_input(t("sidebar.org"), value="default-org")
 
 model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
 model_choice = st.sidebar.selectbox(
-    "LLM Model",
+    t("sidebar.model"),
     options=model_options,
     index=0,
-    help="Claude / ChatGPT / Gemini / Qwen から選択。custom は自由入力。",
 )
 if model_choice == "custom":
     model_choice = st.sidebar.text_input("Custom model string", value="anthropic/claude-opus-4-7")
 
 backend_choice = st.sidebar.selectbox(
-    "Memory Backend",
+    t("sidebar.backend"),
     options=["json", "mem0", "langmem", "letta", "zep"],
     index=0,
-    help="LTM 実装を選択 (Mem0 推奨)",
 )
 os.environ["PRAXIA_MEMORY_BACKEND"] = backend_choice
 
@@ -72,17 +73,17 @@ loom = get_loom(user_id, org_id, model_choice)
     tab_prompts, tab_users, tab_connectors, tab_policies, tab_admin, tab_about,
 ) = st.tabs(
     [
-        "🎬 Run Flow",
-        "🛠 Skill",
-        "🧠 Memory",
-        "🌙 Consolidate",
-        "📊 Dashboard",
-        "📝 Prompts",
-        "👥 Users",
-        "🔌 Connectors",
-        "🛡 Policies",
-        "💾 Admin",
-        "ℹ About",
+        t("tab.run_flow"),
+        t("tab.skill"),
+        t("tab.memory"),
+        t("tab.consolidate"),
+        t("tab.dashboard"),
+        t("tab.prompts"),
+        t("tab.users"),
+        t("tab.connectors"),
+        t("tab.policies"),
+        t("tab.admin"),
+        t("tab.about"),
     ]
 )
 

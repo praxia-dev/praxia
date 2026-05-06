@@ -11,7 +11,8 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
-[![Tests: 342](https://img.shields.io/badge/tests-342%20passing-green.svg)]()
+[![Tests: 364](https://img.shields.io/badge/tests-364%20passing-green.svg)]()
+[![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
 
 > 🇯🇵 日本語版の各業務別記事 (Zenn): [docs/zenn/](docs/zenn/)
 > 🔍 Complete feature reference: [docs/FEATURES.md](docs/FEATURES.md)
@@ -523,7 +524,8 @@ Full guide: [docs/quickstart.md](docs/quickstart.md).
 > **Deploying it?** Two paths — fastest is `praxia ui` (full-stack); for "Praxia as a brain behind your own frontend" use the SDK or `praxia serve` (HTTP API). Setup recipes: [docs/deployment-modes.md](docs/deployment-modes.md).
 > **Building a connector?** Step-by-step recipe in [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md). The pattern is ~50 lines + an entry-point.
 > **Formal specs?** Basic design / I/F / detailed design / **functional spec (機能仕様書)** (EN + JA) under [docs/specs/](docs/specs/).
-> **Regression suite?** 311 tests covering auth/memory/exporters/CLI/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
+> **Regression suite?** 364 tests covering auth/memory/exporters/CLI/i18n/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
+> **Multilingual?** Landing page + Streamlit UI ship in 8 languages (en / ja / zh-CN / ko / es / fr / de / pt-BR) with browser-language auto-detection — see [docs/i18n.md](docs/i18n.md).
 
 ---
 
