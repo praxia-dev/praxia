@@ -759,7 +759,7 @@
 
     // ===== Where it fits =============================================
     "fit.kicker":                {en:"Where it fits", ja:"適合領域", "zh-CN":"适用场景", ko:"적합 영역", es:"Dónde encaja", fr:"Où ça s'inscrit", de:"Wo es passt", "pt-BR":"Onde se encaixa"},
-    "fit.h2":                    {en:"What Praxia is best at — without putting others down.", ja:"Praxia が最も得意なこと (他を貶めず)", "zh-CN":"Praxia 最擅长的领域 — 不贬低他人。", ko:"Praxia 가 가장 잘하는 것 — 타인을 폄하하지 않고.", es:"En qué Praxia es mejor — sin denigrar a otros.", fr:"Là où Praxia excelle — sans dénigrer.", de:"Worin Praxia am besten ist — ohne andere abzuwerten.", "pt-BR":"O que Praxia faz de melhor — sem desmerecer outros."},
+    "fit.h2":                    {en:"What Praxia is best at.", ja:"Praxia が最も得意なこと。", "zh-CN":"Praxia 最擅长的领域。", ko:"Praxia 가 가장 잘하는 것.", es:"En qué Praxia es mejor.", fr:"Là où Praxia excelle.", de:"Worin Praxia am besten ist.", "pt-BR":"O que Praxia faz de melhor."},
     "fit.best":                  {en:"Best for…", ja:"最適なケース", "zh-CN":"最适合…", ko:"가장 적합한 경우", es:"Mejor para…", fr:"Idéal pour…", de:"Am besten für…", "pt-BR":"Melhor para…"},
     "fit.less":                  {en:"Less ideal when…", ja:"あまり向かないケース", "zh-CN":"不太适合…", ko:"적합하지 않은 경우", es:"Menos ideal cuando…", fr:"Moins idéal quand…", de:"Weniger ideal wenn…", "pt-BR":"Menos ideal quando…"},
     "fit.plays":                 {en:"Plays well with…", ja:"相性が良いもの", "zh-CN":"配合良好…", ko:"잘 어울리는 것", es:"Funciona bien con…", fr:"Compatible avec…", de:"Funktioniert gut mit…", "pt-BR":"Funciona bem com…"},
