@@ -105,7 +105,7 @@ praxia run rag --question "Which license is Praxia released under?"
 ## 4½. Let the LLM drive — autonomous agent
 
 For tasks where you don't want to hand-orchestrate flows, use
-`praxia.agent.AutonomousAgent`. It runs a Claude-Code-style tool-use
+`praxia.agent.AutonomousAgent`. It runs a LLM-driven tool-use
 loop over personal/org memory, the frozen layer, business skills, and
 external connectors — the LLM decides which tools to call and when.
 
@@ -132,7 +132,7 @@ for tc in result.tool_calls:
 
 Every tool call is **audit-logged** and `pull_from_connector` is
 **ACL-checked**. `record_fact` is a no-op when memory mode is `read_only`.
-See [FEATURES § 38](FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop)
+See [FEATURES § 38](FEATURES.md#38-autonomous-agent-llm-driven-tool-use-loop)
 for the full tool catalog and governance details.
 
 ## 5. Run a single business skill

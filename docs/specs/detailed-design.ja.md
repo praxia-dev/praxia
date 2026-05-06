@@ -16,7 +16,7 @@ praxia/
 │   ├── llm.py           # LLM, ProviderConfig, LLMResponse (tool_calls 露出), DEFAULT_ALIASES (27 件)
 │   ├── agent.py         # Agent (単一ターンの LLM 呼出)
 │   └── orchestrator.py  # Praxia (トップレベルファサード)
-├── agent/               # AutonomousAgent — ClaudeCode 同等のツール使用ループ
+├── agent/               # AutonomousAgent — LLM 駆動のツール使用ループ
 │   ├── __init__.py
 │   ├── autonomous.py    # AutonomousAgent
 │   ├── result.py        # AgentResult, ToolCallTrace

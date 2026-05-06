@@ -270,7 +270,7 @@ praxia skill distribute sales_strategist --target-roles member
 
 ## 自律エージェント (AutonomousAgent) で「商談準備」を 1 行に
 
-`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。営業が「Acme との来週の MTG 準備して」と一言投げるだけで、エージェントが Salesforce 取得 → 過去案件メモ検索 → 組織プレイブック確認 → SalesSkill 実行を自律的に回します。
+`praxia.agent.AutonomousAgent` は **LLM 駆動のツール使用ループ** を Praxia の各レイヤ上で実行します。営業が「Acme との来週の MTG 準備して」と一言投げるだけで、エージェントが Salesforce 取得 → 過去案件メモ検索 → 組織プレイブック確認 → SalesSkill 実行を自律的に回します。
 
 ```python
 from praxia.agent import AutonomousAgent

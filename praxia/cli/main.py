@@ -663,7 +663,7 @@ from praxia.cli.commands.connector import connector_app
 app.add_typer(connector_app, name="connector")
 
 
-# --- Autonomous agent (Claude-Code-style tool-use loop) ------------------
+# --- Autonomous agent (LLM-driven tool-use loop) ------------------
 from praxia.cli.commands.agent import agent_app
 app.add_typer(agent_app, name="agent")
 

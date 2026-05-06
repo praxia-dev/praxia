@@ -302,7 +302,7 @@ praxia skill distribute purchasing_analyst --target-roles member
 
 ## 自律エージェント (AutonomousAgent) で「サプライヤー評価」を半自動化
 
-`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。「○社の見積評価して」と一言投げるだけで、エージェントが過去取引履歴 → ベテラン評価フレーム → kintone サプライヤー DB → PurchasingSkill を自律順序で回します。
+`praxia.agent.AutonomousAgent` は **LLM 駆動のツール使用ループ** を Praxia の各レイヤ上で実行します。「○社の見積評価して」と一言投げるだけで、エージェントが過去取引履歴 → ベテラン評価フレーム → kintone サプライヤー DB → PurchasingSkill を自律順序で回します。
 
 ```python
 from praxia.agent import AutonomousAgent

@@ -16,7 +16,7 @@ praxia/
 │   ├── llm.py           # LLM, ProviderConfig, LLMResponse (with tool_calls), DEFAULT_ALIASES (27 entries)
 │   ├── agent.py         # Agent (single-turn LLM invocation)
 │   └── orchestrator.py  # Praxia (top-level facade)
-├── agent/               # AutonomousAgent — Claude-Code-style tool-use loop
+├── agent/               # AutonomousAgent — LLM-driven tool-use loop
 │   ├── __init__.py
 │   ├── autonomous.py    # AutonomousAgent
 │   ├── result.py        # AgentResult, ToolCallTrace

@@ -386,7 +386,7 @@ auth.get_sso("microsoft").config.role_mapping = {
 
 ## 自律エージェント (AutonomousAgent) で「契約レビュー」を半自動化
 
-`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。法務担当が「この NDA レビューして」と Box の URL を投げるだけで、エージェントが過去の交渉経緯メモ → 凍結済み法務ガイドライン → 契約書本体取得 → LegalSkill を自律順序で回します。
+`praxia.agent.AutonomousAgent` は **LLM 駆動のツール使用ループ** を Praxia の各レイヤ上で実行します。法務担当が「この NDA レビューして」と Box の URL を投げるだけで、エージェントが過去の交渉経緯メモ → 凍結済み法務ガイドライン → 契約書本体取得 → LegalSkill を自律順序で回します。
 
 ```python
 from praxia.agent import AutonomousAgent

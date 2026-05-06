@@ -1,4 +1,4 @@
-"""AutonomousAgent — Claude-Code-style tool-use loop over Praxia primitives.
+"""AutonomousAgent — LLM-driven tool-use loop over Praxia primitives.
 
 Workflow:
     1. Wrap the user prompt in a system message that names every available tool.
@@ -10,7 +10,7 @@ Workflow:
 
 The loop is intentionally simple — the agent's intelligence comes from the
 LLM itself, the rich set of tools, and the personal/organizational layers it
-can access. Mirrors how Claude Code drives its own tool use, scoped to the
+can access. Mirrors a modern tool-use-loop pattern, scoped to the
 Praxia stack.
 """
 from __future__ import annotations

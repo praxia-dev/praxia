@@ -296,7 +296,7 @@ praxia skill distribute patent_analyst --target-roles operator
 
 ## 自律エージェント (AutonomousAgent) で「先行技術調査」を半自動化
 
-`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。研究者が「この発明、出願可能性ある?」と発明提案書を投げるだけで、エージェントが類似発明メモ → ベテランの検索式テンプレ → 発明提案フォルダ → PatentSkill を自律順序で回します。
+`praxia.agent.AutonomousAgent` は **LLM 駆動のツール使用ループ** を Praxia の各レイヤ上で実行します。研究者が「この発明、出願可能性ある?」と発明提案書を投げるだけで、エージェントが類似発明メモ → ベテランの検索式テンプレ → 発明提案フォルダ → PatentSkill を自律順序で回します。
 
 ```python
 from praxia.agent import AutonomousAgent

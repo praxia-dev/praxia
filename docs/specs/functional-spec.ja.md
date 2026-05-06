@@ -2507,7 +2507,7 @@ pytest tests/llm_eval \
 
 ## AutonomousAgent (自律エージェント)
 
-`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ**
+`praxia.agent.AutonomousAgent` は **LLM 駆動のツール使用ループ**
 を Praxia の各レイヤ上で実行する。利用者がツールを明示的に呼び出さなくても、
 LLM が自発的に「個人メモリ検索 → 組織メモリ検索 → 凍結層検索 → スキル一覧 →
 スキル実行 → コネクタ pull → 最終回答」の流れを判断して進行する。

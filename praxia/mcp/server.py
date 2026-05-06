@@ -100,7 +100,7 @@ def build_tools(*, llm: Any = None) -> list[MCPTool]:
         MCPTool(
             name="autonomous_agent",
             description=(
-                "Run a Claude-Code-style autonomous agent that can search "
+                "Run a autonomous agent (LLM-driven tool-use loop) that can search "
                 "personal/org memory, run skills, and pull from connectors "
                 "on its own. Use this for open-ended tasks where you don't "
                 "want to orchestrate individual tools."

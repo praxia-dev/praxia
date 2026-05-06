@@ -288,7 +288,7 @@ praxia prompt distribute architecture_anti_patterns anti.md \
 
 ## 自律エージェント (AutonomousAgent) で「設計レビュー」を半自動化
 
-`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。新人アーキトが「この設計書レビューして」と投げるだけで、エージェントが過去類似事例の失敗メモを検索 → 凍結層 (アンチパターン集) を参照 → DesignSkill 実行を自律的に判断します。
+`praxia.agent.AutonomousAgent` は **LLM 駆動のツール使用ループ** を Praxia の各レイヤ上で実行します。新人アーキトが「この設計書レビューして」と投げるだけで、エージェントが過去類似事例の失敗メモを検索 → 凍結層 (アンチパターン集) を参照 → DesignSkill 実行を自律的に判断します。
 
 ```python
 from praxia.agent import AutonomousAgent

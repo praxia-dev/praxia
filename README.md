@@ -142,12 +142,12 @@ For details, see [docs/architecture.md](docs/architecture.md).
 
 ## ✨ What's Bundled
 
-### Autonomous agent (Claude-Code-style tool-use loop)
+### Autonomous agent (LLM-driven tool-use loop)
 
 `praxia.agent.AutonomousAgent` runs an LLM-driven tool-use loop over the
 full Praxia stack — personal/org memory, skills, frozen layer, connectors —
 with ACL checks and audit logging built in. The LLM picks tools on its own
-until it has the information it needs, mirroring how Claude Code drives its
+until it has the information it needs, mirroring how modern code-editing assistants drives its
 own tool use.
 
 ```python
@@ -167,7 +167,7 @@ praxia agent tools     # list the 11 built-in tools
 The agent is also exposed as a single MCP meta-tool (`autonomous_agent`) so
 remote clients (Claude Desktop, Cursor) can delegate an entire investigation
 without orchestrating individual tools by hand. See
-[FEATURES § 38](docs/FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop).
+[FEATURES § 38](docs/FEATURES.md#38-autonomous-agent-llm-driven-tool-use-loop).
 
 ### 3 Specialized Multi-Agent Flows
 

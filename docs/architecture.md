@@ -9,7 +9,7 @@
                                  │
               ┌──────────────────▼───────────────────┐
               │  AutonomousAgent (tool-use loop)     │ (praxia.agent)
-              │  Claude-Code-style; LLM picks tools  │
+              │  LLM-driven; LLM picks tools  │
               └──┬─────────────────────────────────┬─┘
                  │  uses                           │
                  ▼                                 ▼
@@ -74,7 +74,7 @@ The final score is a weighted blend; auto-promote above one threshold, route to 
 
 ## Autonomous Agent (`praxia.agent.AutonomousAgent`)
 
-A Claude-Code-style tool-use loop sitting **on top** of the orchestrator,
+A LLM-driven tool-use loop sitting **on top** of the orchestrator,
 flows, skills, and memory layers. Where a `Flow` is a script you author
 with `${var}` substitution, the autonomous agent is the LLM **deciding
 the script** turn-by-turn: search personal memory → run a skill → pull
@@ -102,7 +102,7 @@ The agent is also exposed as a single MCP meta-tool `autonomous_agent`
 so remote clients (Claude Desktop / Cursor) can delegate an entire
 investigation rather than orchestrating individual tools.
 
-See [FEATURES § 38](FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop)
+See [FEATURES § 38](FEATURES.md#38-autonomous-agent-llm-driven-tool-use-loop)
 for the full tool catalog and governance details.
 
 ## Flow Execution Model

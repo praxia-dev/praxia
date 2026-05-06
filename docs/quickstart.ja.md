@@ -103,7 +103,7 @@ praxia run rag --question "Praxia のライセンスは?"
 ## 4½. LLM に判断させる — 自律エージェント
 
 フロー設計を自分でしたくないとき、`praxia.agent.AutonomousAgent` を使うと
-ClaudeCode 同様のツール使用ループを Praxia の各レイヤ (個人/組織メモリ・
+LLM 駆動のツール使用ループを Praxia の各レイヤ (個人/組織メモリ・
 凍結層・スキル・コネクタ) 上で LLM に自律的に回させることができます。
 
 ```bash
@@ -129,7 +129,7 @@ for tc in result.tool_calls:
 
 全ツール呼出は **監査ログ化**、`pull_from_connector` は **ACL チェック**
 を通過。`record_fact` は `read_only` モード時には no-op。詳細は
-[FEATURES § 38](FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop)。
+[FEATURES § 38](FEATURES.md#38-autonomous-agent-llm-driven-tool-use-loop)。
 
 ## 5. 単一スキル実行
 

@@ -1,4 +1,4 @@
-"""Autonomous agent — Claude-Code-style tool-use loop over Praxia primitives.
+"""Autonomous agent — LLM-driven tool-use loop over Praxia primitives.
 
 `praxia.core.agent.Agent` is a single-shot prompt-then-respond agent. The
 **autonomous** agent in this module runs a multi-step decision loop where the

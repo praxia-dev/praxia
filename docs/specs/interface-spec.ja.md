@@ -214,7 +214,7 @@ result: FlowResult = flow.run({"customer_name": ..., "product": ...})
 
 ### 1.9.1 `praxia.agent.AutonomousAgent`
 
-ClaudeCode 同等の LLM 駆動ツール使用ループを Praxia スタック全体 (メモリ /
+LLM 駆動のツール使用ループを Praxia スタック全体 (メモリ /
 スキル / コネクタ / 凍結層) に対して実行する自律エージェント。
 
 ```python

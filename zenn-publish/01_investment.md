@@ -271,7 +271,7 @@ praxia skill distribute investment_analyst --target-roles member,operator
 
 ## 自律エージェント (AutonomousAgent) で「投資判断の前準備」を半自動化
 
-`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ** を Praxia の各レイヤ上で実行します。アナリストが「○○株について見て」と一言投げるだけで、エージェントが自分でメモリ検索 → セクター方針確認 → IR 取得 → スキル実行を順序判断します。
+`praxia.agent.AutonomousAgent` は **LLM 駆動のツール使用ループ** を Praxia の各レイヤ上で実行します。アナリストが「○○株について見て」と一言投げるだけで、エージェントが自分でメモリ検索 → セクター方針確認 → IR 取得 → スキル実行を順序判断します。
 
 ```python
 from praxia.agent import AutonomousAgent

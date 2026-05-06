@@ -49,7 +49,7 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 35. [A/B experiments framework](#35-ab-experiments-framework-praxiaexperiments)
 36. [LLM output quality evaluation](#36-llm-output-quality-evaluation-testsllm_eval)
 37. [Legal templates](#37-legal-templates)
-38. [Autonomous agent (Claude-Code-style tool-use loop)](#38-autonomous-agent-claude-code-style-tool-use-loop)
+38. [Autonomous agent (LLM-driven tool-use loop)](#38-autonomous-agent-llm-driven-tool-use-loop)
 
 ---
 
@@ -57,7 +57,7 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 
 | Capability | Status | Description |
 |---|---|---|
-| Autonomous agent (Claude-Code-style) | ✅ | LLM-driven tool-use loop over personal/org memory + skills + connectors — see [§ 38](#38-autonomous-agent-claude-code-style-tool-use-loop) |
+| Autonomous agent (LLM-driven) | ✅ | LLM-driven tool-use loop over personal/org memory + skills + connectors — see [§ 38](#38-autonomous-agent-llm-driven-tool-use-loop) |
 | Multi-agent orchestration | ✅ | Declarative `Flow` of `FlowStep`s with `${var}` template substitution |
 | Workflow-specialized templates | ✅ | 3 production-ready flows + community-contributable recipes |
 | Auto-extracting personal memory | ✅ | Layer 1; no explicit `save()` calls in business code |
@@ -1398,9 +1398,9 @@ inventory and "when you need each" matrix.
 
 ---
 
-## 38. Autonomous agent (Claude-Code-style tool-use loop)
+## 38. Autonomous agent (LLM-driven tool-use loop)
 
-`praxia.agent.AutonomousAgent` is a Claude-Code-style autonomous agent: it
+`praxia.agent.AutonomousAgent` is a autonomous agent (LLM-driven tool-use loop): it
 runs an LLM-driven tool-use loop over the full Praxia stack instead of being
 hand-orchestrated. The LLM picks tools on its own — searches personal/org
 memory, lists/runs skills, pulls from external connectors — until it has the

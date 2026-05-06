@@ -214,8 +214,8 @@ Built-in: `SalesAgentFlow`, `LogicCheckerFlow`, `RAGOptimizationFlow`. Custom fl
 
 ### 1.9.1 `praxia.agent.AutonomousAgent`
 
-LLM-driven tool-use loop over the full Praxia stack. Mirrors how Claude Code
-drives its own tool use, scoped to memory / skills / connectors / frozen layer.
+LLM-driven tool-use loop over the full Praxia stack. Mirrors how modern code-editing assistants
+pick their own tools, scoped to memory / skills / connectors / frozen layer.
 
 ```python
 from praxia.agent import AutonomousAgent, AgentResult, ToolCallTrace

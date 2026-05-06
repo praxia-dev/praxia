@@ -46,7 +46,7 @@ Legend: ✅ supported · ~ partial / via plug-in · — not currently supported
 | Storage / SaaS connectors (Pull + Push) | — | — | ~ | ~ | ✅ ×20 |
 | Multi-LTM fusion + dynamic routing | — | — | — | — | ✅ |
 | MCP / Claude Skills format | ~ | ~ | ~ | — | ✅ |
-| Autonomous agent (Claude-Code-style tool-use loop) | ~ | ~ | ~ | — | ✅ |
+| Autonomous agent (LLM-driven tool-use loop) | ~ | ~ | ~ | — | ✅ |
 | First-class LLM aliases (with auto-detect) | ~ | ~ | ~ | — | ✅ ×27 |
 | License model | MIT (OSS) | MIT (OSS) | MIT (OSS) | Commercial | Apache 2.0 (OSS) |
 

@@ -107,8 +107,8 @@
         <span data-i18n="chip.mcp">🪐 MCP (stdio + remote HTTP/SSE)</span>
         <span data-i18n="chip.conn20">🔗 20 connectors (Box / Notion / Slack / Jira / GitHub / S3 / …)</span>
         <span data-i18n="chip.responsive">📱 Mobile-responsive</span>
-        <span data-i18n="chip.agent">🤖 Autonomous agent (Claude-Code-style)</span>
-        <span data-i18n="chip.tests">✅ 431 regression tests</span>
+        <span data-i18n="chip.agent">🤖 Autonomous agent (LLM-driven tool-use loop)</span>
+        <span data-i18n="chip.tests">✅ Hermetic test harness (stubs &amp; drivers)</span>
       </div>
     </div>
   </header>
@@ -122,7 +122,7 @@
       <div class="grid grid-3">
         <article class="card">
           <div class="card-icon">🤖</div>
-          <h3 data-i18n="feat.autonomous_agent">Autonomous agent (Claude-Code-style)</h3>
+          <h3 data-i18n="feat.autonomous_agent">Autonomous agent — LLM-driven tool-use loop</h3>
           <p data-i18n="feat.autonomous_agent.body">An LLM-driven tool-use loop over your full Praxia stack — personal memory, org memory, frozen layer, skills, connectors. The agent picks tools on its own (search → run skill → pull connector → answer) with ACL gates and audit logging. Ships as <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code>, and an MCP meta-tool for remote clients.</p>
         </article>
         <article class="card">
@@ -266,11 +266,6 @@
           <p data-i18n="feat.deploy_modes.body">Use Praxia as a brain behind your own frontend (SDK embed or <code>praxia serve</code> FastAPI HTTP API), or run the bundled Streamlit UI for the fastest path. Same auth, memory, skills.</p>
         </article>
         <article class="card">
-          <div class="card-icon">📐</div>
-          <h3 data-i18n="feat.specs">Formal design specs (EN + JA)</h3>
-          <p data-i18n="feat.specs.body">Basic design / I/F spec / detailed design as procurement-ready documents in both English and Japanese. Every public surface and plugin protocol covered.</p>
-        </article>
-        <article class="card">
           <div class="card-icon">🔑</div>
           <h3 data-i18n="feat.kms">KMS-backed token encryption</h3>
           <p data-i18n="feat.kms.body">OAuth tokens use envelope encryption — fresh DEK per write, AES-GCM payload, DEK wrapped by your KMS. 5 adapters: <code>local</code> / <code>aws</code> / <code>azure</code> / <code>gcp</code> / <code>vault</code>. Master key never lives on the application host.</p>
@@ -292,8 +287,8 @@
         </article>
         <article class="card">
           <div class="card-icon">🧮</div>
-          <h3 data-i18n="feat.tests">431 regression tests</h3>
-          <p data-i18n="feat.tests.body">Auth / memory / fusion / exporters / OAuth / parsers / CLI / extensions / experiments / connectors — every public surface has a hermetic test. CI runs on every PR. Add features without breaking existing ones.</p>
+          <h3 data-i18n="feat.tests">Hermetic test harness — stubs &amp; drivers for every surface</h3>
+          <p data-i18n="feat.tests.body">Every public surface (auth / memory / fusion / exporters / OAuth / parsers / CLI / extensions / experiments / connectors / agent) ships with backend stubs, fixture factories, and protocol-conforming drivers — so contributors can write hermetic tests without standing up real services. CI runs them on every PR.</p>
         </article>
         <article class="card">
           <div class="card-icon">🔗</div>
@@ -350,23 +345,23 @@
 
       <div class="scenario-result">
         <div class="scenario-pane scenario-summary">
-          <h3 id="sc-title">Pre-meeting research for a B2B account</h3>
-          <p id="sc-desc">
+          <h3 id="sc-title" data-i18n="scn.b2b-prep.title">Pre-meeting research for a B2B account</h3>
+          <p id="sc-desc" data-i18n="scn.b2b-prep.desc">
             You're meeting Acme Manufacturing tomorrow at 14:00. Praxia ingests
             their IR, recent press, and your past wins → produces top-3 pain
             hypotheses, a 5-row FAQ with citations, and a proposal outline.
           </p>
           <div class="ba-grid">
             <div class="ba-block ba-before">
-              <h4>Before</h4>
+              <h4 data-i18n="scn.before">Before</h4>
               <ul id="sc-before"><li>6 hours of LinkedIn skim + 10-K reading</li><li>Hit-or-miss prep — CFO asks about a recent capex you didn't know about</li><li>Acceptance rate ≈ 55%</li></ul>
             </div>
             <div class="ba-block ba-after">
-              <h4>After</h4>
+              <h4 data-i18n="scn.after">After</h4>
               <ul id="sc-after"><li><strong>1 hour</strong> total prep</li><li>3-pain-hypotheses + 5-row FAQ + proposal outline</li><li>Acceptance rate <strong>+15–20pt</strong></li></ul>
             </div>
           </div>
-          <p class="scenario-extra" id="sc-extra">
+          <p class="scenario-extra" id="sc-extra" data-i18n="scn.b2b-prep.extra">
             Variation: attach .pdf board deck → Praxia auto-parses + cites it. Or pull straight from Salesforce → <code>praxia connector pull salesforce "SELECT Id,Name FROM Account WHERE Id='001..'"</code>.
           </p>
         </div>
@@ -381,7 +376,6 @@
           <div class="demo-controls">
             <button id="sc-run-btn" class="btn btn-primary btn-sm" data-i18n="tryit.run">▶ Run preview</button>
             <button id="sc-copy-btn" class="btn btn-ghost btn-sm" data-i18n="tryit.copy">📋 Copy command</button>
-            <span class="demo-note" data-i18n="tryit.note">Preview runs locally in your browser — no install, no API key.</span>
           </div>
           <pre class="demo-output"><code id="sc-output"># Click ▶ Run preview to see a typed-out simulation</code></pre>
         </div>
@@ -404,17 +398,17 @@
         <article class="card persona-card">
           <div class="persona-icon">🏢</div>
           <h3 data-i18n="who.p1_title">Information Systems / Platform team (300–5,000 employees)</h3>
-          <p class="persona-need">
+          <p class="persona-need" data-i18n="who.p1_need">
             <strong>Need:</strong> Roll out AI tools across the org without
             handing every team a different vendor — and without
             paywalling SSO / RBAC / audit.
           </p>
-          <p class="persona-fit">
+          <p class="persona-fit" data-i18n="who.p1_fit">
             <strong>Fit:</strong> Auth + RBAC + ACL + per-user OAuth +
             audit log all in OSS, not behind an enterprise tier. Self-hostable
             on-prem or private cloud. Same code as the OSS, just operated by you.
           </p>
-          <p class="persona-result">
+          <p class="persona-result" data-i18n="who.p1_result">
             <strong>Typical year-1 result:</strong> 100 knowledge workers,
             <strong>~$1.25M net benefit</strong>, full audit trail,
             no per-seat licensing surprises.
@@ -423,19 +417,19 @@
         <article class="card persona-card">
           <div class="persona-icon">🏗️</div>
           <h3 data-i18n="who.p2_title">Engineering / Product VP (50–500 in scope)</h3>
-          <p class="persona-need">
+          <p class="persona-need" data-i18n="who.p2_need">
             <strong>Need:</strong> Senior architects' code-review and
             design intuition is the bottleneck. Junior PMs ramp in 12–18
             months. Best practices live in Slack threads and one staff
             engineer's head.
           </p>
-          <p class="persona-fit">
+          <p class="persona-fit" data-i18n="who.p2_fit">
             <strong>Fit:</strong> DesignSkill + sleep-time consolidation
             distills "how senior X reviews specs" into reusable shared
             blocks. Markdown + git frozen layer fits existing PR review
             workflow.
           </p>
-          <p class="persona-result">
+          <p class="persona-result" data-i18n="who.p2_result">
             <strong>Typical year-1 result:</strong> Senior load 16h/wk → <strong>4h/wk</strong>,
             junior PM ramp <strong>6–9 months</strong>, NFR coverage 5–7 → <strong>15–20 axes</strong>.
           </p>
@@ -443,18 +437,18 @@
         <article class="card persona-card">
           <div class="persona-icon">⚖️</div>
           <h3 data-i18n="who.p3_title">Legal / Compliance lead (regulated industry)</h3>
-          <p class="persona-need">
+          <p class="persona-need" data-i18n="who.p3_need">
             <strong>Need:</strong> 50–100 contracts/month bottlenecked on 2–3
             people. Critical risk slips through under deadline. Need an
             <em>auditable</em> AI workflow with no vendor lock-in.
           </p>
-          <p class="persona-fit">
+          <p class="persona-fit" data-i18n="who.p3_fit">
             <strong>Fit:</strong> LegalSkill (RACE framework) + read-only
             memory mode for sensitive contracts + per-user OAuth respects
             external system ACL + every action audited. Apache 2.0 means
             you can show the source to your auditors.
           </p>
-          <p class="persona-result">
+          <p class="persona-result" data-i18n="who.p3_result">
             <strong>Typical year-1 result:</strong> Per-contract review
             60–90min → <strong>10–15min</strong>, throughput 50–80/mo →
             <strong>200–300/mo</strong>, critical-miss rate
@@ -464,19 +458,19 @@
         <article class="card persona-card">
           <div class="persona-icon">🧪</div>
           <h3 data-i18n="who.p4_title">OSS / Research integrator (engineering team)</h3>
-          <p class="persona-need">
+          <p class="persona-need" data-i18n="who.p4_need">
             <strong>Need:</strong> Build a domain-specific agent system
             over Mem0 / LangGraph / your-own-vector-DB without
             re-implementing auth, memory cycling, dashboards, exporters
             yourself.
           </p>
-          <p class="persona-fit">
+          <p class="persona-fit" data-i18n="who.p4_fit">
             <strong>Fit:</strong> 7 plugin types (~50 LoC each) — connectors,
             memory backends, parsers, exporters, OAuth providers, skills,
             flows. Use as a Python library, run <code>praxia serve</code>
             as a backend, embed in LangGraph. Apache 2.0.
           </p>
-          <p class="persona-result">
+          <p class="persona-result" data-i18n="who.p4_result">
             <strong>Typical day-30:</strong> domain skill PR'd, custom
             connector pip-installable, memory cycling working,
             <strong>~3 weeks ahead of building it from scratch</strong>.
@@ -557,61 +551,61 @@
       <div class="grid grid-3">
         <article class="card">
           <h3 data-i18n="oss.c1">SSO + RBAC + audit are not paywalled</h3>
-          <p>OIDC SSO (Google / Microsoft / Okta / GitHub / Keycloak) is in
+          <p data-i18n="oss.c1.body">OIDC SSO (Google / Microsoft / Okta / GitHub / Keycloak) is in
           the OSS. Most agent frameworks ship without it; most agent
           platforms paywall it. Praxia treats it as table stakes.</p>
         </article>
         <article class="card">
           <h3 data-i18n="oss.c2">Memory format is not locked in</h3>
-          <p>Layer 4 is plain Markdown in your git repo. Layer 3 exports to
+          <p data-i18n="oss.c2.body">Layer 4 is plain Markdown in your git repo. Layer 3 exports to
           JSONL. Layer 1 is your chosen backend's native format. The
           framework doesn't hold your data hostage — leaving costs nothing.</p>
         </article>
         <article class="card">
           <h3 data-i18n="oss.c3">You can read every line</h3>
-          <p>Apache 2.0. Show the source to your auditors, your security
+          <p data-i18n="oss.c3.body">Apache 2.0. Show the source to your auditors, your security
           team, your customers. No "trust us, the SaaS is secure" —
           inspect the auth manager yourself.</p>
         </article>
         <article class="card">
           <h3 data-i18n="oss.c4">Multi-LTM ensembles, not single-vendor</h3>
-          <p>Run Mem0 + Zep + HindSight in parallel and fuse with RRF, or
+          <p data-i18n="oss.c4.body">Run Mem0 + Zep + HindSight in parallel and fuse with RRF, or
           route per query. No commercial agent platform exposes this — they
           pick a backend and lock you in. Praxia treats it as a first-class feature.</p>
         </article>
         <article class="card">
           <h3 data-i18n="oss.c5">Per-user OAuth respects external ACL</h3>
-          <p>When alice pulls from Box, Box's own ACL applies — alice only
+          <p data-i18n="oss.c5.body">When alice pulls from Box, Box's own ACL applies — alice only
           sees what alice can see. Service-account designs (typical SaaS
           shortcut) leak data across users. Praxia's per-user OAuth makes
           this the default.</p>
         </article>
         <article class="card">
           <h3 data-i18n="oss.c6">Run fully on-prem with Gemma / Qwen</h3>
-          <p>Set <code>PRAXIA_LOCAL_MODEL=gemma</code>, run Ollama,
+          <p data-i18n="oss.c6.body">Set <code>PRAXIA_LOCAL_MODEL=gemma</code>, run Ollama,
           choose <code>backend=json</code>. No cloud LLM, no cloud vector DB,
           no telemetry. Air-gapped customers run identical code as
           cloud customers.</p>
         </article>
         <article class="card">
-          <h3>KMS-backed token encryption (5 adapters)</h3>
-          <p>OAuth tokens are envelope-encrypted with the master key in
+          <h3 data-i18n="oss.c7">KMS-backed token encryption (5 adapters)</h3>
+          <p data-i18n="oss.c7.body">OAuth tokens are envelope-encrypted with the master key in
           AWS KMS, Azure Key Vault, GCP KMS, HashiCorp Vault — or
           locally for dev. Most agent frameworks store tokens with a
           local symmetric key; Praxia treats KMS as a first-class
           concern in the OSS.</p>
         </article>
         <article class="card">
-          <h3>Production OAuth callback handler</h3>
-          <p>Multi-worker safe — state cache survives across
+          <h3 data-i18n="oss.c8">Production OAuth callback handler</h3>
+          <p data-i18n="oss.c8.body">Multi-worker safe — state cache survives across
           processes (TTL-pruned JSON file), redirect URI pinned via
           env var. Run <code>praxia serve</code> behind nginx and the
           callback works correctly with N replicas. Most OSS
           competitors only support CLI loopback.</p>
         </article>
         <article class="card">
-          <h3>A/B testing + LLM quality eval included</h3>
-          <p>Run controlled experiments on prompts / skills / LLMs with
+          <h3 data-i18n="oss.c9">A/B testing + LLM quality eval included</h3>
+          <p data-i18n="oss.c9.body">Run controlled experiments on prompts / skills / LLMs with
           deterministic assignment + outcome tracking. CI-gate quality
           regressions with a baseline-flagging eval framework. Both in
           the OSS — no separate "experimentation platform" subscription.</p>
@@ -2044,15 +2038,22 @@ P  = Praxia cost (license + infra)</code></pre>
       function renderScenario() {
         const sc = (SCENARIOS[currentRole] || {})[currentTask];
         if (!sc) return;
-        titleEl.textContent = sc.title;
-        descEl.innerHTML = sc.desc;
+        // Look up translations by `scn.<task>.<field>` (e.g. "scn.b2b-prep.title").
+        // Falls back to the English text in SCENARIOS if no key is registered.
+        const t = (window.praxiaT) || ((_, f) => f);
+        titleEl.textContent = t(`scn.${currentTask}.title`, sc.title);
+        descEl.innerHTML    = t(`scn.${currentTask}.desc`,  sc.desc);
+        extraEl.innerHTML   = t(`scn.${currentTask}.extra`, sc.extra);
+        // before/after/cmd/output stay English — they're sample CLI / output,
+        // closer to source-truth than marketing copy.
         beforeEl.innerHTML = sc.before.map(b => `<li>${b}</li>`).join('');
         afterEl.innerHTML = sc.after.map(a => `<li>${a}</li>`).join('');
-        extraEl.innerHTML = sc.extra;
         cmdEl.textContent = sc.cmd;
         outputEl.textContent = '# Click ▶ Run preview to see a typed-out simulation';
         if (typingCancel) typingCancel();
       }
+      // Re-render when the user changes language so non-default scenarios update too.
+      document.addEventListener('praxia-lang-changed', renderScenario);
 
       roleChips.querySelectorAll('.chip').forEach(btn => {
         btn.addEventListener('click', () => {
