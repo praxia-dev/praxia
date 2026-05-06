@@ -35,11 +35,11 @@ the bottom under "Done — keep for changelog".
 - [ ] Replace `REPLACE_WITH_TALLY_FORM_ID` placeholder with the published form's id.
 - [ ] Add a notification webhook (Slack / email / Notion) so submissions surface in real time.
 
-### Pricing & commercial messaging (decision needed — see proposal in chat / below)
-- [ ] Decide whether to keep the 3-tier pricing on the landing or downscale to
-      OSS-only + waitlist while we're alpha. **Recommendation: downscale.**
-- [ ] If downscaling, also remove "Pricing" from the nav for now (or rename to "Editions").
-- [ ] Once a hosted backend actually runs, restore tier-2 with real pricing + Stripe link.
+### Pricing & commercial messaging (next milestone)
+- [ ] Once a hosted backend actually runs, add a 3rd Editions tier with real pricing
+      + Stripe link. Until then the page deliberately shows only OSS + Hosted-alpha.
+- [ ] When SOC 2 / ISO 27001 work begins, surface the in-flight status (with a date)
+      on a separate `docs/COMPLIANCE.md` page rather than on the landing.
 
 ## 📋 Roadmap (not blocked on info)
 
@@ -76,6 +76,10 @@ the bottom under "Done — keep for changelog".
 
 ## ✅ Done — keep for changelog later
 
+- 2026-05-06 — Pricing → Editions: drop the 3-tier pricing (OSS + Team $200/mo +
+              Enterprise) for an alpha-honest 2-tier (OSS + Hosted-alpha
+              waitlist). Removes premature `$200/mo` commitment, drops compliance
+              certs we don't have, aligns the landing with the portal's Path A/B.
 - 2026-05-06 — Restructure: `docs/landing` → `web-publish/`, `docs/zenn` → `zenn-publish/`.
 - 2026-05-06 — Portal sign-up: stub auth replaced with self-host CTA + Tally waitlist embed.
 - 2026-05-06 — `praxia.agent.AutonomousAgent` shipped with 11 built-in tools, ACL/audit hooks,
