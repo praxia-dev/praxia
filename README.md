@@ -11,7 +11,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
-[![Tests: 428](https://img.shields.io/badge/tests-428%20passing-green.svg)]()
+[![Tests: 431](https://img.shields.io/badge/tests-431%20passing-green.svg)]()
 [![Connectors: 20](https://img.shields.io/badge/connectors-20-blueviolet.svg)]()
 [![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
 [![MCP: stdio + HTTP/SSE](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP%2FSSE-orange.svg)]()
@@ -201,11 +201,22 @@ LiteLLM-powered single-line provider switching:
 | Google Gemini | `gemini` / `gemini-flash` | `GEMINI_API_KEY` |
 | Google Gemma (open) | `gemma` / `gemma-2b` / `gemma-9b` / `gemma-27b` (Ollama) · `gemma-cloud` (Vertex AI) | (none for local) / Vertex auth |
 | Alibaba Qwen (cloud) | `qwen` / `qwen-72b` | `DASHSCOPE_API_KEY` |
-| Qwen / Llama (local) | `qwen-local` (Ollama) | (none — runs in-house) |
+| **DeepSeek** | `deepseek` (v3 chat) · `deepseek-reasoner` (R1) | `DEEPSEEK_API_KEY` |
+| **Mistral** | `mistral` (large) · `mistral-small` · `codestral` | `MISTRAL_API_KEY` |
+| **xAI Grok** | `grok` | `XAI_API_KEY` |
+| **Llama (Groq fast)** | `llama` (3.3 70B Versatile via Groq) | `GROQ_API_KEY` |
+| **Cohere** | `command-r` (Command R+) | `COHERE_API_KEY` |
+| **Perplexity Sonar** | `perplexity` (web-search-augmented) | `PERPLEXITY_API_KEY` |
+| **Microsoft Phi** (local) | `phi` (3.5 3.8B Ollama) | (none — runs in-house) |
+| Qwen / Llama / Phi (local) | `qwen-local` · `llama-local` · `phi` (Ollama) | (none — runs in-house) |
 
 ```python
 LLM("claude")        # Anthropic Claude
+LLM("deepseek")      # DeepSeek v3 — strong + low cost
+LLM("mistral")       # Mistral large — EU-friendly
+LLM("llama")         # Llama 3.3 70B via Groq (fast)
 LLM("gemma")         # Google Gemma 9B via local Ollama
+LLM("phi")           # Microsoft Phi 3.5 — small / edge
 LLM("qwen-local")    # Local Qwen via Ollama
 LLM("openai/gpt-4o") # Any LiteLLM-compatible model string
 ```

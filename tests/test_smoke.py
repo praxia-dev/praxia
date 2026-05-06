@@ -1095,6 +1095,83 @@ def test_gemma_alias_registered() -> None:
     assert DEFAULT_ALIASES["gemma-cloud"].startswith("vertex_ai/")
 
 
+def test_new_provider_aliases_resolve() -> None:
+    """The Tier-2/3 expansion (DeepSeek / Mistral / Grok / Llama / Cohere /
+    Perplexity / Phi) should each have a friendly alias that maps to the
+    correct LiteLLM provider prefix."""
+    from praxia.core.llm import DEFAULT_ALIASES
+
+    expectations = {
+        "deepseek": "deepseek/",
+        "deepseek-reasoner": "deepseek/",
+        "mistral": "mistral/",
+        "mistral-small": "mistral/",
+        "codestral": "mistral/",
+        "grok": "xai/",
+        "llama": "groq/",
+        "llama-local": "ollama/",
+        "command-r": "cohere/",
+        "perplexity": "perplexity/",
+        "phi": "ollama/",
+    }
+    for alias, prefix in expectations.items():
+        assert alias in DEFAULT_ALIASES, f"missing alias: {alias}"
+        assert DEFAULT_ALIASES[alias].startswith(prefix), (
+            f"{alias} should map to {prefix}*, got {DEFAULT_ALIASES[alias]!r}"
+        )
+
+
+def test_auto_detect_prefers_new_providers(monkeypatch) -> None:
+    """auto_detect() should pick newly-supported providers when their key is set."""
+    from praxia.core.llm import LLM
+
+    # Clear all known LLM env vars so each scenario is hermetic.
+    for v in (
+        "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
+        "DEEPSEEK_API_KEY", "MISTRAL_API_KEY", "XAI_API_KEY",
+        "DASHSCOPE_API_KEY", "COHERE_API_KEY", "PERPLEXITY_API_KEY",
+        "GROQ_API_KEY", "TOGETHERAI_API_KEY", "PRAXIA_LOCAL_MODEL",
+    ):
+        monkeypatch.delenv(v, raising=False)
+
+    # 1) Pure local fallback when nothing is set.
+    assert LLM.auto_detect() == "qwen-local"
+
+    # 2) DeepSeek beats Qwen / Cohere / Perplexity / Grok when only its key is set.
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "x")
+    assert LLM.auto_detect() == "deepseek"
+    monkeypatch.delenv("DEEPSEEK_API_KEY")
+
+    # 3) Mistral wins among the Tier-2 group.
+    monkeypatch.setenv("MISTRAL_API_KEY", "x")
+    assert LLM.auto_detect() == "mistral"
+    monkeypatch.delenv("MISTRAL_API_KEY")
+
+    # 4) Grok next.
+    monkeypatch.setenv("XAI_API_KEY", "x")
+    assert LLM.auto_detect() == "grok"
+    monkeypatch.delenv("XAI_API_KEY")
+
+    # 5) Groq → Llama alias.
+    monkeypatch.setenv("GROQ_API_KEY", "x")
+    assert LLM.auto_detect() == "llama"
+    monkeypatch.delenv("GROQ_API_KEY")
+
+    # 6) Anthropic still wins overall when also set.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "y")
+    assert LLM.auto_detect() == "claude"
+
+
+def test_supported_providers_list_grew() -> None:
+    """list_supported_providers() should advertise the new Tier-2/3 vendors."""
+    from praxia.core.llm import LLM
+
+    providers = set(LLM.list_supported_providers())
+    for required in ("deepseek", "xai", "perplexity", "groq", "mistral", "cohere"):
+        assert required in providers, f"missing provider in list: {required}"
+
+
 def test_authmanager_has_policies_and_exports() -> None:
     """AuthManager exposes policies + exports as composed sub-services."""
     from praxia.auth import AuthManager

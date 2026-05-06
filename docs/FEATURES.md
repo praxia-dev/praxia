@@ -380,13 +380,37 @@ overhead). When it picks several, fan-out + RRF runs automatically.
 | Anthropic | `claude` / `claude-sonnet` / `claude-haiku` | `ANTHROPIC_API_KEY` | Reasoning, long-form |
 | OpenAI | `chatgpt` / `gpt-4o` / `o1` | `OPENAI_API_KEY` | Tool use, breadth |
 | Google | `gemini` / `gemini-flash` | `GEMINI_API_KEY` | Long-context, multimodal |
+| Google Gemma (open) | `gemma` / `gemma-2b` / `gemma-9b` / `gemma-27b` · `gemma-cloud` | (Ollama) / Vertex auth | Open weights, edge to 27B |
 | Alibaba | `qwen` / `qwen-72b` | `DASHSCOPE_API_KEY` | Cost / Chinese-language |
-| Ollama (local) | `qwen-local` | (none) | On-prem, no data leaves |
+| **DeepSeek** | `deepseek` (v3) / `deepseek-reasoner` (R1) | `DEEPSEEK_API_KEY` | Frontier quality at ~1/10 cost; R1 for chain-of-thought |
+| **Mistral** | `mistral` / `mistral-small` / `codestral` | `MISTRAL_API_KEY` | EU compliance angle; coding (codestral) |
+| **xAI Grok** | `grok` | `XAI_API_KEY` | Recent events / X integrations |
+| **Cohere** | `command-r` (Command R+) | `COHERE_API_KEY` | Enterprise RAG, multilingual |
+| **Perplexity Sonar** | `perplexity` | `PERPLEXITY_API_KEY` | Built-in web search — alternative to a search-tool agent |
+| **Llama (Groq, fast)** | `llama` (3.3 70B Versatile) | `GROQ_API_KEY` | Hundreds of tokens/sec on OSS weights |
+| Llama (local) | `llama-local` (3.3 70B via Ollama) | (none) | On-prem, no data leaves |
+| **Microsoft Phi** (local) | `phi` (3.5 3.8B via Ollama) | (none) | Edge / small footprint |
+| Qwen (local) | `qwen-local` | (none) | On-prem, no data leaves |
 | 100+ others | `<provider>/<model>` | varies | LiteLLM-supported |
 
 Praxia auto-detects which provider to use at startup based on which
-environment variable is set; explicit selection via `--model` or `LLM(...)`
-also works.
+environment variable is set. Detection priority order:
+
+1. `ANTHROPIC_API_KEY` → `claude`
+2. `OPENAI_API_KEY` → `chatgpt`
+3. `GEMINI_API_KEY` → `gemini`
+4. `DEEPSEEK_API_KEY` → `deepseek`
+5. `MISTRAL_API_KEY` → `mistral`
+6. `XAI_API_KEY` → `grok`
+7. `DASHSCOPE_API_KEY` → `qwen`
+8. `COHERE_API_KEY` → `command-r`
+9. `PERPLEXITY_API_KEY` → `perplexity`
+10. `GROQ_API_KEY` / `TOGETHERAI_API_KEY` → `llama`
+11. Local Ollama fallback (`PRAXIA_LOCAL_MODEL` env var picks the alias —
+    default `qwen-local`; `gemma`, `llama-local`, `phi` are also valid).
+
+Explicit selection via `--model` (CLI) or `LLM("alias")` / `LLM("provider/model")`
+(SDK) always overrides auto-detect.
 
 ---
 

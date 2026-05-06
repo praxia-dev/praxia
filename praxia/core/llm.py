@@ -5,19 +5,29 @@ chat completion API for every major provider. The model string follows the
 LiteLLM convention `<provider>/<model>` (or just the model name when the default
 provider is unambiguous).
 
-Supported providers (out of the box):
+Supported providers (out of the box, with friendly aliases):
 
-| Provider           | Model string examples                    | Auth env var          |
-|--------------------|------------------------------------------|-----------------------|
-| Anthropic Claude   | anthropic/claude-opus-4-7                | ANTHROPIC_API_KEY     |
-| OpenAI ChatGPT     | openai/gpt-4o, openai/o1                 | OPENAI_API_KEY        |
-| Google Gemini      | gemini/gemini-2.0-pro                    | GEMINI_API_KEY        |
-| Alibaba Qwen (API) | dashscope/qwen-max, dashscope/qwen2.5-72b| DASHSCOPE_API_KEY     |
-| Qwen (local)       | ollama/qwen2.5:72b                       | (Ollama on localhost) |
-| OpenRouter         | openrouter/anthropic/claude-3.5-sonnet   | OPENROUTER_API_KEY    |
+| Provider              | Model string examples                       | Auth env var          |
+|-----------------------|---------------------------------------------|-----------------------|
+| Anthropic Claude      | anthropic/claude-opus-4-7                   | ANTHROPIC_API_KEY     |
+| OpenAI ChatGPT        | openai/gpt-4o, openai/o1                    | OPENAI_API_KEY        |
+| Google Gemini         | gemini/gemini-2.0-pro                       | GEMINI_API_KEY        |
+| Google Gemma (open)   | ollama/gemma2:9b, vertex_ai/google/gemma-2  | (Ollama / Vertex)     |
+| Alibaba Qwen (API)    | dashscope/qwen-max                          | DASHSCOPE_API_KEY     |
+| Qwen (local)          | ollama/qwen2.5:14b                          | (Ollama on localhost) |
+| DeepSeek              | deepseek/deepseek-chat, deepseek-reasoner   | DEEPSEEK_API_KEY      |
+| Mistral               | mistral/mistral-large-latest, codestral     | MISTRAL_API_KEY       |
+| xAI Grok              | xai/grok-2-latest                           | XAI_API_KEY           |
+| Llama (Groq fast)     | groq/llama-3.3-70b-versatile                | GROQ_API_KEY          |
+| Llama (local Ollama)  | ollama/llama3.3:70b                         | (Ollama on localhost) |
+| Cohere Command R+     | cohere/command-r-plus                       | COHERE_API_KEY        |
+| Perplexity Sonar      | perplexity/llama-3.1-sonar-large-128k-online| PERPLEXITY_API_KEY    |
+| Microsoft Phi (local) | ollama/phi3.5:3.8b                          | (Ollama on localhost) |
+| OpenRouter            | openrouter/anthropic/claude-3.5-sonnet      | OPENROUTER_API_KEY    |
 
 Any other LiteLLM-supported provider works automatically — just pass the
-appropriate model string.
+appropriate model string. The aliases above are convenience shortcuts; the
+underlying call goes through LiteLLM in every case.
 """
 from __future__ import annotations
 
@@ -58,6 +68,24 @@ DEFAULT_ALIASES: dict[str, str] = {
     "gemma-9b": "ollama/gemma2:9b",        # alias for 9B
     "gemma-27b": "ollama/gemma2:27b",      # local 27B (largest open weight)
     "gemma-cloud": "vertex_ai/google/gemma-2-27b-it",  # via Google Vertex AI
+    # DeepSeek — Chinese SOTA, very low cost. v3 = chat, R1 = reasoning.
+    "deepseek": "deepseek/deepseek-chat",
+    "deepseek-reasoner": "deepseek/deepseek-reasoner",
+    # Mistral — French OSS-leaning. Large for general, small for cheap, codestral for code.
+    "mistral": "mistral/mistral-large-latest",
+    "mistral-small": "mistral/mistral-small-latest",
+    "codestral": "mistral/codestral-latest",
+    # xAI Grok
+    "grok": "xai/grok-2-latest",
+    # Llama — fastest path is Groq (cloud) or Ollama (local).
+    "llama": "groq/llama-3.3-70b-versatile",
+    "llama-local": "ollama/llama3.3:70b",
+    # Cohere — Command R+ shines on retrieval-augmented enterprise use.
+    "command-r": "cohere/command-r-plus",
+    # Perplexity — Sonar models do web search internally; useful for research-style agents.
+    "perplexity": "perplexity/llama-3.1-sonar-large-128k-online",
+    # Microsoft Phi — small / efficient, the "edge" companion to Gemma.
+    "phi": "ollama/phi3.5:3.8b",
 }
 
 
@@ -199,28 +227,53 @@ class LLM:
             "openai",
             "gemini",
             "dashscope",  # Alibaba Cloud Qwen API
-            "ollama",  # local Qwen / Llama / Mistral
+            "ollama",  # local Qwen / Llama / Mistral / Phi / Gemma
             "openrouter",
             "azure",
             "bedrock",
             "vertex_ai",
-            "groq",
-            "mistral",
-            "cohere",
+            "groq",       # fast Llama / Mixtral inference
+            "mistral",    # Mistral cloud API (mistral-large, codestral)
+            "cohere",     # Command R+ for enterprise RAG
+            "deepseek",   # DeepSeek v3 / R1
+            "xai",        # Grok
+            "perplexity", # Sonar (web-search-augmented)
+            "together_ai",
         ]
 
     @staticmethod
     def auto_detect() -> str:
-        """Pick a sensible default based on which API keys are present."""
+        """Pick a sensible default based on which API keys are present.
+
+        Priority order favors quality + ubiquity. Override with
+        ``PRAXIA_LOCAL_MODEL=<alias>`` to force a specific local fallback.
+        """
+        # Tier 1: frontier proprietary
         if os.getenv("ANTHROPIC_API_KEY"):
             return "claude"
         if os.getenv("OPENAI_API_KEY"):
             return "chatgpt"
         if os.getenv("GEMINI_API_KEY"):
             return "gemini"
+        # Tier 2: strong proprietary / OSS-friendly cloud APIs
+        if os.getenv("DEEPSEEK_API_KEY"):
+            return "deepseek"
+        if os.getenv("MISTRAL_API_KEY"):
+            return "mistral"
+        if os.getenv("XAI_API_KEY"):
+            return "grok"
         if os.getenv("DASHSCOPE_API_KEY"):
             return "qwen"
-        # Last resort: pick a local Ollama model. PRAXIA_LOCAL_MODEL lets the
-        # operator opt into Gemma instead of the default Qwen.
+        if os.getenv("COHERE_API_KEY"):
+            return "command-r"
+        if os.getenv("PERPLEXITY_API_KEY"):
+            return "perplexity"
+        # Tier 3: fast inference of OSS weights
+        if os.getenv("GROQ_API_KEY"):
+            return "llama"
+        if os.getenv("TOGETHERAI_API_KEY"):
+            return "llama"
+        # Tier 4: local Ollama. PRAXIA_LOCAL_MODEL lets the operator opt
+        # into Gemma / Phi / Llama instead of the default Qwen.
         local = os.getenv("PRAXIA_LOCAL_MODEL", "qwen-local")
         return local if local in DEFAULT_ALIASES else "qwen-local"
