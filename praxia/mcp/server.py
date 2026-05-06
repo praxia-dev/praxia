@@ -98,6 +98,27 @@ def build_tools(*, llm: Any = None) -> list[MCPTool]:
             handler=_search_memory,
         ),
         MCPTool(
+            name="autonomous_agent",
+            description=(
+                "Run a Claude-Code-style autonomous agent that can search "
+                "personal/org memory, run skills, and pull from connectors "
+                "on its own. Use this for open-ended tasks where you don't "
+                "want to orchestrate individual tools."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string"},
+                    "task": {"type": "string", "description": "task / question for the agent"},
+                    "role": {"type": "string", "default": "member"},
+                    "org_id": {"type": "string", "default": "default-org"},
+                    "max_steps": {"type": "integer", "default": 10},
+                },
+                "required": ["user_id", "task"],
+            },
+            handler=lambda args, _llm=llm: _run_autonomous_agent(args, _llm),
+        ),
+        MCPTool(
             name="export_as",
             description="Render Markdown content to html/pptx/docx/json.",
             input_schema={
@@ -126,6 +147,27 @@ def _search_memory(args: dict[str, Any]) -> str:
     pm = PersonalMemory(user_id=args["user_id"])
     hits = pm.search(args["query"], limit=int(args.get("limit", 5)))
     return "\n---\n".join(hits) if hits else "(no relevant memories)"
+
+
+def _run_autonomous_agent(args: dict[str, Any], llm: Any) -> str:
+    """Invoke the AutonomousAgent and return its final answer.
+
+    Surfacing it as a single MCP tool lets a remote client (Claude Desktop,
+    Cursor) delegate an entire investigation rather than orchestrating the
+    individual memory/skill/connector tools by hand.
+    """
+    from praxia.agent import AutonomousAgent
+    from praxia.core.llm import LLM
+
+    agent = AutonomousAgent(
+        user_id=args["user_id"],
+        role=args.get("role", "member"),
+        org_id=args.get("org_id", "default-org"),
+        llm=llm or LLM(),
+        max_steps=int(args.get("max_steps", 10)),
+    )
+    result = agent.run(args["task"])
+    return result.final_text
 
 
 def _export_as(args: dict[str, Any]) -> str:

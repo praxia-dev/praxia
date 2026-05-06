@@ -11,7 +11,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
-[![Tests: 429](https://img.shields.io/badge/tests-429%20passing-green.svg)]()
+[![Tests: 428](https://img.shields.io/badge/tests-428%20passing-green.svg)]()
 [![Connectors: 20](https://img.shields.io/badge/connectors-20-blueviolet.svg)]()
 [![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
 [![MCP: stdio + HTTP/SSE](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP%2FSSE-orange.svg)]()
@@ -124,6 +124,33 @@ For details, see [docs/architecture.md](docs/architecture.md).
 ---
 
 ## ✨ What's Bundled
+
+### Autonomous agent (Claude-Code-style tool-use loop)
+
+`praxia.agent.AutonomousAgent` runs an LLM-driven tool-use loop over the
+full Praxia stack — personal/org memory, skills, frozen layer, connectors —
+with ACL checks and audit logging built in. The LLM picks tools on its own
+until it has the information it needs, mirroring how Claude Code drives its
+own tool use.
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
+result = agent.run("Tell me what we know about Acme and draft a proposal.")
+print(result.final_text)
+```
+
+```bash
+praxia agent run "Acme との今四半期の営業状況を整理して提案書ドラフトを作成して"
+praxia agent tools     # list the 11 built-in tools
+```
+
+The agent is also exposed as a single MCP meta-tool (`autonomous_agent`) so
+remote clients (Claude Desktop, Cursor) can delegate an entire investigation
+without orchestrating individual tools by hand. See
+[FEATURES § 38](docs/FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop).
 
 ### 3 Specialized Multi-Agent Flows
 

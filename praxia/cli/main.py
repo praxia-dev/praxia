@@ -663,6 +663,11 @@ from praxia.cli.commands.connector import connector_app
 app.add_typer(connector_app, name="connector")
 
 
+# --- Autonomous agent (Claude-Code-style tool-use loop) ------------------
+from praxia.cli.commands.agent import agent_app
+app.add_typer(agent_app, name="agent")
+
+
 # --- Admin: resource access policies (ACL) -----------------------------
 
 policy_app = typer.Typer(help="Resource access policies (admin / IS dept use)")

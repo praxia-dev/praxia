@@ -2501,6 +2501,33 @@ pytest tests/llm_eval \
 | Outcome | episode に紐付く成果 (success / score) |
 | Block | 共有メモリの単位 (label + value + read_only) |
 | Frozen layer | Markdown + git で凍結された安定版知識 |
+| AutonomousAgent | LLM 駆動のツール使用ループを回す自律エージェント (`praxia.agent`) |
+
+---
+
+## AutonomousAgent (自律エージェント)
+
+`praxia.agent.AutonomousAgent` は ClaudeCode 同様の **LLM 駆動ツール使用ループ**
+を Praxia の各レイヤ上で実行する。利用者がツールを明示的に呼び出さなくても、
+LLM が自発的に「個人メモリ検索 → 組織メモリ検索 → 凍結層検索 → スキル一覧 →
+スキル実行 → コネクタ pull → 最終回答」の流れを判断して進行する。
+
+組込みツールは 11 種類:
+`search_personal_memory` / `search_org_memory` / `search_frozen_layer` /
+`list_skills` / `list_personal_skills` / `list_org_skills` / `run_skill` /
+`list_connectors` / `pull_from_connector` / `record_fact` / `final_answer`。
+
+ガバナンス:
+
+- 全ツール呼び出しを `auth.audit.record(...)` で監査ログに記録
+- `pull_from_connector` は `auth.policies.require(...)` で ACL チェック
+  → 拒否時は `{"ok": false, "error": "access denied"}` を LLM に返す
+  (例外を投げずにループは継続するが保護リソースは保護される)
+- `record_fact` は `read_only` モード時に no-op (理由を LLM に通知)
+- `enable_tools=[...]` でツール露出を絞れる (`final_answer` は常に保持)
+
+CLI: `praxia agent run "<task>" --user-id alice --max-steps 10`
+MCP: 単一メタツール `autonomous_agent` として `tools/list` に露出。
 
 ---
 
@@ -2509,3 +2536,4 @@ pytest tests/llm_eval \
 | 版 | 日付 | 内容 |
 |---|---|---|
 | v1.0 | 2026-05 | 初版 |
+| v1.1 | 2026-05 | AutonomousAgent (自律エージェント) を追加 |

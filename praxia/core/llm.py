@@ -84,6 +84,7 @@ class LLMResponse:
     model: str
     usage: dict[str, int]
     raw: Any
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
 
 
 class LLM:
@@ -162,7 +163,21 @@ class LLM:
             "output_tokens": getattr(result.usage, "completion_tokens", 0) or 0,
             "total_tokens": getattr(result.usage, "total_tokens", 0) or 0,
         }
-        return LLMResponse(text=text, model=self.model, usage=usage, raw=result)
+        tool_calls: list[dict[str, Any]] = []
+        for tc in getattr(choice, "tool_calls", None) or []:
+            fn = getattr(tc, "function", None)
+            tool_calls.append({
+                "id": getattr(tc, "id", None) or "",
+                "name": getattr(fn, "name", "") if fn else "",
+                "arguments": getattr(fn, "arguments", "") if fn else "",
+            })
+        return LLMResponse(
+            text=text,
+            model=self.model,
+            usage=usage,
+            raw=result,
+            tool_calls=tool_calls,
+        )
 
     async def acomplete(
         self,

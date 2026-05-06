@@ -49,6 +49,7 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 35. [A/B experiments framework](#35-ab-experiments-framework-praxiaexperiments)
 36. [LLM output quality evaluation](#36-llm-output-quality-evaluation-testsllm_eval)
 37. [Legal templates](#37-legal-templates)
+38. [Autonomous agent (Claude-Code-style tool-use loop)](#38-autonomous-agent-claude-code-style-tool-use-loop)
 
 ---
 
@@ -56,6 +57,7 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 
 | Capability | Status | Description |
 |---|---|---|
+| Autonomous agent (Claude-Code-style) | ✅ | LLM-driven tool-use loop over personal/org memory + skills + connectors — see [§ 38](#38-autonomous-agent-claude-code-style-tool-use-loop) |
 | Multi-agent orchestration | ✅ | Declarative `Flow` of `FlowStep`s with `${var}` template substitution |
 | Workflow-specialized templates | ✅ | 3 production-ready flows + community-contributable recipes |
 | Auto-extracting personal memory | ✅ | Layer 1; no explicit `save()` calls in business code |
@@ -1369,3 +1371,79 @@ to all four; the landing footer has a `Legal` column.
 
 Refer to [docs/legal/README.md](legal/README.md) for the document
 inventory and "when you need each" matrix.
+
+---
+
+## 38. Autonomous agent (Claude-Code-style tool-use loop)
+
+`praxia.agent.AutonomousAgent` is a Claude-Code-style autonomous agent: it
+runs an LLM-driven tool-use loop over the full Praxia stack instead of being
+hand-orchestrated. The LLM picks tools on its own — searches personal/org
+memory, lists/runs skills, pulls from external connectors — until it has the
+information it needs and emits a final answer.
+
+### Built-in tools
+
+| Tool | Layer | Purpose |
+|---|---|---|
+| `search_personal_memory` | 1 | Search the user's auto-extracted memory (Mem0 / Letta / JSON / ...). |
+| `search_org_memory` | 3 | Search promoted org-shared blocks. |
+| `search_frozen_layer` | 4 | Substring-match the version-controlled `.praxia/frozen/**.md`. |
+| `list_skills` | — | List in-process business skills (with optional `domain=` filter). |
+| `list_personal_skills` | 6 | List skills the user has personally registered. |
+| `list_org_skills` | 6 | Effective skill catalog (org + distributed + personal). |
+| `run_skill` | 6 | Invoke a skill by name with a free-text input. |
+| `list_connectors` | — | List built-in / entry-point connectors. |
+| `pull_from_connector` | — | ACL-checked + audited pull from any connector. |
+| `record_fact` | 1 | Record a durable fact (no-op in `read_only` memory mode). |
+| `final_answer` | — | Sentinel that terminates the loop. |
+
+### Governance
+
+- **Every tool call is audited** via `auth.audit.record(...)` so admins can
+  reconstruct exactly what the agent looked at.
+- **Connector access goes through `auth.policies.require(...)`** — denials
+  return `{"ok": false, "error": "access denied"}` to the LLM rather than
+  raising, so the loop continues but the protected resource stays protected.
+- **`record_fact` honors `read_only` mode** — when admin policy locks
+  memory accumulation, the tool is a no-op and the agent is told why.
+- **Tool whitelist:** `enable_tools=[...]` restricts which tools the LLM
+  can see (`final_answer` is always kept, otherwise the loop never
+  terminates).
+
+### CLI
+
+```bash
+# Run an autonomous task
+praxia agent run "Acme との今四半期の営業状況を整理して提案書ドラフトを作成して" \
+    --user-id alice --role member --org-id acme --max-steps 10
+
+# List the built-in tools
+praxia agent tools
+```
+
+### Python
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(
+    user_id="alice",
+    role="member",
+    org_id="acme",
+    llm=LLM("claude"),
+    max_steps=10,
+)
+result = agent.run("Tell me what we know about Acme and draft a proposal.")
+print(result.final_text)
+for tc in result.tool_calls:
+    print(f"- {tc.name}({tc.arguments_text[:60]}) -> ok={tc.ok}")
+```
+
+### MCP integration
+
+The agent is also exposed as a single MCP meta-tool named `autonomous_agent`
+so remote clients (Claude Desktop, Cursor, etc.) can delegate an entire
+investigation rather than orchestrating individual memory/skill/connector
+tools by hand. See `praxia.mcp.server.build_tools` for the schema.
