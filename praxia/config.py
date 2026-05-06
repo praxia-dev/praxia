@@ -76,18 +76,39 @@ from typing import Any
 # Canonical list of keys Praxia knows about, with category + secret-flag
 KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     # category, is_secret
+
+    # LLM providers (auto-detected by LLM.auto_detect in this priority)
     "ANTHROPIC_API_KEY":              ("LLM", True),
     "OPENAI_API_KEY":                 ("LLM", True),
     "GEMINI_API_KEY":                 ("LLM", True),
+    "DEEPSEEK_API_KEY":               ("LLM", True),
+    "MISTRAL_API_KEY":                ("LLM", True),
+    "XAI_API_KEY":                    ("LLM", True),
     "DASHSCOPE_API_KEY":              ("LLM", True),
-    "OLLAMA_API_BASE":                ("LLM", False),
+    "COHERE_API_KEY":                 ("LLM", True),
+    "PERPLEXITY_API_KEY":             ("LLM", True),
+    "GROQ_API_KEY":                   ("LLM", True),
+    "TOGETHERAI_API_KEY":             ("LLM", True),
     "OPENROUTER_API_KEY":             ("LLM", True),
+    "OLLAMA_API_BASE":                ("LLM", False),
+    "PRAXIA_LOCAL_MODEL":             ("LLM", False),
 
+    # Identity (for the agent / multi-tenant scenarios)
+    "PRAXIA_USER_ID":                 ("Identity", False),
+
+    # Memory
     "PRAXIA_MEMORY_BACKEND":          ("Memory", False),
+    "PRAXIA_MEMORY_MODE":             ("Memory", False),
 
+    # Auth (JWT / token encryption)
     "PRAXIA_JWT_SECRET":              ("Auth", True),
     "PRAXIA_TOKEN_ENC_KEY":           ("Auth", True),
 
+    # SCIM
+    "PRAXIA_SCIM_TOKEN":              ("SCIM", True),
+    "PRAXIA_SCIM_DEFAULT_ROLE":       ("SCIM", False),
+
+    # SSO (OIDC)
     "PRAXIA_SSO_PROVIDER":            ("SSO", False),
     "PRAXIA_SSO_CLIENT_ID":           ("SSO", False),
     "PRAXIA_SSO_CLIENT_SECRET":       ("SSO", True),
@@ -97,6 +118,18 @@ KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     "PRAXIA_SSO_KEYCLOAK_BASE_URL":   ("SSO", False),
     "PRAXIA_SSO_KEYCLOAK_REALM":      ("SSO", False),
     "PRAXIA_SSO_ISSUER_URL":          ("SSO", False),
+
+    # KMS — wraps DEKs that envelope-encrypt OAuth tokens at rest
+    "PRAXIA_KMS_ADAPTER":             ("KMS", False),
+    "PRAXIA_KMS_KEY_ID":              ("KMS", False),
+    "AWS_REGION":                     ("KMS", False),
+    "VAULT_ADDR":                     ("KMS", False),
+    "VAULT_TOKEN":                    ("KMS", True),
+    "VAULT_TRANSIT_KEY":              ("KMS", False),
+
+    # OAuth — server-side surface
+    "PRAXIA_PUBLIC_URL":              ("OAuth (server)", False),
+    "PRAXIA_OAUTH_SUCCESS_REDIRECT":  ("OAuth (server)", False),
 
     # OAuth — one pair per provider
     "PRAXIA_OAUTH_BOX_CLIENT_ID":             ("OAuth (Box)", False),
@@ -109,6 +142,13 @@ KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     "PRAXIA_OAUTH_GOOGLE_CLIENT_SECRET":      ("OAuth (Google)", True),
     "PRAXIA_OAUTH_SALESFORCE_CLIENT_ID":      ("OAuth (Salesforce)", False),
     "PRAXIA_OAUTH_SALESFORCE_CLIENT_SECRET":  ("OAuth (Salesforce)", True),
+    # Per-tenant URL placeholders — required by some providers (e.g. Zendesk subdomain)
+    "PRAXIA_OAUTH_ZENDESK_CLIENT_ID":         ("OAuth (Zendesk)", False),
+    "PRAXIA_OAUTH_ZENDESK_CLIENT_SECRET":     ("OAuth (Zendesk)", True),
+    "PRAXIA_OAUTH_ZENDESK_SUBDOMAIN":         ("OAuth (Zendesk)", False),
+
+    # MCP HTTP transport
+    "PRAXIA_MCP_TOKEN":               ("MCP", True),
 
     # Audio (optional, separate from LLM)
     "ELEVENLABS_API_KEY":             ("Audio", True),

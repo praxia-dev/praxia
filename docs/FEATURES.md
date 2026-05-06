@@ -72,7 +72,7 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 | Multi-LLM provider | ✅ | Claude / ChatGPT / Gemini / Qwen-API / Qwen-local + 100+ via LiteLLM |
 | Built-in evaluation | ✅ | Hallucination check + retrieval metrics |
 | Auth + RBAC + audit | ✅ | API key + JWT + 4 roles + append-only audit log |
-| SSO (OIDC + SAML skeleton) | ✅ | Google / Microsoft / Okta / GitHub / Keycloak / custom |
+| SSO (OIDC) | ✅ | Google / Microsoft / Okta / GitHub / Keycloak / custom |
 | Resource access policies (ACL) | ✅ | Glob-pattern allow/deny rules per resource type, principal, action — built for IS depts |
 | Admin user CRUD | ✅ | Create / read / update / delete / deactivate / rotate keys |
 | Admin data exports | ✅ | CSV / JSON / JSONL exports of audit, users, usage, memory, policies |
@@ -530,8 +530,10 @@ sso = OIDCProvider(SSOConfig(
 ))
 ```
 
-SAML is supported via skeleton (`SAMLProvider`); production deployments
-should swap in `python3-saml`.
+SAML 2.0 is **not** shipped here. If you need SAML, integrate
+`python3-saml` directly inside your own redirect handler — Praxia's
+`AuthManager.upsert_sso_user(...)` accepts the resulting `SSOUserInfo`
+without caring how you obtained it.
 
 ### Audit log
 
@@ -775,7 +777,8 @@ ROI remains > 10×.
 | 2 | Sleep-time consolidator + statistical promotion | ✅ Done | ✅ |
 | 3 | Shared blocks + Markdown freeze workflow | ✅ Done | ✅ |
 | 4 | Skill registry promotion (personal → org) | ✅ Done | ✅ |
-| 5 | Auth + RBAC + audit + SSO (OIDC + SAML skeleton) | ✅ Done | ✅ |
+| 5 | Auth + RBAC + audit + SSO (OIDC) | ✅ Done | ✅ |
+
 | 6 | Multi-tenant SaaS, advanced GUI | 🚧 Planned | 💼 Commercial |
 | 7 | Vertical SaaS editions (Sales / Legal / Patent / R&D) | 🚧 Planned | 💼 Commercial |
 | 8 | Mobile apps, voice integration | 📋 Future | TBD |

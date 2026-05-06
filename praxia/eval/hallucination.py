@@ -17,9 +17,17 @@ class HallucinationCheck:
     grounded_sentences: list[str]
     ungrounded_sentences: list[str]
     hallucination_rate: float
+    # Set when the underlying judge LLM returned a malformed (non-JSON) response.
+    # In that case the verdict is **inconclusive** — `hallucination_rate` is set
+    # to `nan` so callers must explicitly handle the unknown case rather than
+    # treating an unparseable answer as "all clean".
+    judge_failed: bool = False
+    judge_failure_reason: str = ""
 
     @property
     def is_clean(self) -> bool:
+        if self.judge_failed:
+            return False
         return self.hallucination_rate == 0.0
 
 
@@ -51,12 +59,19 @@ def check_hallucination(answer: str, chunks: list[str], llm: LLM | None = None) 
     response = llm.complete([{"role": "user", "content": prompt}], response_format="json")
     try:
         data = json.loads(response.text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        # Surface the failure rather than silently report "all grounded".
+        # `hallucination_rate=nan` forces callers to branch on `judge_failed`.
         return HallucinationCheck(
             answer=answer,
-            grounded_sentences=sentences,
-            ungrounded_sentences=[],
-            hallucination_rate=0.0,
+            grounded_sentences=[],
+            ungrounded_sentences=sentences,
+            hallucination_rate=float("nan"),
+            judge_failed=True,
+            judge_failure_reason=(
+                f"judge LLM returned non-JSON ({type(exc).__name__}: {exc}). "
+                f"first 200 chars: {response.text[:200]!r}"
+            ),
         )
 
     grounded: list[str] = []

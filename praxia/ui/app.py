@@ -174,11 +174,21 @@ with tab_run:
         flow_cls = LogicCheckerFlow
     else:  # rag-optimizer
         flow_inputs["question"] = st.text_input("質問")
+        # Use the user's PersonalMemory as the retriever — no stub.
+        # This grounds answers in whatever the user has previously recorded
+        # (auto-extracted from past flows + explicit record_fact calls).
+        # For a richer corpus, swap with a custom retriever via the SDK.
         st.info(
-            "RAG フローはリトリーバを別途設定する必要があります。"
-            "簡易デモではダミーリトリーバを使用します。"
+            "リトリーバは個人メモリ (`PersonalMemory.search`) を使用します。"
+            "他のリトリーバを使う場合は SDK から flow.run(retriever=...) で差し替えてください。"
         )
-        flow_inputs["retriever"] = lambda q: [{"id": 1, "text": f"(stub chunk for: {q})"}]
+        def _personal_memory_retriever(q: str) -> list[dict]:
+            try:
+                hits = loom.personal_memory.search(q, limit=10)
+            except Exception:
+                hits = []
+            return [{"id": i, "text": h} for i, h in enumerate(hits)]
+        flow_inputs["retriever"] = _personal_memory_retriever
         flow_cls = RAGOptimizationFlow
 
     if st.button("▶ 実行", type="primary", disabled=not any(flow_inputs.values())):

@@ -4,7 +4,7 @@ Provides:
     - User model with role-based access control (RBAC)
     - API-key + JWT authentication
     - Audit log for every memory read/write and skill invocation
-    - OIDC adapter for enterprise SSO (skeleton)
+    - OIDC adapter for enterprise SSO (Google / Microsoft / Okta / GitHub / Keycloak)
 
 Usage:
     from praxia.auth import AuthManager, Role
@@ -23,8 +23,6 @@ from praxia.auth.policies import PolicyDecision, PolicyManager, ResourcePolicy
 from praxia.auth.rbac import PERMISSIONS_BY_ROLE, Role
 from praxia.auth.sso import (
     OIDCProvider,
-    SAMLConfig,
-    SAMLProvider,
     SSOConfig,
     SSOProvider,
     SSOUserInfo,
@@ -53,8 +51,6 @@ __all__ = [
     "SSOProvider",
     "SSOUserInfo",
     "OIDCProvider",
-    "SAMLConfig",
-    "SAMLProvider",
     "google_provider",
     "microsoft_provider",
     "okta_provider",

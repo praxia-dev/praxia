@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import secrets
 import time
 import urllib.parse
@@ -63,16 +64,55 @@ class OAuthFlow:
         redirect_uri: str,
         token_store: OAuthTokenStore | None = None,
         state_store: Any = None,
+        url_params: dict[str, str] | None = None,
     ) -> None:
+        """Initialize an OAuth flow.
+
+        Args:
+            url_params: Per-tenant URL placeholders to substitute in the
+                provider's authorize_url / token_url. Required for providers
+                whose endpoints embed a tenant-specific subdomain (Zendesk,
+                certain Atlassian deployments). Example:
+                ``url_params={"subdomain": "acme"}``.
+        """
         self.provider = provider
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
         self.store = token_store or OAuthTokenStore()
-        # State cache — defaults to in-memory dict (single process).
-        # Pass a `PersistentStateStore` for multi-process / multi-host.
         self._state_store = state_store
         self._states: dict[str, OAuthState] = {}
+        self.url_params = dict(url_params or {})
+        self._validate_url_params()
+
+    def _validate_url_params(self) -> None:
+        """Eagerly fail with a clear message if a placeholder is missing.
+
+        Without this, a missing ``{subdomain}`` would silently produce a
+        literal ``https://{subdomain}.example.com/...`` URL that 404s.
+        """
+        for url_attr in ("authorize_url", "token_url"):
+            url = getattr(self.provider, url_attr, "") or ""
+            for placeholder in re.findall(r"\{([a-zA-Z_]+)\}", url):
+                if placeholder not in self.url_params:
+                    raise ValueError(
+                        f"OAuth provider {self.provider.name!r} requires "
+                        f"`url_params={{'{placeholder}': '...'}}` because "
+                        f"its {url_attr} contains '{{{placeholder}}}' "
+                        f"(e.g. {url!r})."
+                    )
+
+    def _resolve(self, url: str) -> str:
+        """Apply url_params substitution to a provider URL template."""
+        if not url or "{" not in url:
+            return url
+        try:
+            return url.format(**self.url_params)
+        except KeyError as exc:
+            raise ValueError(
+                f"OAuth url template {url!r} needs url_param {exc.args[0]!r}; "
+                f"pass it via OAuthFlow(..., url_params={{'{exc.args[0]}': '...'}})."
+            ) from exc
 
     @classmethod
     def for_provider(cls, name: str, **kwargs: Any) -> "OAuthFlow":
@@ -122,7 +162,7 @@ class OAuthFlow:
         params.update(self.provider.extra_authorize_params)
 
         url = (
-            self.provider.authorize_url
+            self._resolve(self.provider.authorize_url)
             + "?"
             + urllib.parse.urlencode(params)
         )
@@ -156,7 +196,7 @@ class OAuthFlow:
 
         body = urllib.parse.urlencode(body_params).encode()
         req = urllib.request.Request(
-            self.provider.token_url,
+            self._resolve(self.provider.token_url),
             data=body,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )

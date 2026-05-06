@@ -12,13 +12,18 @@ Exposed surface:
                     Plus utility tools: search_memory, export_as
 
 Transport modes:
-    - **stdio** (default for desktop clients)  —  `praxia mcp serve`
-    - **HTTP+SSE** (for remote clients)        —  `praxia mcp serve --http --port 9000`
+    - **stdio** (default for desktop clients)
+        Local: `praxia mcp serve` — boots the JSON-RPC stdio loop.
+    - **HTTP+SSE** (for remote clients)
+        Mounted as part of `praxia serve` (the FastAPI HTTP server) under
+        `/api/v1/mcp`. There is no separate `praxia mcp serve --http` flag —
+        run `praxia serve` and the MCP HTTP/SSE endpoints come up alongside
+        the rest of the API.
 
 Auth:
     - stdio mode runs as the local user; no auth (process boundary is enough).
-    - HTTP mode requires either an API key (X-API-Key header) or a
-      pre-shared MCP token (PRAXIA_MCP_TOKEN env).
+    - HTTP mode (under `praxia serve`) requires either an API key
+      (X-API-Key header) or a pre-shared MCP token (PRAXIA_MCP_TOKEN env).
 
 Spec: https://modelcontextprotocol.io/
 """

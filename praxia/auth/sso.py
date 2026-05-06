@@ -1,4 +1,4 @@
-"""SSO (Single Sign-On) adapter — OIDC / SAML / OAuth2.
+"""SSO (Single Sign-On) adapter — OIDC / OAuth2.
 
 Provides the connection point for enterprise identity providers:
     - Google Workspace
@@ -6,8 +6,11 @@ Provides the connection point for enterprise identity providers:
     - Okta
     - GitHub Enterprise
     - Any OIDC-compliant IdP (Keycloak, Auth0, Ping, etc.)
-    - SAML 2.0 (skeleton — production deployments should plug in
-      `python3-saml` or similar)
+
+SAML 2.0 is **not** shipped here. If you need SAML, integrate
+`python3-saml` directly inside your own redirect handler — Praxia's
+`AuthManager.upsert_sso_user(...)` accepts the resulting `SSOUserInfo`
+without caring how you obtained it.
 
 Usage:
     from praxia.auth import AuthManager
@@ -296,44 +299,6 @@ def keycloak_provider(
 
 
 # --- SAML (skeleton) ---------------------------------------------------------
-
-@dataclass
-class SAMLConfig:
-    """SAML 2.0 — production deployments should plug in `python3-saml`.
-
-    This config carries the data needed for the standard SP/IdP setup.
-    """
-
-    sp_entity_id: str
-    sp_acs_url: str  # Assertion Consumer Service URL
-    idp_entity_id: str
-    idp_sso_url: str
-    idp_x509_cert: str  # PEM-encoded
-    nameid_format: str = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
-
-
-class SAMLProvider:
-    """SAML 2.0 adapter — minimal skeleton.
-
-    Real deployments should:
-      1. Install `python3-saml`: `pip install python3-saml`
-      2. Replace this skeleton with `OneLogin_Saml2_Auth` initialization.
-    """
-
-    def __init__(self, config: SAMLConfig) -> None:
-        self.config = config
-
-    def authorization_url(self, state: str, *, nonce: str | None = None) -> str:  # pragma: no cover
-        raise NotImplementedError(
-            "SAML support requires `python3-saml`. "
-            "Install: pip install python3-saml — and replace this skeleton."
-        )
-
-    def exchange_code(self, code: str, *, state: str) -> SSOUserInfo:  # pragma: no cover
-        raise NotImplementedError(
-            "SAML support requires `python3-saml`. See docs/auth.md."
-        )
-
 
 # --- Provider factory --------------------------------------------------------
 

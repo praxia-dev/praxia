@@ -257,12 +257,14 @@ def scim_router(
             updated = auth.update_user(user.username, email=email)
         except Exception as e:
             raise HTTPException(400, str(e))
-        # Activation
+        # Activation flip — both directions are honored.
+        # Some IdPs (Okta, Entra) deprovision via SCIM and later reactivate
+        # the same record; silently no-op'ing reactivation broke that flow.
         if "active" in body:
-            if body["active"] and not updated.is_active:
-                # Reactivation not exposed — guard against it for now
-                pass
-            elif not body["active"] and updated.is_active:
+            target = bool(body["active"])
+            if target and not updated.is_active:
+                updated = auth.update_user(updated.username, is_active=True)
+            elif not target and updated.is_active:
                 auth.deactivate_user(updated.username)
                 updated = auth.users.get_by_username(updated.username)
         return map_praxia_user_to_scim(updated).to_dict()

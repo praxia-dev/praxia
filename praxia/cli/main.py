@@ -46,7 +46,13 @@ def init(
     user_id: str = typer.Option("default-user", help="User ID (personal memory namespace)"),
     org_id: str = typer.Option("default-org", help="Organization ID (shared memory namespace)"),
     backend: str = typer.Option(
-        "json", help="LTM backend: json|mem0|langmem|letta|zep|hindsight"
+        "json",
+        help=(
+            "LTM backend. Recommended: json (default, zero deps) or mem0 "
+            "(production). Other backends (langmem / letta / zep / hindsight) "
+            "ship as protocol stubs and require pinning their respective SDK "
+            "versions before use — see docs/FEATURES.md § 5."
+        ),
     ),
     model: str = typer.Option(
         "auto", help="LLM model: auto|claude|chatgpt|gemini|qwen|qwen-local|gemma|gemma-cloud"
@@ -174,14 +180,32 @@ def list_(
     elif target == "backends":
         table = Table(title="Memory Backends")
         table.add_column("Name", style="cyan")
+        table.add_column("Status", style="yellow")
         table.add_column("Notes")
-        table.add_row("json", "Default — zero deps, JSONL on disk")
-        table.add_row("mem0", "Mem0 OSS — entity linking + hybrid search (recommended)")
-        table.add_row("langmem", "LangChain LangMem SDK")
-        table.add_row("letta", "Letta shared blocks")
-        table.add_row("zep", "Zep / Graphiti — temporal KG (Layer 5)")
-        table.add_row("hindsight", "vectorize-io/hindsight — agent memory store")
+        table.add_row("json", "✅ stable", "Default — zero deps, JSONL on disk")
+        table.add_row("mem0", "✅ stable", "Mem0 OSS — entity linking + hybrid search (recommended for production)")
+        table.add_row(
+            "langmem", "🟡 experimental",
+            "LangChain LangMem — SDK shape unstable; pin a specific version before use",
+        )
+        table.add_row(
+            "letta", "🟡 experimental",
+            "Letta shared blocks — search is substring-only against the JSONL form",
+        )
+        table.add_row(
+            "zep", "🟡 experimental",
+            "Zep / Graphiti — errors silently swallowed; verify before relying on results",
+        )
+        table.add_row(
+            "hindsight", "🟡 experimental",
+            "vectorize-io/hindsight — speculative SDK probing; falls back to in-memory list",
+        )
         console.print(table)
+        console.print(
+            "[dim]✅ stable means tested against a real SDK. 🟡 experimental "
+            "means the wrapper exists but production users should pin versions "
+            "and verify behavior before relying on the backend.[/dim]"
+        )
         console.print(
             "[dim]Combine multiple backends with CompositeBackend (RRF fusion) "
             "or RoutedBackend (query-aware dispatch) — see "
@@ -1063,11 +1087,19 @@ app.add_typer(oauth_app, name="oauth")
 
 @oauth_app.command("start")
 def oauth_start(
-    provider: str = typer.Argument(..., help="box | microsoft | dropbox | google | salesforce"),
+    provider: str = typer.Argument(..., help="box | microsoft | dropbox | google | salesforce | zendesk | ..."),
     user_id: str = typer.Option(..., help="Praxia user_id this token belongs to"),
     redirect_uri: str = typer.Option(
         "http://localhost:8765/callback",
         help="Redirect URI registered with the provider's OAuth app",
+    ),
+    scopes: str = typer.Option(
+        "",
+        help=(
+            "Space-separated scopes to request (overrides provider defaults). "
+            "Use this for `microsoft` when you need the Teams connector — pass "
+            "e.g. 'Files.ReadWrite.All Sites.Read.All ChannelMessage.Read.All ChannelMessage.Send'."
+        ),
     ),
 ) -> None:
     """Print the authorization URL for a user to authorize a connector.
@@ -1075,6 +1107,9 @@ def oauth_start(
     Reads client credentials from
         PRAXIA_OAUTH_<PROVIDER>_CLIENT_ID
         PRAXIA_OAUTH_<PROVIDER>_CLIENT_SECRET
+
+    For providers with per-tenant URLs (e.g. Zendesk), also reads:
+        PRAXIA_OAUTH_<PROVIDER>_SUBDOMAIN
     """
     import os
     from praxia.connectors.oauth import OAuthFlow
@@ -1088,10 +1123,30 @@ def oauth_start(
         )
         raise typer.Exit(1)
 
-    flow = OAuthFlow.for_provider(
-        provider, client_id=cid, client_secret=csec, redirect_uri=redirect_uri
-    )
-    url, state = flow.authorization_url(user_id=user_id)
+    # Per-tenant URL placeholders (e.g. Zendesk subdomain).
+    # The flow's _validate_url_params() raises a clear error if any
+    # required placeholder is missing.
+    url_params: dict[str, str] = {}
+    sub = os.environ.get(f"PRAXIA_OAUTH_{provider.upper()}_SUBDOMAIN")
+    if sub:
+        url_params["subdomain"] = sub
+
+    try:
+        flow = OAuthFlow.for_provider(
+            provider,
+            client_id=cid,
+            client_secret=csec,
+            redirect_uri=redirect_uri,
+            url_params=url_params or None,
+        )
+    except ValueError as exc:
+        console.print(f"[red]✗ {exc}[/red]")
+        console.print(
+            f"[dim]Hint: set PRAXIA_OAUTH_{provider.upper()}_SUBDOMAIN=<your-subdomain>[/dim]"
+        )
+        raise typer.Exit(1)
+    requested_scopes = [s for s in scopes.split() if s] or None
+    url, state = flow.authorization_url(user_id=user_id, scopes=requested_scopes)
     console.print(
         Panel.fit(
             f"Open this URL in a browser to authorize:\n\n"
@@ -1104,30 +1159,21 @@ def oauth_start(
     )
 
 
-@oauth_app.command("callback")
-def oauth_callback(
-    provider: str = typer.Argument(...),
-    code: str = typer.Argument(..., help="The 'code' query param from the redirect"),
-    state: str = typer.Argument(..., help="The state token returned by `oauth start`"),
-    redirect_uri: str = typer.Option("http://localhost:8765/callback"),
-) -> None:
-    """Complete the OAuth flow with the code returned by the provider.
-
-    NOTE: The state must match the one shown in `oauth start`. The flow
-    object holds the state in-memory; for production deployments use a
-    web server with persistent state storage.
-    """
-    console.print(
-        "[yellow]CLI callback is intended for local dev/test only. "
-        "For production use a real HTTP redirect handler.[/yellow]"
-    )
-    console.print(
-        "Use the SDK form for production:\n"
-        "  flow = OAuthFlow.for_provider(...)\n"
-        "  url, state = flow.authorization_url(user_id=...)\n"
-        "  # ... user authorizes ...\n"
-        "  token = flow.exchange_code(code=..., state=...)"
-    )
+# NOTE: there is no `praxia oauth callback` CLI command.
+# The OAuth state lives in `OAuthFlow`, which is constructed per-process.
+# A CLI invocation that received the redirect could not see the state
+# stored by the previous `praxia oauth start` invocation, so a `callback`
+# CLI command would always fail. Use the production HTTP path instead:
+#
+#     praxia serve  →  POST /api/v1/oauth/{provider}/start
+#                   →  GET  /api/v1/oauth/{provider}/callback?code=...
+#
+# or call the SDK directly inside your own redirect handler:
+#
+#     flow = OAuthFlow.for_provider(provider, ...)
+#     url, state = flow.authorization_url(user_id=...)
+#     # ... user authorizes, IdP redirects to your handler ...
+#     token = flow.exchange_code(code=..., state=...)
 
 
 @oauth_app.command("list")
