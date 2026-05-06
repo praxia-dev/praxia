@@ -181,8 +181,45 @@
   line-height: 1.8;
 }
 
+/* Self-host snippet card */
+.form-card .kicker {
+  display: inline-block;
+  margin-bottom: 0.85rem;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+}
+.install-snippet {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.1rem;
+  font-size: 13.5px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.install-snippet .comment { color: var(--text-dim); }
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+.cta-row .btn { flex: 1 1 auto; min-width: 0; justify-content: center; }
+
+/* Tally iframe sits inside the form-card; tame default white bg flash */
+.form-signup iframe {
+  background: transparent;
+  margin-top: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
 @media (max-width: 880px) {
   .portal-main { grid-template-columns: 1fr; }
-  .portal-side { display: none; }
-  .portal-form { padding: 2.5rem 1rem; }
+  .portal-side { padding: 2rem 1.5rem; }
+  .portal-form { padding: 2rem 1rem; gap: 1.5rem; }
+  .form-card { padding: 1.75rem 1.5rem; }
+  .cta-row .btn { flex: 1 1 100%; }
 }
