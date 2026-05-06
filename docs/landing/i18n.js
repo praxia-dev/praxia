@@ -279,14 +279,14 @@
       "pt-BR": "Por que Praxia",
     },
     "features.h2": {
-      en: "37+ advantages no other framework offers in one package.",
-      ja: "1 パッケージに 37+ の独自優位性。他にないラインナップ。",
-      "zh-CN": "37+ 项独特优势,无其他框架可比。",
-      ko: "다른 프레임워크에는 없는 37+ 가지 강점.",
-      es: "37+ ventajas que ningún otro framework ofrece en un solo paquete.",
-      fr: "37+ avantages qu'aucun autre framework n'offre en un seul package.",
-      de: "37+ Vorteile, die kein anderes Framework in einem Paket bietet.",
-      "pt-BR": "37+ vantagens que nenhum outro framework oferece em um pacote.",
+      en: "38+ advantages no other framework offers in one package.",
+      ja: "1 パッケージに 38+ の独自優位性。他にないラインナップ。",
+      "zh-CN": "38+ 项独特优势,无其他框架可比。",
+      ko: "다른 프레임워크에는 없는 38+ 가지 강점.",
+      es: "38+ ventajas que ningún otro framework ofrece en un solo paquete.",
+      fr: "38+ avantages qu'aucun autre framework n'offre en un seul package.",
+      de: "38+ Vorteile, die kein anderes Framework in einem Paket bietet.",
+      "pt-BR": "38+ vantagens que nenhum outro framework oferece em um pacote.",
     },
 
     "who.kicker": {
@@ -496,7 +496,9 @@
       "pt-BR": "Preferências de cookies",
     },
 
-    // ===== Feature card titles (33 cards) ============================
+    // ===== Feature card titles (34 cards) ============================
+    "feat.autonomous_agent":     {en:"Autonomous agent (Claude-Code-style)", ja:"自律エージェント (ClaudeCode 同等)", "zh-CN":"自主代理 (Claude-Code 风格)", ko:"자율 에이전트 (Claude-Code 스타일)", es:"Agente autónomo (estilo Claude-Code)", fr:"Agent autonome (style Claude-Code)", de:"Autonomer Agent (Claude-Code-Stil)", "pt-BR":"Agente autônomo (estilo Claude-Code)"},
+    "feat.autonomous_agent.body":{en:"An LLM-driven tool-use loop over your full Praxia stack — personal memory, org memory, frozen layer, skills, connectors. The agent picks tools on its own (search → run skill → pull connector → answer) with ACL gates and audit logging. Ships as <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code>, and an MCP meta-tool for remote clients.", ja:"Praxia スタック全体 (個人メモリ・組織メモリ・凍結層・スキル・コネクタ) を LLM 駆動のツール使用ループで自律的に活用。検索 → スキル実行 → コネクタ pull → 回答 の流れをエージェントが自分で判断し、ACL チェックと監査ログを伴って実行。<code>praxia.agent.AutonomousAgent</code> / <code>praxia agent run</code> / MCP メタツールで提供。", "zh-CN":"基于 LLM 的工具使用循环,贯穿整个 Praxia 栈 — 个人记忆、组织记忆、冻结层、技能、连接器。代理自主选择工具(搜索 → 执行技能 → 拉取连接器 → 回答),具有 ACL 检查和审计日志。提供 <code>praxia.agent.AutonomousAgent</code>、<code>praxia agent run</code> 及 MCP 元工具。", ko:"Praxia 스택 전체 (개인 메모리·조직 메모리·동결 레이어·스킬·커넥터) 위에서 LLM 주도 도구 사용 루프. 에이전트가 도구를 직접 선택 (검색 → 스킬 실행 → 커넥터 pull → 답변), ACL 게이트와 감사 로그 포함. <code>praxia.agent.AutonomousAgent</code> / <code>praxia agent run</code> / MCP 메타도구로 제공.", es:"Bucle de uso de herramientas guiado por LLM sobre toda la pila Praxia — memoria personal, memoria org, capa congelada, habilidades, conectores. El agente elige herramientas por su cuenta (buscar → ejecutar habilidad → extraer conector → responder) con ACL y auditoría. Disponible como <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code> y meta-herramienta MCP.", fr:"Boucle d'utilisation d'outils pilotée par LLM sur toute la pile Praxia — mémoire personnelle, mémoire org, couche figée, compétences, connecteurs. L'agent choisit ses outils (rechercher → exécuter une compétence → tirer un connecteur → répondre) avec ACL et journal d'audit. Fourni en tant que <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code> et méta-outil MCP.", de:"Eine LLM-gesteuerte Tool-Use-Schleife über den gesamten Praxia-Stack — persönlicher Speicher, Org-Speicher, eingefrorene Schicht, Skills, Konnektoren. Der Agent wählt selbst Werkzeuge (Suche → Skill ausführen → Konnektor abrufen → antworten) mit ACL-Gates und Audit-Log. Bereitgestellt als <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code> und MCP-Meta-Tool.", "pt-BR":"Loop de uso de ferramentas guiado por LLM sobre toda a stack Praxia — memória pessoal, memória org, camada congelada, habilidades, conectores. O agente escolhe ferramentas sozinho (buscar → executar habilidade → puxar conector → responder) com gates de ACL e log de auditoria. Disponível como <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code> e meta-ferramenta MCP."},
     "feat.memory_loop":          {en:"Personal → org memory loop", ja:"個人 → 組織のメモリ循環", "zh-CN":"个人 → 组织 记忆循环", ko:"개인 → 조직 메모리 순환", es:"Bucle memoria personal → org", fr:"Boucle mémoire personnelle → org", de:"Persönlich → Organisations-Speicherschleife", "pt-BR":"Ciclo de memória pessoal → org"},
     "feat.promotion_engine":     {en:"3-path promotion engine", ja:"3 経路の昇格エンジン", "zh-CN":"3 路晋升引擎", ko:"3 경로 승격 엔진", es:"Motor de promoción de 3 rutas", fr:"Moteur de promotion 3 voies", de:"3-Pfad-Promotion-Engine", "pt-BR":"Motor de promoção de 3 caminhos"},
     "feat.workflow_flows":       {en:"Workflow-specialized flows", ja:"業務特化フロー", "zh-CN":"工作流特化流水线", ko:"워크플로 특화 플로", es:"Flujos especializados", fr:"Flux spécialisés", de:"Workflow-spezialisierte Flows", "pt-BR":"Fluxos especializados"},
@@ -530,7 +532,7 @@
     "feat.oauth_web":            {en:"Production OAuth callback (HTTP)", ja:"本番 OAuth コールバック (HTTP)", "zh-CN":"生产 OAuth 回调 (HTTP)", ko:"프로덕션 OAuth 콜백 (HTTP)", es:"Callback OAuth de producción (HTTP)", fr:"Callback OAuth production (HTTP)", de:"Produktions-OAuth-Callback (HTTP)", "pt-BR":"Callback OAuth de produção (HTTP)"},
     "feat.ab":                   {en:"A/B experiments built in", ja:"A/B 実験フレーム同梱", "zh-CN":"内置 A/B 实验", ko:"A/B 실험 내장", es:"Experimentos A/B integrados", fr:"Expériences A/B intégrées", de:"A/B-Experimente eingebaut", "pt-BR":"Experimentos A/B integrados"},
     "feat.llm_eval":             {en:"LLM output quality eval (CI gate)", ja:"LLM 出力品質評価 (CI ガード)", "zh-CN":"LLM 输出质量评估 (CI 门禁)", ko:"LLM 출력 품질 평가 (CI 게이트)", es:"Evaluación calidad LLM (CI)", fr:"Éval qualité LLM (CI)", de:"LLM-Qualitätsbewertung (CI)", "pt-BR":"Avaliação de qualidade LLM (CI)"},
-    "feat.tests":                {en:"429 regression tests", ja:"429 件のリグレッションテスト", "zh-CN":"429 项回归测试", ko:"429 개 회귀 테스트", es:"429 tests de regresión", fr:"429 tests de régression", de:"429 Regressionstests", "pt-BR":"429 testes de regressão"},
+    "feat.tests":                {en:"428 regression tests", ja:"428 件のリグレッションテスト", "zh-CN":"428 项回归测试", ko:"428 개 회귀 테스트", es:"428 tests de regresión", fr:"428 tests de régression", de:"428 Regressionstests", "pt-BR":"428 testes de regressão"},
     "feat.mcp_server":           {en:"MCP server (stdio + remote HTTP/SSE)", ja:"MCP サーバ (stdio + リモート HTTP/SSE)", "zh-CN":"MCP 服务器 (stdio + 远程 HTTP/SSE)", ko:"MCP 서버 (stdio + 원격 HTTP/SSE)", es:"Servidor MCP (stdio + HTTP/SSE remoto)", fr:"Serveur MCP (stdio + HTTP/SSE distant)", de:"MCP-Server (stdio + Remote HTTP/SSE)", "pt-BR":"Servidor MCP (stdio + HTTP/SSE remoto)"},
     "feat.responsive":           {en:"Mobile-responsive UI + landing", ja:"モバイル対応 UI + サイト", "zh-CN":"移动响应式 UI + 站点", ko:"모바일 반응형 UI + 사이트", es:"UI responsive móvil + sitio", fr:"UI responsive mobile + site", de:"Mobile-responsive UI + Site", "pt-BR":"UI responsiva móvel + site"},
 

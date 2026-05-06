@@ -107,7 +107,8 @@
         <span>🪐 MCP (stdio + remote HTTP/SSE)</span>
         <span>🔗 20 connectors (Box / Notion / Slack / Jira / GitHub / S3 / …)</span>
         <span>📱 Mobile-responsive</span>
-        <span>✅ 429 regression tests</span>
+        <span>🤖 Autonomous agent (Claude-Code-style)</span>
+        <span>✅ 428 regression tests</span>
       </div>
     </div>
   </header>
@@ -116,9 +117,14 @@
     <div class="container">
       <div class="section-head">
         <span class="kicker" data-i18n="features.kicker">Why Praxia</span>
-        <h2 data-i18n="features.h2">37+ advantages no other framework offers in one package.</h2>
+        <h2 data-i18n="features.h2">38+ advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
+        <article class="card">
+          <div class="card-icon">🤖</div>
+          <h3 data-i18n="feat.autonomous_agent">Autonomous agent (Claude-Code-style)</h3>
+          <p data-i18n="feat.autonomous_agent.body">An LLM-driven tool-use loop over your full Praxia stack — personal memory, org memory, frozen layer, skills, connectors. The agent picks tools on its own (search → run skill → pull connector → answer) with ACL gates and audit logging. Ships as <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code>, and an MCP meta-tool for remote clients.</p>
+        </article>
         <article class="card">
           <div class="card-icon">🧠</div>
           <h3 data-i18n="feat.memory_loop">Personal → org memory loop</h3>
@@ -286,7 +292,7 @@
         </article>
         <article class="card">
           <div class="card-icon">🧮</div>
-          <h3 data-i18n="feat.tests">429 regression tests</h3>
+          <h3 data-i18n="feat.tests">428 regression tests</h3>
           <p>Auth / memory / fusion / exporters / OAuth / parsers / CLI / extensions / experiments / connectors — every public surface has a hermetic test. CI runs on every PR. Add features without breaking existing ones.</p>
         </article>
         <article class="card">
