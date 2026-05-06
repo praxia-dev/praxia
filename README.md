@@ -16,9 +16,26 @@
 [![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
 [![MCP: stdio + HTTP/SSE](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP%2FSSE-orange.svg)]()
 
-> 🇯🇵 日本語版の各業務別記事 (Zenn): [docs/zenn/](docs/zenn/)
+> 🇯🇵 日本語版の各業務別記事 (Zenn): [zenn-publish/](zenn-publish/)
 > 🔍 Complete feature reference: [docs/FEATURES.md](docs/FEATURES.md)
 > 📊 Concrete Before/After tables: [docs/use-cases.md](docs/use-cases.md)
+
+---
+
+## 📁 Where everything goes (publishing map)
+
+This repo holds three classes of content that are published to **different
+places**. The top-level layout reflects that split:
+
+| Directory | Where it ships | Maintained as |
+|---|---|---|
+| `praxia/`, `tests/`, `docs/`, `examples/`, `pyproject.toml`, etc. | **GitHub repo** (this README is what users see) | Code + technical docs |
+| [`web-publish/`](web-publish/) | **Cloudflare Pages** (`praxia.pages.dev`) + **GitHub Pages** (`genarch.github.io/praxia`) — see [DEPLOY.md](web-publish/DEPLOY.md) | Static landing page + portal |
+| [`zenn-publish/`](zenn-publish/) | **Zenn** (zenn.dev) via `zenn-cli` | 7 long-form Japanese articles |
+
+A change to `web-publish/` only affects the landing page; a change under
+`praxia/` only affects the OSS package. Cross-cutting docs (FEATURES /
+architecture / specs) live under `docs/`.
 
 ---
 

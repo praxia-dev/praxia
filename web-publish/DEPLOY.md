@@ -7,7 +7,7 @@ We run **two mirrors** in parallel:
 | **Cloudflare Pages** | `https://praxia.pages.dev/` | **Primary / canonical** — fast worldwide (320+ POPs) |
 | **GitHub Pages** | `https://genarch.github.io/praxia/` | **Secondary / fallback** — official, integrated with the repo |
 
-Both mirrors serve the same files from `docs/landing/`. Search engines see Cloudflare as canonical (via `<link rel="canonical">`); the GitHub Pages mirror shows a banner nudging visitors to switch.
+Both mirrors serve the same files from `web-publish/`. Search engines see Cloudflare as canonical (via `<link rel="canonical">`); the GitHub Pages mirror shows a banner nudging visitors to switch.
 
 ---
 
@@ -25,7 +25,7 @@ Both mirrors serve the same files from `docs/landing/`. Search engines see Cloud
    Production branch:    main
    Framework preset:     None
    Build command:        (leave empty — pure static)
-   Build output dir:     docs/landing
+   Build output dir:     web-publish
    Root directory:       (leave empty)
    Environment vars:     (none)
    ```
@@ -76,7 +76,7 @@ After DNS propagates, update:
    ```
    Source:                 Deploy from a branch
    Branch:                 main
-   Folder:                 /docs/landing
+   Folder:                 /web-publish
    ```
 3. Wait ~1 minute. URL: `https://genarch.github.io/praxia/`
 

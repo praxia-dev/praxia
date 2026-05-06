@@ -7,7 +7,7 @@ and modern SaaS marketing sites.
 ## Layout
 
 ```
-docs/landing/
+web-publish/
 ├── index.html        — main landing page (hero / features / pricing)
 ├── styles.css        — shared theme (dark + warm-gold accent)
 ├── 404.html          — branded 404 page (used by both mirrors)
@@ -29,7 +29,7 @@ We run both **Cloudflare Pages** (primary, fast) and **GitHub Pages** (secondary
 ## Local preview
 
 ```bash
-cd docs/landing
+cd web-publish
 python -m http.server 8000
 # then open http://localhost:8000
 ```
@@ -39,7 +39,7 @@ python -m http.server 8000
 If you forked the repo to a different GitHub org, replace `genarch` in HTML/href links accordingly. A bulk find-replace works:
 
 ```bash
-find docs/landing -type f \( -name "*.html" -o -name "*.md" \) \
+find web-publish -type f \( -name "*.html" -o -name "*.md" \) \
   -exec sed -i 's|genarch|your-org|g' {} +
 ```
 
