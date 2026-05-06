@@ -7,7 +7,7 @@ technologies.
 
 ## What we use
 
-The Praxia landing page (`praxia.dev`, `praxia.pages.dev`,
+The Praxia website (`praxia.dev`, `praxia.pages.dev`,
 `genarch.github.io/praxia`) uses **minimal browser storage**:
 
 | Technology | Purpose | Required? | Retention |
