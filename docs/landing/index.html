@@ -630,7 +630,7 @@
         <div class="how-step">
           <div class="step-num">1</div>
           <h3 data-i18n="how.s1">You just work</h3>
-          <p>Run flows and skills via CLI / SDK / UI. Every interaction lands in your personal memory automatically — no <code>save()</code> calls in business code.</p>
+          <p data-i18n="how.s1.body">Run flows and skills via CLI / SDK / UI. Every interaction lands in your personal memory automatically — no <code>save()</code> calls in business code.</p>
           <pre><code>p = Praxia(user_id=<span class="str">"alice"</span>)
 p.run(SalesAgentFlow, inputs={...})
 <span class="comment"># Memory accumulates implicitly</span></code></pre>
@@ -638,7 +638,7 @@ p.run(SalesAgentFlow, inputs={...})
         <div class="how-step">
           <div class="step-num">2</div>
           <h3 data-i18n="how.s2">Outcomes get attached</h3>
-          <p>When deals close, tests pass, or PRs merge, attach an outcome. The consolidator uses these to weight which patterns are <em>actually</em> effective.</p>
+          <p data-i18n="how.s2.body">When deals close, tests pass, or PRs merge, attach an outcome. The consolidator uses these to weight which patterns are <em>actually</em> effective.</p>
           <pre><code>p.personal_memory.record_outcome(
     episode_id=ep.id,
     success=<span class="str">True</span>, score=0.9,
@@ -648,14 +648,14 @@ p.run(SalesAgentFlow, inputs={...})
         <div class="how-step">
           <div class="step-num">3</div>
           <h3 data-i18n="how.s3">Nightly distillation</h3>
-          <p>The Sleep-time Consolidator clusters similar memories across users, runs each through the 3-path engine, and auto-promotes the high-confidence ones.</p>
+          <p data-i18n="how.s3.body">The Sleep-time Consolidator clusters similar memories across users, runs each through the 3-path engine, and auto-promotes the high-confidence ones.</p>
           <pre><code>praxia consolidate
 <span class="comment"># auto_promoted: 3, review_queued: 5</span></code></pre>
         </div>
         <div class="how-step">
           <div class="step-num">4</div>
           <h3 data-i18n="how.s4">Living → frozen</h3>
-          <p>Promoted shared blocks become living org knowledge. The most stable get frozen into Markdown + git for PR review. Every step is auditable.</p>
+          <p data-i18n="how.s4.body">Promoted shared blocks become living org knowledge. The most stable get frozen into Markdown + git for PR review. Every step is auditable.</p>
           <pre><code>praxia freeze --block manufacturing_pain
 <span class="comment"># → .praxia/frozen/.../*.md</span></code></pre>
         </div>
@@ -666,26 +666,26 @@ p.run(SalesAgentFlow, inputs={...})
   <section class="section section-dark">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Architecture</span>
-        <h2>Six layers that turn one expert's drawer into everyone's playbook.</h2>
+        <span class="kicker" data-i18n="arch.kicker">Architecture</span>
+        <h2 data-i18n="arch.h2">Six layers that turn one expert's drawer into everyone's playbook.</h2>
       </div>
       <div class="arch">
         <div class="arch-row">
-          <div class="arch-cell">UI · CLI · SDK</div>
+          <div class="arch-cell" data-i18n="arch.top">UI · CLI · SDK</div>
         </div>
         <div class="arch-row">
-          <div class="arch-cell arch-orch">Orchestrator · Flows · Skills</div>
+          <div class="arch-cell arch-orch" data-i18n="arch.orch">Orchestrator · Flows · Skills</div>
         </div>
         <div class="arch-stack">
-          <div class="arch-layer"><span>Layer 1</span> Personal Memory <em>(auto-extracted)</em></div>
-          <div class="arch-layer"><span>Layer 2</span> Sleep-time Consolidation · 3 promotion paths</div>
-          <div class="arch-layer"><span>Layer 3</span> Shared Memory Blocks <em>(living)</em></div>
-          <div class="arch-layer"><span>Layer 4</span> Markdown + git frozen layer <em>(stable)</em></div>
-          <div class="arch-layer arch-optional"><span>Layer 5</span> Graph layer <em>(optional)</em></div>
-          <div class="arch-layer arch-side"><span>Layer 6</span> Skills Registry <em>(promotion-aware)</em></div>
+          <div class="arch-layer" data-i18n="arch.l1">Layer 1 — Personal Memory (auto-extracted)</div>
+          <div class="arch-layer" data-i18n="arch.l2">Layer 2 — Sleep-time Consolidation · 3 promotion paths</div>
+          <div class="arch-layer" data-i18n="arch.l3">Layer 3 — Shared Memory Blocks (living)</div>
+          <div class="arch-layer" data-i18n="arch.l4">Layer 4 — Markdown + git frozen layer (stable)</div>
+          <div class="arch-layer arch-optional" data-i18n="arch.l5">Layer 5 — Graph layer (optional)</div>
+          <div class="arch-layer arch-side" data-i18n="arch.l6">Layer 6 — Skills Registry (promotion-aware)</div>
         </div>
         <div class="arch-row">
-          <div class="arch-cell arch-auth">Auth · RBAC · Audit · SSO (OIDC / SAML)</div>
+          <div class="arch-cell arch-auth" data-i18n="arch.auth">Auth · RBAC · Audit · SSO (OIDC / SAML)</div>
         </div>
       </div>
     </div>
@@ -694,26 +694,26 @@ p.run(SalesAgentFlow, inputs={...})
   <section id="flows" class="section">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Three workflow flows</span>
-        <h2>Run a multi-agent pipeline in 30 seconds.</h2>
+        <span class="kicker" data-i18n="flows.kicker">Three workflow flows</span>
+        <h2 data-i18n="flows.h2">Run a multi-agent pipeline in 30 seconds.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
-          <h3>Sales Agent Flow</h3>
-          <p>Customer IR + past minutes + RAG → hypotheses → FAQ → proposal outline.</p>
+          <h3 data-i18n="flows.sales.title">Sales Agent Flow</h3>
+          <p data-i18n="flows.sales.body">Customer IR + past minutes + RAG → hypotheses → FAQ → proposal outline.</p>
           <pre><code>praxia run sales \
   --customer-name "Acme" \
   --product "BizFlow"</code></pre>
         </article>
         <article class="card">
-          <h3>Logic Checker Flow</h3>
-          <p>Three agents (structure / contradiction / reader) review long docs.</p>
+          <h3 data-i18n="flows.logic.title">Logic Checker Flow</h3>
+          <p data-i18n="flows.logic.body">Three agents (structure / contradiction / reader) review long docs.</p>
           <pre><code>praxia run logic \
   --document spec.md</code></pre>
         </article>
         <article class="card">
-          <h3>RAG Optimization Flow</h3>
-          <p>Self-correcting RAG: query expansion → eval → hallucination check loop.</p>
+          <h3 data-i18n="flows.rag.title">RAG Optimization Flow</h3>
+          <p data-i18n="flows.rag.body">Self-correcting RAG: query expansion → eval → hallucination check loop.</p>
           <pre><code>praxia run rag \
   --question "What license?"</code></pre>
         </article>
@@ -724,39 +724,39 @@ p.run(SalesAgentFlow, inputs={...})
   <section id="skills" class="section section-dark">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">Six default business skills</span>
-        <h2>Domain-tuned agents, ready out of the box.</h2>
+        <span class="kicker" data-i18n="skills.kicker">Six default business skills</span>
+        <h2 data-i18n="skills.h2">Domain-tuned agents, ready out of the box.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
-          <span class="domain-tag">Investment</span>
+          <span class="domain-tag" data-i18n="skills.investment.tag">Investment</span>
           <h3>InvestmentSkill</h3>
-          <p>Equity research, due diligence, portfolio decisions with bull/bear analysis.</p>
+          <p data-i18n="skills.investment.body">Equity research, due diligence, portfolio decisions with bull/bear analysis.</p>
         </article>
         <article class="card">
-          <span class="domain-tag">Sales</span>
+          <span class="domain-tag" data-i18n="skills.sales.tag">Sales</span>
           <h3>SalesSkill</h3>
-          <p>Account research, proposal drafting, FAQ prep, objection handling.</p>
+          <p data-i18n="skills.sales.body">Account research, proposal drafting, FAQ prep, objection handling.</p>
         </article>
         <article class="card">
-          <span class="domain-tag">Engineering</span>
+          <span class="domain-tag" data-i18n="skills.design.tag">Engineering</span>
           <h3>DesignSkill</h3>
-          <p>System design review, requirements engineering, architecture trade-offs.</p>
+          <p data-i18n="skills.design.body">System design review, requirements engineering, architecture trade-offs.</p>
         </article>
         <article class="card">
-          <span class="domain-tag">Procurement</span>
+          <span class="domain-tag" data-i18n="skills.purchasing.tag">Procurement</span>
           <h3>PurchasingSkill</h3>
-          <p>Supplier evaluation, RFQ analysis, TCO calculation, BCP risk scoring.</p>
+          <p data-i18n="skills.purchasing.body">Supplier evaluation, RFQ analysis, TCO calculation, BCP risk scoring.</p>
         </article>
         <article class="card">
-          <span class="domain-tag">IP / Patent</span>
+          <span class="domain-tag" data-i18n="skills.patent.tag">IP / Patent</span>
           <h3>PatentSkill</h3>
-          <p>Prior-art search, claims drafting, patent maps, filing strategy.</p>
+          <p data-i18n="skills.patent.body">Prior-art search, claims drafting, patent maps, filing strategy.</p>
         </article>
         <article class="card">
-          <span class="domain-tag">Legal</span>
+          <span class="domain-tag" data-i18n="skills.legal.tag">Legal</span>
           <h3>LegalSkill</h3>
-          <p>Contract review, compliance checks, M&A diligence, policy drafting.</p>
+          <p data-i18n="skills.legal.body">Contract review, compliance checks, M&A diligence, policy drafting.</p>
         </article>
       </div>
     </div>
@@ -1251,29 +1251,29 @@ P  = Praxia cost (license + infra)</code></pre>
         <article class="card">
           <h3 data-i18n="fit.best">Best for…</h3>
           <ul class="bullet-tight">
-            <li>Teams where senior staff's tacit knowledge needs to compound</li>
-            <li>Workflows in sales / legal / patent / design / purchasing / investment</li>
-            <li>Enterprises that need RBAC + ACL + audit out of the box</li>
-            <li>Self-hosted / on-prem deployments (LLM + memory both)</li>
+            <li data-i18n="fit.best.l1">Teams where senior staff's tacit knowledge needs to compound</li>
+            <li data-i18n="fit.best.l2">Workflows in sales / legal / patent / design / purchasing / investment</li>
+            <li data-i18n="fit.best.l3">Enterprises that need RBAC + ACL + audit out of the box</li>
+            <li data-i18n="fit.best.l4">Self-hosted / on-prem deployments (LLM + memory both)</li>
           </ul>
         </article>
         <article class="card">
           <h3 data-i18n="fit.less">Less ideal when…</h3>
           <ul class="bullet-tight">
-            <li>You need a fully generic agent graph builder — try LangGraph</li>
-            <li>You want a hosted-only knowledge platform — try a SaaS</li>
-            <li>You're building a single-shot chatbot — Praxia is overkill</li>
-            <li>Your team is a single user with no organizational learning need</li>
+            <li data-i18n="fit.less.l1">You need a fully generic agent graph builder — try LangGraph</li>
+            <li data-i18n="fit.less.l2">You want a hosted-only knowledge platform — try a SaaS</li>
+            <li data-i18n="fit.less.l3">You're building a single-shot chatbot — Praxia is overkill</li>
+            <li data-i18n="fit.less.l4">Your team is a single user with no organizational learning need</li>
           </ul>
         </article>
         <article class="card">
           <h3 data-i18n="fit.plays">Plays well with…</h3>
           <ul class="bullet-tight">
-            <li>Mem0 / LangMem / Letta / Zep / HindSight — Praxia uses them as backends, or several at once via Composite / Routed</li>
-            <li>Claude / ChatGPT / Gemini / <strong>Gemma</strong> / Qwen via LiteLLM (local Ollama or cloud)</li>
-            <li>Box / SharePoint / Dropbox / Drive / kintone / Salesforce connectors</li>
-            <li>MCP / Claude Skills / Cursor Skills (skill format compatible)</li>
-            <li>Your own frontend (Next.js / Slack / mobile) — run <code>praxia serve</code> as the HTTP backend</li>
+            <li data-i18n="fit.plays.l1">Mem0 / LangMem / Letta / Zep / HindSight — Praxia uses them as backends, or several at once via Composite / Routed</li>
+            <li data-i18n="fit.plays.l2">Claude / ChatGPT / Gemini / <strong>Gemma</strong> / Qwen via LiteLLM (local Ollama or cloud)</li>
+            <li data-i18n="fit.plays.l3">Box / SharePoint / Dropbox / Drive / kintone / Salesforce connectors</li>
+            <li data-i18n="fit.plays.l4">MCP / Claude Skills / Cursor Skills (skill format compatible)</li>
+            <li data-i18n="fit.plays.l5">Your own frontend (Next.js / Slack / mobile) — run <code>praxia serve</code> as the HTTP backend</li>
           </ul>
         </article>
       </div>
@@ -1292,80 +1292,80 @@ P  = Praxia cost (license + infra)</code></pre>
       </div>
       <div class="faq-list">
         <details>
-          <summary>Does Praxia send my data to a third party?</summary>
-          <p>No. The default <code>json</code> backend stores everything on local disk. LLM calls go to whichever provider you configure — pick <code>qwen-local</code> (Ollama) for fully in-house operation. You choose the trust boundary.</p>
+          <summary data-i18n="faq.q1">Does Praxia send my data to a third party?</summary>
+          <p data-i18n="faq.a1">No. The default <code>json</code> backend stores everything on local disk. LLM calls go to whichever provider you configure — pick <code>qwen-local</code> (Ollama) for fully in-house operation. You choose the trust boundary.</p>
         </details>
         <details>
-          <summary>How is this different from "just using Mem0"?</summary>
-          <p>Mem0 is a memory layer. Praxia is the <strong>orchestrator + memory + skill registry + flows + eval + auth</strong>. Mem0 is one of six interchangeable backends inside Praxia.</p>
+          <summary data-i18n="faq.q2">How is this different from "just using Mem0"?</summary>
+          <p data-i18n="faq.a2">Mem0 is a memory layer. Praxia is the <strong>orchestrator + memory + skill registry + flows + eval + auth</strong>. Mem0 is one of six interchangeable backends inside Praxia.</p>
         </details>
         <details>
-          <summary>Is auto-promotion actually safe?</summary>
-          <p>Three guardrails: (1) auto-threshold defaults to 0.75 — high; (2) review queue catches mid-confidence items for human approval; (3) the audit log records every promotion so rollback is trivial.</p>
+          <summary data-i18n="faq.q3">Is auto-promotion actually safe?</summary>
+          <p data-i18n="faq.a3">Three guardrails: (1) auto-threshold defaults to 0.75 — high; (2) review queue catches mid-confidence items for human approval; (3) the audit log records every promotion so rollback is trivial.</p>
         </details>
         <details>
-          <summary>Can I run Praxia fully offline / on-prem?</summary>
-          <p>Yes. Pick <code>qwen-local</code> (Ollama) for the LLM and <code>json</code> or self-hosted Mem0/HindSight for memory. No cloud calls.</p>
+          <summary data-i18n="faq.q4">Can I run Praxia fully offline / on-prem?</summary>
+          <p data-i18n="faq.a4">Yes. Pick <code>qwen-local</code> (Ollama) for the LLM and <code>json</code> or self-hosted Mem0/HindSight for memory. No cloud calls.</p>
         </details>
         <details>
-          <summary>How does Praxia compare to LangGraph?</summary>
-          <p>LangGraph excels at general agent orchestration but doesn't ship workflow templates, business skills, memory cycling, or auth. Praxia is opinionated and batteries-included for the "specialized multi-agent + organizational memory" niche.</p>
+          <summary data-i18n="faq.q5">How does Praxia compare to LangGraph?</summary>
+          <p data-i18n="faq.a5">LangGraph excels at general agent orchestration but doesn't ship workflow templates, business skills, memory cycling, or auth. Praxia is opinionated and batteries-included for the "specialized multi-agent + organizational memory" niche.</p>
         </details>
         <details>
-          <summary>Can I use this commercially?</summary>
-          <p>Yes — Apache 2.0. Even auth/SSO is in the OSS, where competitors typically paywall those features.</p>
+          <summary data-i18n="faq.q6">Can I use this commercially?</summary>
+          <p data-i18n="faq.a6">Yes — Apache 2.0. Even auth/SSO is in the OSS, where competitors typically paywall those features.</p>
         </details>
         <details>
-          <summary>Is the 6-skill set fixed?</summary>
-          <p>No. Add your own with ~20 lines. PRs that contribute new skills are very welcome.</p>
+          <summary data-i18n="faq.q7">Is the 6-skill set fixed?</summary>
+          <p data-i18n="faq.a7">No. Add your own with ~20 lines. PRs that contribute new skills are very welcome.</p>
         </details>
         <details>
-          <summary>What about MCP / Claude Skills compatibility?</summary>
-          <p>Skills serialize to standard <code>SKILL.md</code> frontmatter. Drop any Praxia skill into Claude Skills, Cursor Skills, or any MCP registry without code changes.</p>
+          <summary data-i18n="faq.q8">What about MCP / Claude Skills compatibility?</summary>
+          <p data-i18n="faq.a8">Skills serialize to standard <code>SKILL.md</code> frontmatter. Drop any Praxia skill into Claude Skills, Cursor Skills, or any MCP registry without code changes.</p>
         </details>
         <details>
-          <summary>Is my org memory locked into Praxia?</summary>
-          <p>No. Layer 4 is plain Markdown in your git repo. Layer 3 exports to JSONL. Layer 1 personal memory is standard JSONL or your chosen backend's native format. You can leave at any time.</p>
+          <summary data-i18n="faq.q9">Is my org memory locked into Praxia?</summary>
+          <p data-i18n="faq.a9">No. Layer 4 is plain Markdown in your git repo. Layer 3 exports to JSONL. Layer 1 personal memory is standard JSONL or your chosen backend's native format. You can leave at any time.</p>
         </details>
         <details>
-          <summary>How big can my org grow before hitting limits?</summary>
-          <p>JSON backend handles ~10k users comfortably. Beyond that, switch to Mem0 + Qdrant/Pinecone or HindSight. The promotion engine scales with LLM tokens — budget 10–50 LLM calls per consolidation per cluster.</p>
+          <summary data-i18n="faq.q10">How big can my org grow before hitting limits?</summary>
+          <p data-i18n="faq.a10">JSON backend handles ~10k users comfortably. Beyond that, switch to Mem0 + Qdrant/Pinecone or HindSight. The promotion engine scales with LLM tokens — budget 10–50 LLM calls per consolidation per cluster.</p>
         </details>
         <details>
-          <summary>Can I use Praxia behind my own frontend (Next.js / mobile / Slack bot)?</summary>
-          <p>Yes — that's <strong>mode B</strong>. Two paths: embed the Python SDK directly if your backend is Python, or run <code>praxia serve</code> (FastAPI, 8 endpoints under <code>/api/v1</code>) and call it from any HTTP client. Same auth, RBAC, ACL, and audit log as the Streamlit UI. Setup recipe: <a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
+          <summary data-i18n="faq.q11">Can I use Praxia behind my own frontend (Next.js / mobile / Slack bot)?</summary>
+          <p data-i18n="faq.a11">Yes — that's <strong>mode B</strong>. Two paths: embed the Python SDK directly if your backend is Python, or run <code>praxia serve</code> (FastAPI, 8 endpoints under <code>/api/v1</code>) and call it from any HTTP client. Same auth, RBAC, ACL, and audit log as the Streamlit UI. Setup recipe: <a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
         </details>
         <details>
-          <summary>Does the user have to write to memory every time?</summary>
-          <p>No. Personal memory accumulates implicitly during normal use. Per user, you can also flip <code>read_only</code> mode for sensitive sessions — writes are silently dropped, reads still work. Admins can lock the mode tenant-wide or per role.</p>
+          <summary data-i18n="faq.q12">Does the user have to write to memory every time?</summary>
+          <p data-i18n="faq.a12">No. Personal memory accumulates implicitly during normal use. Per user, you can also flip <code>read_only</code> mode for sensitive sessions — writes are silently dropped, reads still work. Admins can lock the mode tenant-wide or per role.</p>
         </details>
         <details>
-          <summary>How do I get a PowerPoint / Word output instead of just text?</summary>
-          <p>Use <code>OutputFormatSkill</code> — it detects format hints in natural language ("パワポで" / "as a Word doc" / "HTML please") and renders via the matching exporter. CLI: <code>praxia export report.md slides.pptx</code>. Custom formats register via the <code>praxia.exporters</code> entry-point.</p>
+          <summary data-i18n="faq.q13">How do I get a PowerPoint / Word output instead of just text?</summary>
+          <p data-i18n="faq.a13">Use <code>OutputFormatSkill</code> — it detects format hints in natural language ("パワポで" / "as a Word doc" / "HTML please") and renders via the matching exporter. CLI: <code>praxia export report.md slides.pptx</code>. Custom formats register via the <code>praxia.exporters</code> entry-point.</p>
         </details>
         <details>
-          <summary>Can I plug in a connector to a system you don't ship?</summary>
-          <p>Yes. The <code>Connector</code> protocol is two methods (<code>pull</code> / <code>push</code>) and ~50 lines. Per-user OAuth, ACL enforcement, and audit logging plug in for free. End-to-end Notion example: <a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>.</p>
+          <summary data-i18n="faq.q14">Can I plug in a connector to a system you don't ship?</summary>
+          <p data-i18n="faq.a14">Yes. The <code>Connector</code> protocol is two methods (<code>pull</code> / <code>push</code>) and ~50 lines. Per-user OAuth, ACL enforcement, and audit logging plug in for free. End-to-end Notion example: <a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>.</p>
         </details>
         <details>
-          <summary>Is Gemma supported?</summary>
-          <p>Yes. <code>gemma</code> / <code>gemma-2b</code> / <code>gemma-9b</code> / <code>gemma-27b</code> via local Ollama; <code>gemma-cloud</code> via Google Vertex AI. <code>PRAXIA_LOCAL_MODEL=gemma</code> makes <code>auto_detect()</code> fall back to Gemma instead of Qwen-local when no cloud key is set.</p>
+          <summary data-i18n="faq.q15">Is Gemma supported?</summary>
+          <p data-i18n="faq.a15">Yes. <code>gemma</code> / <code>gemma-2b</code> / <code>gemma-9b</code> / <code>gemma-27b</code> via local Ollama; <code>gemma-cloud</code> via Google Vertex AI. <code>PRAXIA_LOCAL_MODEL=gemma</code> makes <code>auto_detect()</code> fall back to Gemma instead of Qwen-local when no cloud key is set.</p>
         </details>
         <details>
-          <summary>How are OAuth tokens protected at rest?</summary>
-          <p>Envelope encryption: a fresh 256-bit DEK per token, AES-GCM payload encryption, and the DEK wrapped by a configurable <code>KmsAdapter</code>. 5 adapters ship: <code>local</code> (HKDF, dev), <code>aws</code> (AWS KMS CMK), <code>azure</code> (Key Vault Keys), <code>gcp</code> (Cloud KMS), <code>vault</code> (HashiCorp Transit). Master key never leaves the KMS / HSM. Switch with <code>PRAXIA_KMS_ADAPTER=aws</code>.</p>
+          <summary data-i18n="faq.q16">How are OAuth tokens protected at rest?</summary>
+          <p data-i18n="faq.a16">Envelope encryption: a fresh 256-bit DEK per token, AES-GCM payload encryption, and the DEK wrapped by a configurable <code>KmsAdapter</code>. 5 adapters ship: <code>local</code> (HKDF, dev), <code>aws</code> (AWS KMS CMK), <code>azure</code> (Key Vault Keys), <code>gcp</code> (Cloud KMS), <code>vault</code> (HashiCorp Transit). Master key never leaves the KMS / HSM. Switch with <code>PRAXIA_KMS_ADAPTER=aws</code>.</p>
         </details>
         <details>
-          <summary>Can I A/B test a new prompt before rolling it out?</summary>
-          <p>Yes — built into the OSS. Define an experiment with control / treatment variants, set traffic split, restrict the audience (roles / users / time window). Each user's assignment is deterministic (SHA-256 hash) so they always see the same variant during the experiment. Outcomes auto-track via the existing <code>record_outcome()</code> API. <code>praxia experiment results &lt;id&gt;</code> shows tentative winner.</p>
+          <summary data-i18n="faq.q17">Can I A/B test a new prompt before rolling it out?</summary>
+          <p data-i18n="faq.a17">Yes — built into the OSS. Define an experiment with control / treatment variants, set traffic split, restrict the audience (roles / users / time window). Each user's assignment is deterministic (SHA-256 hash) so they always see the same variant during the experiment. Outcomes auto-track via the existing <code>record_outcome()</code> API. <code>praxia experiment results &lt;id&gt;</code> shows tentative winner.</p>
         </details>
         <details>
-          <summary>Can I use Praxia from Claude Desktop / Cursor over the network?</summary>
-          <p>Yes. Praxia is an MCP server in two flavors. <strong>Local</strong> (recommended for desktop): <code>praxia mcp serve</code> → configure Claude Desktop's <code>mcp.json</code> to spawn it via stdio. <strong>Remote</strong> (multi-host / team): run <code>praxia serve</code> and the MCP HTTP+SSE endpoints under <code>/api/v1/mcp</code> are available. Auth via API key, JWT, or a shared <code>X-MCP-Token</code>. Every business skill + multi-agent flow + memory search becomes an MCP tool automatically — no per-tool wiring required.</p>
+          <summary data-i18n="faq.q18">Can I use Praxia from Claude Desktop / Cursor over the network?</summary>
+          <p data-i18n="faq.a18">Yes. Praxia is an MCP server in two flavors. <strong>Local</strong> (recommended for desktop): <code>praxia mcp serve</code> → configure Claude Desktop's <code>mcp.json</code> to spawn it via stdio. <strong>Remote</strong> (multi-host / team): run <code>praxia serve</code> and the MCP HTTP+SSE endpoints under <code>/api/v1/mcp</code> are available. Auth via API key, JWT, or a shared <code>X-MCP-Token</code>. Every business skill + multi-agent flow + memory search becomes an MCP tool automatically — no per-tool wiring required.</p>
         </details>
         <details>
-          <summary>How do I prevent prompt changes from silently degrading quality?</summary>
-          <p>Run <code>tests/llm_eval/</code> in CI. Each PR runs 6 canonical cases (one per business skill) against the configured LLM and grades output with rubrics (keyword / structure / length / must-not-contain / LLM-as-judge). Scores below the committed baseline minus 5pt fail the build. Update the baseline with <code>--update-baselines</code> after a known-good change.</p>
+          <summary data-i18n="faq.q19">How do I prevent prompt changes from silently degrading quality?</summary>
+          <p data-i18n="faq.a19">Run <code>tests/llm_eval/</code> in CI. Each PR runs 6 canonical cases (one per business skill) against the configured LLM and grades output with rubrics (keyword / structure / length / must-not-contain / LLM-as-judge). Scores below the committed baseline minus 5pt fail the build. Update the baseline with <code>--update-baselines</code> after a known-good change.</p>
         </details>
       </div>
     </div>
@@ -1454,12 +1454,12 @@ P  = Praxia cost (license + infra)</code></pre>
 
   <section id="contact" class="section section-dark cta">
     <div class="container">
-      <h2>Ready to make your team's tacit knowledge unforgettable?</h2>
-      <p>Star us on GitHub, run the quickstart, or reach out for a tailored PoC.</p>
+      <h2 data-i18n="contact.h2">Ready to make your team's tacit knowledge unforgettable?</h2>
+      <p data-i18n="contact.p">Star us on GitHub, run the quickstart, or reach out for a tailored PoC.</p>
       <div class="hero-cta">
-        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-primary">★ Star on GitHub</a>
-        <a href="portal/index.html" class="btn btn-ghost">Open Portal</a>
-        <a href="mailto:hello@praxia.ai" class="btn btn-ghost">Contact us</a>
+        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-primary" data-i18n="contact.star">★ Star on GitHub</a>
+        <a href="portal/index.html" class="btn btn-ghost" data-i18n="contact.portal">Open Portal</a>
+        <a href="mailto:hello@praxia.ai" class="btn btn-ghost" data-i18n="contact.contact">Contact us</a>
       </div>
     </div>
   </section>
@@ -1476,40 +1476,40 @@ P  = Praxia cost (license + infra)</code></pre>
       <div>
         <h4 data-i18n="footer.product">Product</h4>
         <ul>
-          <li><a href="#features">Features</a></li>
-          <li><a href="#flows">Flows</a></li>
-          <li><a href="#skills">Skills</a></li>
-          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#features" data-i18n="footer.product.features">Features</a></li>
+          <li><a href="#flows" data-i18n="footer.product.flows">Flows</a></li>
+          <li><a href="#skills" data-i18n="footer.product.skills">Skills</a></li>
+          <li><a href="#pricing" data-i18n="footer.product.pricing">Pricing</a></li>
         </ul>
       </div>
       <div>
         <h4 data-i18n="footer.resources">Resources</h4>
         <ul>
-          <li><a href="https://github.com/genarch/praxia">GitHub</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/quickstart.md">Quickstart</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/architecture.md">Architecture</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">Deployment modes</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">Custom connector guide</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/specs/">Design specs (EN + JA)</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md">Use cases</a></li>
+          <li><a href="https://github.com/genarch/praxia" data-i18n="footer.res.github">GitHub</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/quickstart.md" data-i18n="footer.res.quickstart">Quickstart</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/architecture.md" data-i18n="footer.res.arch">Architecture</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md" data-i18n="footer.res.deploy">Deployment modes</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md" data-i18n="footer.res.connectors">Custom connector guide</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/specs/" data-i18n="footer.res.specs">Design specs (EN + JA)</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md" data-i18n="footer.res.usecases">Use cases</a></li>
         </ul>
       </div>
       <div>
         <h4 data-i18n="footer.community">Community</h4>
         <ul>
-          <li><a href="https://github.com/genarch/praxia/discussions">Discussions</a></li>
-          <li><a href="https://github.com/genarch/praxia/issues">Issues</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/CONTRIBUTING.md">Contributing</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/NOTICE.md">Third-party licenses</a></li>
+          <li><a href="https://github.com/genarch/praxia/discussions" data-i18n="footer.com.discuss">Discussions</a></li>
+          <li><a href="https://github.com/genarch/praxia/issues" data-i18n="footer.com.issues">Issues</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/CONTRIBUTING.md" data-i18n="footer.com.contribute">Contributing</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/NOTICE.md" data-i18n="footer.com.licenses">Third-party licenses</a></li>
         </ul>
       </div>
       <div>
         <h4 data-i18n="footer.legal">Legal</h4>
         <ul>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/TERMS.md">Terms of Service</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md">Privacy Policy</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/ACCEPTABLE_USE.md">Acceptable Use</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md">Cookies</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/TERMS.md" data-i18n="footer.legal.terms">Terms of Service</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md" data-i18n="footer.legal.privacy">Privacy Policy</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/ACCEPTABLE_USE.md" data-i18n="footer.legal.aup">Acceptable Use</a></li>
+          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md" data-i18n="footer.legal.cookies">Cookies</a></li>
         </ul>
       </div>
     </div>
