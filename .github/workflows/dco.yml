@@ -1,0 +1,37 @@
+name: DCO check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify Signed-off-by on each commit
+        run: |
+          set -e
+          commits=$(git rev-list origin/${{ github.base_ref }}..HEAD)
+          missing=0
+          for sha in $commits; do
+            msg=$(git log -1 --format=%B "$sha")
+            author_name=$(git log -1 --format=%an "$sha")
+            author_email=$(git log -1 --format=%ae "$sha")
+            expected="Signed-off-by: ${author_name} <${author_email}>"
+            if ! echo "$msg" | grep -F -q "$expected"; then
+              echo "::error::Commit $sha is missing 'Signed-off-by: ${author_name} <${author_email}>'"
+              echo ""
+              echo "  Fix: git commit --amend -s   (or  git rebase -i HEAD~N --signoff)"
+              echo "  Read: CONTRIBUTING.md > Developer Certificate of Origin"
+              missing=$((missing+1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo ""
+            echo "❌ $missing commit(s) missing DCO sign-off."
+            exit 1
+          fi
+          echo "✅ All commits properly signed-off."

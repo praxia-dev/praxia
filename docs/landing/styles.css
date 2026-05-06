@@ -396,6 +396,77 @@ pre .str     { color: var(--accent-bright); }
   margin-bottom: 0.5rem;
 }
 
+/* --- Cookie consent banner -------------------------------------- */
+.consent-banner {
+  position: fixed;
+  inset: auto 1rem 1rem 1rem;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.consent-card {
+  pointer-events: auto;
+  max-width: 720px;
+  width: 100%;
+  background: rgba(20, 20, 28, 0.98);
+  border: 1px solid rgba(201, 164, 86, 0.4);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.consent-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  color: #fff;
+}
+.consent-card p {
+  margin: 0 0 0.85rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.88rem;
+}
+.consent-card a {
+  color: rgba(201, 164, 86, 0.95);
+  text-decoration: underline;
+}
+.consent-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.85rem;
+  padding: 0.6rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.consent-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.consent-manage-link {
+  margin-left: 1rem;
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.consent-manage-link:hover { color: rgba(255, 255, 255, 0.85) !important; }
+@media (max-width: 640px) {
+  .consent-banner { inset: auto 0.5rem 0.5rem 0.5rem; }
+  .consent-card { padding: 1rem; }
+  .consent-actions { justify-content: stretch; }
+  .consent-actions .btn { flex: 1 1 auto; }
+}
+
 /* --- i18n: language switcher + translation notice ----------------- */
 .lang-switcher {
   display: flex;

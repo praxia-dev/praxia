@@ -404,6 +404,98 @@
       "pt-BR": "Conectando brilho individual e continuidade organizacional.",
     },
 
+    // ----- Cookie consent banner -----
+    "consent.title": {
+      en: "We use cookies",
+      ja: "Cookie について",
+      "zh-CN": "我们使用 Cookie",
+      ko: "쿠키 사용 안내",
+      es: "Usamos cookies",
+      fr: "Nous utilisons des cookies",
+      de: "Wir verwenden Cookies",
+      "pt-BR": "Usamos cookies",
+    },
+    "consent.body": {
+      en: "Praxia's landing page uses essential cookies (for the language and consent preference) and — only if you agree — privacy-respecting analytics to count anonymous visits. No third-party tracking. No personal data sold. See the <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">Cookies policy</a> and <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">Privacy policy</a>.",
+      ja: "Praxia ランディングページは必須 Cookie (言語・同意設定の保持) を使用し、同意いただいた場合のみ匿名訪問数を計測する分析ツールを利用します。第三者トラッキング・個人データ販売は行いません。詳細は <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">Cookie ポリシー</a> と <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">プライバシーポリシー</a> を参照ください。",
+      "zh-CN": "Praxia 着陆页使用必要 Cookie (用于语言和同意设置),仅在您同意时使用注重隐私的匿名访问统计。无第三方追踪、无个人数据出售。详见 <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">Cookie 政策</a> 和 <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">隐私政策</a>。",
+      ko: "Praxia 랜딩 페이지는 필수 쿠키 (언어 및 동의 설정 저장) 를 사용하며, 동의하신 경우에만 익명 방문 수를 집계하는 프라이버시 친화적 분석 도구를 사용합니다. 제3자 추적 없음, 개인정보 판매 없음. 자세한 내용은 <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">쿠키 정책</a> 과 <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">개인정보 정책</a> 참조.",
+      es: "La página de Praxia usa cookies esenciales (para idioma y preferencias de consentimiento) y — solo si lo aceptas — analítica respetuosa con la privacidad para contar visitas anónimas. Sin rastreo de terceros. Sin venta de datos personales. Ver <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">Política de Cookies</a> y <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">Política de Privacidad</a>.",
+      fr: "La page d'accueil de Praxia utilise des cookies essentiels (langue et préférences de consentement) et — uniquement si vous acceptez — des analyses respectueuses de la vie privée pour compter les visites anonymes. Pas de suivi tiers. Pas de vente de données personnelles. Voir la <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">Politique de cookies</a> et la <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">Politique de confidentialité</a>.",
+      de: "Die Praxia-Startseite verwendet essenzielle Cookies (für Sprache und Einwilligungseinstellungen) und – nur mit Ihrer Zustimmung – datenschutzfreundliche Analytik für anonyme Besuchszählung. Kein Drittanbieter-Tracking. Kein Verkauf personenbezogener Daten. Siehe <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">Cookie-Richtlinie</a> und <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">Datenschutzerklärung</a>.",
+      "pt-BR": "A página do Praxia usa cookies essenciais (para idioma e preferências de consentimento) e — somente se você aceitar — análise que respeita a privacidade para contar visitas anônimas. Sem rastreamento de terceiros. Sem venda de dados pessoais. Veja a <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md\">Política de Cookies</a> e <a href=\"https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md\">Política de Privacidade</a>.",
+    },
+    "consent.accept_all": {
+      en: "Accept all",
+      ja: "すべて許可",
+      "zh-CN": "全部接受",
+      ko: "모두 허용",
+      es: "Aceptar todo",
+      fr: "Tout accepter",
+      de: "Alle akzeptieren",
+      "pt-BR": "Aceitar tudo",
+    },
+    "consent.essential_only": {
+      en: "Essential only",
+      ja: "必須のみ",
+      "zh-CN": "仅必要",
+      ko: "필수만",
+      es: "Solo esenciales",
+      fr: "Essentiels uniquement",
+      de: "Nur essenzielle",
+      "pt-BR": "Apenas essenciais",
+    },
+    "consent.customize": {
+      en: "Customize",
+      ja: "詳細設定",
+      "zh-CN": "自定义",
+      ko: "사용자 지정",
+      es: "Personalizar",
+      fr: "Personnaliser",
+      de: "Anpassen",
+      "pt-BR": "Personalizar",
+    },
+    "consent.cat_essential": {
+      en: "Essential (required for the site to work)",
+      ja: "必須 (サイト動作に必要)",
+      "zh-CN": "必要 (站点运行所需)",
+      ko: "필수 (사이트 작동에 필요)",
+      es: "Esenciales (necesarios para el sitio)",
+      fr: "Essentiels (nécessaires au site)",
+      de: "Essenziell (für die Funktion erforderlich)",
+      "pt-BR": "Essenciais (necessários para o site)",
+    },
+    "consent.cat_analytics": {
+      en: "Analytics (anonymous visit counts)",
+      ja: "分析 (匿名訪問数の計測)",
+      "zh-CN": "分析 (匿名访问统计)",
+      ko: "분석 (익명 방문 통계)",
+      es: "Analítica (visitas anónimas)",
+      fr: "Analytique (visites anonymes)",
+      de: "Analytik (anonyme Besuche)",
+      "pt-BR": "Análise (visitas anônimas)",
+    },
+    "consent.save": {
+      en: "Save preferences",
+      ja: "設定を保存",
+      "zh-CN": "保存偏好",
+      ko: "설정 저장",
+      es: "Guardar preferencias",
+      fr: "Enregistrer les préférences",
+      de: "Einstellungen speichern",
+      "pt-BR": "Salvar preferências",
+    },
+    "consent.manage": {
+      en: "Cookie preferences",
+      ja: "Cookie 設定",
+      "zh-CN": "Cookie 偏好",
+      ko: "쿠키 설정",
+      es: "Preferencias de cookies",
+      fr: "Préférences cookies",
+      de: "Cookie-Einstellungen",
+      "pt-BR": "Preferências de cookies",
+    },
+
     // ----- Translation status notice (for non-English) -----
     "i18n.notice": {
       en: "",
@@ -441,7 +533,10 @@
 
   // ---- Apply --------------------------------------------------------------
 
+  let _currentLang = "en";
+
   function applyLang(lang) {
+    _currentLang = lang;
     document.documentElement.lang = lang;
     document.documentElement.setAttribute("data-praxia-lang", lang);
 
@@ -488,7 +583,16 @@
         el.getAttribute("data-lang-option") === lang
       );
     });
+
+    // Notify other modules (e.g. consent.js) so they can re-render
+    document.dispatchEvent(
+      new CustomEvent("praxia-lang-changed", {detail: {lang}})
+    );
   }
+
+  // Expose so other scripts can re-translate dynamically-injected nodes
+  window.praxiaApplyI18n = function () { applyLang(_currentLang); };
+  window.praxiaCurrentLang = function () { return _currentLang; };
 
   // ---- Switcher UI --------------------------------------------------------
 

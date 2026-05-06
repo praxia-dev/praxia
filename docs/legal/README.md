@@ -16,6 +16,8 @@
 | [Privacy Policy](PRIVACY.md) | Visitors + portal sign-ups | 🟡 Template — review with counsel |
 | [Acceptable Use Policy](ACCEPTABLE_USE.md) | All users | 🟡 Template |
 | [Cookie Policy](COOKIES.md) | Website visitors | 🟡 Template |
+| [GDPR Notes (EN)](GDPR_NOTES.md) / [JA](GDPR_NOTES.ja.md) | Operators with EU users | 🟡 Operational guidance — not legal advice |
+| [Trademark Policy (EN)](TRADEMARK.md) / [JA](TRADEMARK.ja.md) | Forks, plugins, third-party uses of "Praxia" | ✅ Policy v1.0 (registration pending) |
 
 ## When you need each
 

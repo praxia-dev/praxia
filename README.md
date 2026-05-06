@@ -526,6 +526,7 @@ Full guide: [docs/quickstart.md](docs/quickstart.md).
 > **Formal specs?** Basic design / I/F / detailed design / **functional spec (機能仕様書)** (EN + JA) under [docs/specs/](docs/specs/).
 > **Regression suite?** 364 tests covering auth/memory/exporters/CLI/i18n/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
 > **Multilingual?** Landing page + Streamlit UI ship in 8 languages (en / ja / zh-CN / ko / es / fr / de / pt-BR) with browser-language auto-detection — see [docs/i18n.md](docs/i18n.md).
+> **Contributing?** PRs require a DCO sign-off (`git commit -s …`). Trademark policy + GDPR notes for operators are in [docs/legal/](docs/legal/).
 
 ---
 
