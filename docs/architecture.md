@@ -7,10 +7,16 @@
 │                      Application / UI (Streamlit / CLI / SDK)            │
 └────────────────────────────────┬─────────────────────────────────────────┘
                                  │
-                    ┌────────────▼─────────────┐
-                    │      Orchestrator        │  (praxia.core.Praxia)
-                    │   memory + flow + skill  │
-                    └─┬──────────┬──────────┬──┘
+              ┌──────────────────▼───────────────────┐
+              │  AutonomousAgent (tool-use loop)     │ (praxia.agent)
+              │  Claude-Code-style; LLM picks tools  │
+              └──┬─────────────────────────────────┬─┘
+                 │  uses                           │
+                 ▼                                 ▼
+                    ┌────────────────────────┐
+                    │      Orchestrator      │  (praxia.core.Praxia)
+                    │   memory + flow + skill│
+                    └─┬──────────┬──────────┬┘
                       │          │          │
                 ┌─────▼───┐ ┌────▼────┐ ┌──▼───────┐
                 │ Flows   │ │ Skills  │ │ Memory   │
@@ -20,12 +26,17 @@
                      │           │           │
                 ┌────▼───────────▼───────────▼────┐
                 │       Auth / RBAC / Audit       │  (praxia.auth)
+                │  ACL gates connector / memory   │
+                │  every tool call audited        │
                 └────┬────────────────────────────┘
                      │
                 ┌────▼─────────────────────────────┐
                 │            LLM Layer             │  (litellm — multi-provider)
-                │  Claude / ChatGPT / Gemini /     │
-                │  Qwen-API / Qwen-local (Ollama)  │
+                │  Anthropic / OpenAI / Google /   │
+                │  DeepSeek / Mistral / xAI /      │
+                │  Cohere / Perplexity / Qwen +    │
+                │  Llama (Groq / Ollama) / Phi /   │
+                │  Gemma + 100+ via LiteLLM        │
                 └──────────────────────────────────┘
 ```
 
@@ -61,6 +72,39 @@ The final score is a weighted blend; auto-promote above one threshold, route to 
 - Personal skills get promoted to the org registry through the same mechanisms as memory.
 - Compatible with Claude Skills / MCP / Cursor Skills.
 
+## Autonomous Agent (`praxia.agent.AutonomousAgent`)
+
+A Claude-Code-style tool-use loop sitting **on top** of the orchestrator,
+flows, skills, and memory layers. Where a `Flow` is a script you author
+with `${var}` substitution, the autonomous agent is the LLM **deciding
+the script** turn-by-turn: search personal memory → run a skill → pull
+a connector → emit a final answer.
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
+result = agent.run("Tell me what we know about Acme and draft a proposal.")
+print(result.final_text)
+for tc in result.tool_calls:
+    print(tc.name, "ok" if tc.ok else tc.error)
+```
+
+11 built-in tools (memory search × 3 layers, skill list/run × 3 scopes,
+connector list/pull, frozen-layer search, fact recording, final-answer
+sentinel). Each tool call is recorded via `auth.audit.record(...)`;
+`pull_from_connector` is gated by `auth.policies.require(...)` so ACL
+denials short-circuit cleanly. `record_fact` honors `read_only` memory
+mode by no-op'ing.
+
+The agent is also exposed as a single MCP meta-tool `autonomous_agent`
+so remote clients (Claude Desktop / Cursor) can delegate an entire
+investigation rather than orchestrating individual tools.
+
+See [FEATURES § 38](FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop)
+for the full tool catalog and governance details.
+
 ## Flow Execution Model
 
 ```python
@@ -75,16 +119,42 @@ Each `FlowStep` can reference earlier outputs via `${step_name}` template substi
 
 ## LLM Provider Abstraction
 
-Thin wrapper over LiteLLM. String aliases for one-line provider switching:
+Thin wrapper over LiteLLM. 27 friendly aliases cover the major providers;
+every other LiteLLM-supported model works via the raw `provider/model`
+string. `LLM.complete()` returns `LLMResponse` with `text`, `usage`,
+**and `tool_calls`** — the latter feeds the AutonomousAgent loop.
 
 ```python
-LLM("claude")        # → anthropic/claude-opus-4-7
-LLM("chatgpt")       # → openai/gpt-4o
-LLM("gemini")        # → gemini/gemini-2.0-pro
-LLM("qwen")          # → dashscope/qwen-max
-LLM("qwen-local")    # → ollama/qwen2.5:14b
-LLM("openai/gpt-4o") # any LiteLLM-compatible model string
+# Frontier proprietary
+LLM("claude")              # → anthropic/claude-opus-4-7
+LLM("chatgpt")             # → openai/gpt-4o
+LLM("gemini")              # → gemini/gemini-2.0-pro
+
+# Strong cloud APIs
+LLM("deepseek")            # → deepseek/deepseek-chat (v3)
+LLM("deepseek-reasoner")   # → deepseek/deepseek-reasoner (R1, chain-of-thought)
+LLM("mistral")             # → mistral/mistral-large-latest
+LLM("codestral")           # → mistral/codestral-latest
+LLM("grok")                # → xai/grok-2-latest
+LLM("qwen")                # → dashscope/qwen-max
+LLM("command-r")           # → cohere/command-r-plus
+LLM("perplexity")          # → perplexity/llama-3.1-sonar-large-128k-online (web-search)
+
+# OSS weights via fast inference / local
+LLM("llama")               # → groq/llama-3.3-70b-versatile (hundreds tok/s)
+LLM("llama-local")         # → ollama/llama3.3:70b
+LLM("gemma")               # → ollama/gemma2:9b
+LLM("phi")                 # → ollama/phi3.5:3.8b (edge / small)
+LLM("qwen-local")          # → ollama/qwen2.5:14b
+
+# Anything else LiteLLM supports
+LLM("openrouter/anthropic/claude-3.5-sonnet")
 ```
+
+`LLM.auto_detect()` picks a default based on which API key is set
+(priority: Anthropic → OpenAI → Gemini → DeepSeek → Mistral → xAI →
+Qwen → Cohere → Perplexity → Groq/Together → local Ollama). Set
+`PRAXIA_LOCAL_MODEL=phi` to make the local fallback Phi instead of Qwen.
 
 ## Auth, RBAC, and Audit
 
@@ -118,6 +188,7 @@ Default roles: `admin` / `operator` / `member` / `viewer`.
 | 4 | Skill registry promotion (personal → org) | ✅ Done |
 | 5 | Auth, RBAC, audit log | ✅ Done |
 | 6 | Enterprise GUI / multi-tenant SaaS | 💼 Commercial |
+| 7 | AutonomousAgent (LLM-driven tool-use loop over the full stack) | ✅ Done |
 
 ## Design Decisions and Rationale
 

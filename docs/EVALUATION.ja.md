@@ -6,20 +6,24 @@
 
 ## カバー範囲
 
-9 機能領域、311 テスト:
+13 機能領域、431 テスト + 6 LLM 品質テスト:
 
 | ファイル | 領域 | テスト数 |
 |---|---|---|
-| `tests/test_smoke.py` | 高水準スモーク (常時実行) | 60 |
+| `tests/test_smoke.py` | 高水準スモーク (常時実行) — LLM alias 解決 / auto_detect 優先順位 含む | 65 |
 | `tests/evaluation/test_eval_auth.py` | 認証 / RBAC / ACL / 監査ログ | ~25 |
 | `tests/evaluation/test_eval_memory.py` | メモリバックエンド + モード + 管理者ポリシー | ~30 |
 | `tests/evaluation/test_eval_composite.py` | 複数 LTM 融合 + ルーティング | ~30 |
 | `tests/evaluation/test_eval_skills.py` | スキルレジストリ + フロー | ~15 |
+| `tests/evaluation/test_eval_agent.py` | **AutonomousAgent** ループ + ツール ACL + 監査 + max_steps | 13 |
 | `tests/evaluation/test_eval_exporters.py` | 出力エクスポータ (md/html/pptx/docx/json) | ~30 |
 | `tests/evaluation/test_eval_oauth.py` | ユーザ委譲 OAuth (トークンストア + フロー) | ~15 |
 | `tests/evaluation/test_eval_parsers.py` | ファイルパーサ (PDF/Office/CSV/HTML/TXT) | ~20 |
 | `tests/evaluation/test_eval_cli.py` | CLI コマンド表面 | ~50 |
 | `tests/evaluation/test_eval_extensions.py` | Registry + entry-point 検出 | ~15 |
+| `tests/evaluation/test_eval_experiments.py` | A/B 実験 ライフサイクル + 割当 + 結果 | ~17 |
+| `tests/evaluation/test_eval_i18n.py` | UI i18n: 8 言語 / ブラウザ検出 / キー網羅 | ~22 |
+| `tests/llm_eval/test_skill_quality.py` | LLM 出力品質 (実 API、`-m llm_eval`) | 6 |
 
 ## 実行方法
 

@@ -13,9 +13,14 @@ praxia/
 ├── __init__.py          # 公開 API の re-export
 ├── config.py            # PraxiaConfig — 統一キー解決
 ├── core/
-│   ├── llm.py           # LLM, ProviderConfig, LLMResponse, DEFAULT_ALIASES
+│   ├── llm.py           # LLM, ProviderConfig, LLMResponse (tool_calls 露出), DEFAULT_ALIASES (27 件)
 │   ├── agent.py         # Agent (単一ターンの LLM 呼出)
 │   └── orchestrator.py  # Praxia (トップレベルファサード)
+├── agent/               # AutonomousAgent — ClaudeCode 同等のツール使用ループ
+│   ├── __init__.py
+│   ├── autonomous.py    # AutonomousAgent
+│   ├── result.py        # AgentResult, ToolCallTrace
+│   └── tools.py         # AgentTool + 組込ツール 11 種 (memory/skills/connectors/frozen)
 ├── flows/               # FlowResult, Flow, 組込フロー
 ├── skills/
 │   ├── skill.py         # Skill, SkillManifest
@@ -116,7 +121,9 @@ class LLM:
 内部:
 - `complete()` は `ProviderConfig` + 呼出毎オーバライドで kwargs 構築 → `litellm.completion(**kwargs)`
 - LiteLLM は **遅延 import** — install せずスキル / フロー閲覧可
-- `auto_detect()` の優先順: ANTHROPIC > OPENAI > GEMINI > DASHSCOPE > local (`PRAXIA_LOCAL_MODEL`、既定 `qwen-local`)
+- `LLMResponse` は `tool_calls: list[dict]` を `choice.tool_calls` から抽出して保持 (各要素 `id` / `name` / `arguments` の JSON 文字列)。自律エージェントループはこの構造を読み取って動作。
+- `auto_detect()` の優先順: ANTHROPIC > OPENAI > GEMINI > DEEPSEEK > MISTRAL > XAI > DASHSCOPE > COHERE > PERPLEXITY > GROQ > TOGETHERAI > ローカル (`PRAXIA_LOCAL_MODEL`、既定 `qwen-local`、`gemma` / `phi` / `llama-local` 等も指定可)。
+- `DEFAULT_ALIASES` は 27 種類のエイリアスを同梱 — Anthropic / OpenAI / Google (Gemini + Gemma) / Alibaba (Qwen) / DeepSeek / Mistral (Codestral 含む) / xAI Grok / Cohere Command R+ / Perplexity Sonar (Web 検索内蔵) / Groq 経由 Llama 3.3 / ローカル Ollama (Llama / Phi / Qwen / Gemma)。
 
 ### 2.3 `MemoryBackend` Protocol
 
@@ -240,6 +247,49 @@ DEFAULT_RULES = [
 ```
 
 `ResolvedMemoryConfig.reason` が解決トレースを保持。
+
+### 2.7 `AutonomousAgent` (LLM 駆動ツール使用ループ)
+
+```python
+class AutonomousAgent:
+    user_id: str
+    role: str = "member"
+    org_id: str = "default-org"
+    llm: LLM
+    tools: dict[str, AgentTool]   # 組込 11 種 + ホストが追加した extras
+    auth: AuthManager             # 注入必須 (本番では省略不可)
+    max_steps: int = 10
+    max_tokens_per_step: int = 4096
+
+    def run(self, user_input, *, history=None, system_prompt=None) -> AgentResult: ...
+```
+
+**ループ不変式** (1 反復 = 1 ステップ):
+
+1. 初回は `messages = [system, *history?, user]` を構築。以降は引き継ぎ
+2. `llm.complete(messages, tools=tool_schemas, max_tokens=...)` を呼出 — schemas は `AgentTool.to_litellm_schema()` から生成
+3. `resp.tool_calls == []` ならループ終了、`resp.text` を最終回答に
+4. それ以外は、モデルの `tool_calls` を反映した `assistant` メッセージを追加し、各ツール呼出を順次実行:
+   - ハンドラ未登録 → `ok=False` トレースを記録して継続
+   - `arguments` JSON パース失敗 → 空 dict (例外を投げない)
+   - `pull_from_connector` → `auth.policies.require(...)` を先に呼び、拒否時は `{"ok": false, "error": "access denied"}` を返す (例外なし)
+   - `record_fact` → `pm.mode == "read_only"` 時に no-op
+   - 実行結果を `tool` メッセージとして `tool_call_id` 付きで追加 (次の LLM ターンで参照される)
+   - 呼出が `final_answer` で `ok=True` なら、与えられた `answer` で即時終了
+5. `max_steps` を超えても終了しなければ `stopped_reason="max_steps"`
+
+**監査ログ契約**:
+- `agent.run.start` を 1 回 (`input_chars` 付)
+- 各 connector pull を `success` / `denied` / `error` の outcome 付で記録
+- 各 skill run を outcome 付で記録
+- `agent.run.end` を 1 回 (`steps` / `tool_calls` / `reason` 付)
+
+**故障モード**:
+- LLM 呼出で例外 → 捕捉して `final_text="[agent error] LLM failed: …"`、`stopped_reason="error"`、監査の outcome=`error`
+- ツールハンドラで例外 → 捕捉して `ToolCallTrace.error` に記録、ループ継続 (モデルが復旧可能)
+- 監査記録自体の失敗 → 黙殺 (簿記がループを止めてはならない)
+
+`praxia.mcp.server.build_tools()` は `autonomous_agent` MCP メタツールを公開し、呼出毎に `AutonomousAgent` を構築 (`user_id` / `task` 必須、`role` / `org_id` / `max_steps` 任意) して `result.final_text` を返す。
 
 ---
 

@@ -44,23 +44,37 @@ praxia config set ANTHROPIC_API_KEY sk-ant-xxx
 praxia config get OPENAI_API_KEY
 ```
 
-**最低条件**: LLM プロバイダのキーを 1 つ設定:
+**最低条件**: LLM プロバイダのキーを 1 つ設定。`auto_detect()` は以下の優先順位で見つけ次第採用:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...      # 推奨
-# または
-OPENAI_API_KEY=sk-...             # Whisper STT + OpenAI TTS も同じキーで動く
-# または
-GEMINI_API_KEY=...                # Google Gemini
-# または
-DASHSCOPE_API_KEY=...             # Alibaba Qwen API
+ANTHROPIC_API_KEY=sk-ant-...      # → claude (ツール使用に最適、推奨)
+OPENAI_API_KEY=sk-...             # → chatgpt (Whisper STT + OpenAI TTS も同じキー)
+GEMINI_API_KEY=...                # → gemini (長文コンテキスト・マルチモーダル)
+DEEPSEEK_API_KEY=...              # → deepseek (中国 SOTA、コスト約 1/10)
+MISTRAL_API_KEY=...               # → mistral (EU 親和的、mistral-large-latest)
+XAI_API_KEY=...                   # → grok
+DASHSCOPE_API_KEY=...             # → qwen (Alibaba)
+COHERE_API_KEY=...                # → command-r (エンタープライズ RAG)
+PERPLEXITY_API_KEY=...            # → perplexity (Web 検索内蔵)
+GROQ_API_KEY=...                  # → llama (3.3 70B、数百 tok/s)
+TOGETHERAI_API_KEY=...            # → llama via Together
 ```
 
-**完全オフライン運用**もOK:
+明示指定は `--model <alias>` で:
+`claude` / `chatgpt` / `gemini` / `deepseek` / `mistral` / `grok` / `qwen` /
+`command-r` / `perplexity` / `llama` / `gemma` / `phi` / `llama-local` /
+`qwen-local` / `gemma-cloud` 他 10+ ([praxia/core/llm.py](../praxia/core/llm.py) 参照)。
+
+**完全オフライン運用** (クラウド LLM 不使用):
 
 ```bash
-ollama pull qwen2.5:14b
+ollama pull qwen2.5:14b      # デフォルトのローカル
+ollama pull llama3.3:70b     # または Llama 3.3
+ollama pull gemma2:9b        # または Gemma
+ollama pull phi3.5:3.8b      # または Phi (小フットプリント)
+
 praxia run sales --model qwen-local --customer-name "Acme" --product "BizFlow"
+# 同様に: --model llama-local / gemma / phi
 ```
 
 ## 3. 初期化
@@ -85,6 +99,37 @@ praxia run logic --document 仕様書.pdf       # .pdf / .docx / .pptx / .xlsx /
 # 自己修復型 RAG — クエリ拡張 → 評価 → ハルシネーション検証
 praxia run rag --question "Praxia のライセンスは?"
 ```
+
+## 4½. LLM に判断させる — 自律エージェント
+
+フロー設計を自分でしたくないとき、`praxia.agent.AutonomousAgent` を使うと
+ClaudeCode 同様のツール使用ループを Praxia の各レイヤ (個人/組織メモリ・
+凍結層・スキル・コネクタ) 上で LLM に自律的に回させることができます。
+
+```bash
+# CLI — 1 行
+praxia agent run "Acme について整理して提案書ドラフトを作成して" \
+    --user-id alice --org-id acme --max-steps 10
+
+# 組込みツール 11 種を一覧
+praxia agent tools
+```
+
+```python
+# SDK
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
+result = agent.run("Acme について整理して提案書ドラフトを作成して")
+print(result.final_text)
+for tc in result.tool_calls:
+    print(f"- {tc.name}({tc.arguments_text[:60]}) ok={tc.ok}")
+```
+
+全ツール呼出は **監査ログ化**、`pull_from_connector` は **ACL チェック**
+を通過。`record_fact` は `read_only` モード時には no-op。詳細は
+[FEATURES § 38](FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop)。
 
 ## 5. 単一スキル実行
 

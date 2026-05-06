@@ -44,23 +44,38 @@ praxia config set ANTHROPIC_API_KEY sk-ant-xxx
 praxia config get OPENAI_API_KEY
 ```
 
-**Minimum**: set at least one LLM provider key:
+**Minimum**: set at least one LLM provider key. `auto_detect()` picks the
+first one it finds in this priority order:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...      # recommended
-# or
-OPENAI_API_KEY=sk-...             # also enables Whisper STT + OpenAI TTS
-# or
-GEMINI_API_KEY=...                # Google Gemini
-# or
-DASHSCOPE_API_KEY=...             # Alibaba Qwen API
+ANTHROPIC_API_KEY=sk-ant-...      # → claude (recommended for tool use)
+OPENAI_API_KEY=sk-...             # → chatgpt (also enables Whisper STT + OpenAI TTS)
+GEMINI_API_KEY=...                # → gemini (long context / multimodal)
+DEEPSEEK_API_KEY=...              # → deepseek (Chinese SOTA, ~1/10 cost)
+MISTRAL_API_KEY=...               # → mistral (EU-friendly, mistral-large-latest)
+XAI_API_KEY=...                   # → grok
+DASHSCOPE_API_KEY=...             # → qwen (Alibaba)
+COHERE_API_KEY=...                # → command-r (enterprise RAG)
+PERPLEXITY_API_KEY=...            # → perplexity (web-search-augmented)
+GROQ_API_KEY=...                  # → llama (3.3 70B, hundreds of tok/s)
+TOGETHERAI_API_KEY=...            # → llama via Together
 ```
+
+Pass an explicit alias any time with `--model <alias>`:
+`claude` / `chatgpt` / `gemini` / `deepseek` / `mistral` / `grok` / `qwen` /
+`command-r` / `perplexity` / `llama` / `gemma` / `phi` / `llama-local` /
+`qwen-local` / `gemma-cloud` and 10+ more (see [`praxia/core/llm.py`](../praxia/core/llm.py)).
 
 To run **fully on-prem** with no cloud LLM:
 
 ```bash
-ollama pull qwen2.5:14b
+ollama pull qwen2.5:14b      # default local
+ollama pull llama3.3:70b     # or Llama 3.3
+ollama pull gemma2:9b        # or Gemma
+ollama pull phi3.5:3.8b      # or Phi (small footprint)
+
 praxia run sales --model qwen-local --customer-name "Acme" --product "BizFlow"
+# also works: --model llama-local / gemma / phi
 ```
 
 ## 3. Initialize
@@ -86,6 +101,39 @@ praxia run logic --document spec.pdf       # auto-parses .pdf / .docx / .pptx / 
 # Self-correcting RAG — query expansion → eval → hallucination check loop
 praxia run rag --question "Which license is Praxia released under?"
 ```
+
+## 4½. Let the LLM drive — autonomous agent
+
+For tasks where you don't want to hand-orchestrate flows, use
+`praxia.agent.AutonomousAgent`. It runs a Claude-Code-style tool-use
+loop over personal/org memory, the frozen layer, business skills, and
+external connectors — the LLM decides which tools to call and when.
+
+```bash
+# CLI — one-liner
+praxia agent run "Tell me what we know about Acme and draft a proposal" \
+    --user-id alice --org-id acme --max-steps 10
+
+# List the 11 built-in tools
+praxia agent tools
+```
+
+```python
+# SDK
+from praxia.agent import AutonomousAgent
+from praxia.core.llm import LLM
+
+agent = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
+result = agent.run("Tell me what we know about Acme and draft a proposal.")
+print(result.final_text)
+for tc in result.tool_calls:
+    print(f"- {tc.name}({tc.arguments_text[:60]}) ok={tc.ok}")
+```
+
+Every tool call is **audit-logged** and `pull_from_connector` is
+**ACL-checked**. `record_fact` is a no-op when memory mode is `read_only`.
+See [FEATURES § 38](FEATURES.md#38-autonomous-agent-claude-code-style-tool-use-loop)
+for the full tool catalog and governance details.
 
 ## 5. Run a single business skill
 

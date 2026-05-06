@@ -317,6 +317,61 @@ Now `praxia export report.md report.tex` works, and `OutputFormatSkill` picks it
 | **KMS adapter** | `KmsAdapter` (Protocol) | `KMS_ADAPTERS` | `praxia.kms_adapters` |
 | **Skill** | `praxia.skills.skill.Skill` | `SKILLS` | `praxia.skills` |
 | **Flow** | `praxia.core.flow.Flow` | `FLOWS` | `praxia.flows` |
+| **Agent tool** *(new)* | `praxia.agent.tools.AgentTool` (dataclass) | (passed to `AutonomousAgent` via `extra_tools=`) | — |
+
+### 6.1 Adding a custom agent tool
+
+Beyond the 11 built-in tools, you can hand the `AutonomousAgent` extra tools
+that wrap your own infrastructure (a CRM lookup, a vector search, an internal
+ticketing API). The contract is small:
+
+```python
+from praxia.agent import AutonomousAgent
+from praxia.agent.tools import AgentTool
+from praxia.core.llm import LLM
+
+
+def _check_inventory(agent, sku: str, location: str = "any") -> dict:
+    # `agent` is the live AutonomousAgent — you can use agent.user_id /
+    # agent.auth / agent.role for permission scoping. Return a JSON-serializable
+    # value; the loop will serialize it for the next LLM turn.
+    return {"sku": sku, "available": 42, "location": location}
+
+
+inventory_tool = AgentTool(
+    name="check_inventory",
+    description="Look up current inventory for a SKU. Use this before promising delivery dates.",
+    parameters_schema={
+        "type": "object",
+        "properties": {
+            "sku": {"type": "string"},
+            "location": {"type": "string", "default": "any"},
+        },
+        "required": ["sku"],
+    },
+    handler=_check_inventory,
+)
+
+agent = AutonomousAgent(
+    user_id="alice",
+    llm=LLM("claude"),
+    extra_tools=[inventory_tool],          # joins the 11 built-ins
+    enable_tools=["search_personal_memory", "check_inventory", "final_answer"],
+)
+```
+
+Notes:
+- `parameters_schema` is the JSON-Schema body that LiteLLM forwards to the
+  model — only the property descriptions / required list / types are read.
+- The handler should **return** rather than raise on expected failures —
+  raise only for unexpected bugs. Raised exceptions are caught by the loop
+  and recorded as `ToolCallTrace.error`, but the model sees only an opaque
+  failure marker.
+- If your tool reads protected resources, call `agent.auth.policies.require(...)`
+  inside the handler before accessing them, mirroring how `pull_from_connector`
+  is gated.
+- Tools that write should respect `agent._personal_memory().mode` if they touch
+  memory state.
 
 ---
 

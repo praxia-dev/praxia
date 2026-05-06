@@ -43,9 +43,11 @@ Legend: ✅ supported · ~ partial / via plug-in · — not currently supported
 | Resource access policies (ACL) in core | — | — | — | ✅ | ✅ |
 | Admin data exports (CSV/JSON) | — | — | — | ✅ | ✅ |
 | Personal + org usage dashboards | — | — | — | ✅ | ✅ |
-| Storage / SaaS connectors (Pull + Push) | — | — | ~ | ~ | ✅ ×6 |
+| Storage / SaaS connectors (Pull + Push) | — | — | ~ | ~ | ✅ ×20 |
 | Multi-LTM fusion + dynamic routing | — | — | — | — | ✅ |
 | MCP / Claude Skills format | ~ | ~ | ~ | — | ✅ |
+| Autonomous agent (Claude-Code-style tool-use loop) | ~ | ~ | ~ | — | ✅ |
+| First-class LLM aliases (with auto-detect) | ~ | ~ | ~ | — | ✅ ×27 |
 | License model | MIT (OSS) | MIT (OSS) | MIT (OSS) | Commercial | Apache 2.0 (OSS) |
 
 > The license / pricing entries are factual at time of writing. For latest

@@ -33,16 +33,36 @@ LLM(
     **extra,
 )
 ```
-エイリアス: `claude`, `claude-sonnet`, `claude-haiku`, `chatgpt`, `gpt-4o`, `o1`, `gemini`, `gemini-flash`, `qwen`, `qwen-72b`, `qwen-local`, **`gemma`**, **`gemma-2b`**, **`gemma-9b`**, **`gemma-27b`**, **`gemma-cloud`**.
+エイリアス (27 種、ファーストクラス):
+
+| グループ | エイリアス |
+|---|---|
+| Anthropic | `claude`, `claude-sonnet`, `claude-haiku` |
+| OpenAI | `chatgpt`, `gpt-4o`, `o1` |
+| Google | `gemini`, `gemini-flash` |
+| Google Gemma (open) | `gemma`, `gemma-2b`, `gemma-9b`, `gemma-27b`, `gemma-cloud` |
+| Alibaba | `qwen`, `qwen-72b`, `qwen-local` |
+| **DeepSeek** | `deepseek`, `deepseek-reasoner` |
+| **Mistral** | `mistral`, `mistral-small`, `codestral` |
+| **xAI** | `grok` |
+| **Cohere** | `command-r` |
+| **Perplexity** | `perplexity` (Web 検索内蔵) |
+| **Llama** | `llama` (Groq 高速), `llama-local` (Ollama) |
+| **Microsoft Phi** | `phi` (Ollama) |
+
+LiteLLM がサポートするその他のモデルは `provider/model` 文字列を直渡しすれば動作します。
 
 ```python
 LLM.complete(messages, *, tools=None, response_format="text"|"json", **overrides) -> LLMResponse
 LLM.acomplete(messages, **kwargs) -> LLMResponse        # async
 LLM.list_supported_providers() -> list[str]             # static
-LLM.auto_detect() -> str                                 # static
+LLM.auto_detect() -> str                                 # static — 環境変数優先順位ベース
 ```
 
-`LLMResponse`: `text: str`, `model: str`, `usage: dict[str, int]`, `raw: Any`.
+`LLMResponse`: `text: str`, `model: str`, `usage: dict[str, int]`, `raw: Any`,
+**`tool_calls: list[dict]`** (各要素は `id` / `name` / `arguments` を持ち、
+`arguments` は関数引数の JSON 文字列)。`tool_calls` は `praxia.agent.AutonomousAgent`
+ループが読み取る情報源です。
 
 ### 1.3 `praxia.PersonalMemory`
 
@@ -191,6 +211,74 @@ result: FlowResult = flow.run({"customer_name": ..., "product": ...})
 ```
 
 組込: `SalesAgentFlow`, `LogicCheckerFlow`, `RAGOptimizationFlow`。カスタムフローは `@FLOWS.register_decorator(name)` または entry-point。
+
+### 1.9.1 `praxia.agent.AutonomousAgent`
+
+ClaudeCode 同等の LLM 駆動ツール使用ループを Praxia スタック全体 (メモリ /
+スキル / コネクタ / 凍結層) に対して実行する自律エージェント。
+
+```python
+from praxia.agent import AutonomousAgent, AgentResult, ToolCallTrace
+from praxia.agent.tools import AgentTool, builtin_tools
+
+agent = AutonomousAgent(
+    user_id: str,
+    *,
+    role: str = "member",
+    org_id: str = "default-org",
+    llm: LLM | None = None,                   # 既定は LLM() (auto-detect)
+    memory_dir: str | Path = ".praxia",
+    memory_backend: str = "auto",
+    connector_configs: dict[str, dict] | None = None,    # {"box": {"access_token": "..."}}
+    enable_tools: list[str] | None = None,    # ホワイトリスト (`final_answer` は常時保持)
+    extra_tools: list[AgentTool] | None = None,
+    max_steps: int = 10,
+    max_tokens_per_step: int = 4096,
+    system_prompt: str | None = None,
+    auth: AuthManager | None = None,
+)
+
+result: AgentResult = agent.run(
+    user_input: str,
+    *,
+    history: list[dict] | None = None,
+    system_prompt: str | None = None,
+)
+```
+
+`AgentResult`:
+- `final_text: str`
+- `tool_calls: list[ToolCallTrace]` — 全ツール呼出の記録
+- `steps: int`
+- `stopped_reason: "completed" | "max_steps" | "error"`
+- `usage: dict[str, int]` — 累計入出力トークン
+
+`ToolCallTrace`:
+- `step: int`, `name: str`, `arguments: dict`, `arguments_text: str`
+- `result: Any`, `result_text: str`
+- `ok: bool`, `error: str`
+
+**組込ツール 11 種** (`praxia.agent.tools.builtin_tools()` で取得可能):
+
+| ツール | レイヤ | 備考 |
+|---|---|---|
+| `search_personal_memory` | 1 | 個人メモリ検索 |
+| `search_org_memory` | 3 | 組織共有ブロック検索 |
+| `search_frozen_layer` | 4 | `.praxia/frozen/**.md` 部分文字列検索 |
+| `list_skills` | — | `domain=` 任意フィルタ |
+| `list_personal_skills` | 6 | ユーザ個人カタログ |
+| `list_org_skills` | 6 | 実効カタログ (org + distributed + personal) |
+| `run_skill` | 6 | スキル名 + テキスト入力で起動 |
+| `list_connectors` | — | `CONNECTORS` レジストリから |
+| `pull_from_connector` | — | **ACL チェック** (`auth.policies.require`)、監査済 |
+| `record_fact` | 1 | `read_only` モード時 no-op |
+| `final_answer` | — | ループ終了センチネル |
+
+全ツール呼出は成否を問わず `auth.audit.record(...)` で記録。
+
+エージェント自体は `praxia.mcp.server.build_tools` 経由で MCP メタツール
+`autonomous_agent` としても公開、リモート MCP クライアント (Claude Desktop /
+Cursor) から個別ツール配線なしで委譲可能。
 
 ### 1.10 `praxia.auth`
 
@@ -387,6 +475,10 @@ reg.items() -> list[tuple[str, type[T]]]
 - `praxia skill run <name> "<input>"`
 - `praxia skill promote <name>`
 - `praxia skill distribute <name> --target-roles role1,role2`
+
+### 2.3.1 自律エージェント
+- `praxia agent run "<task>" [--user-id alice] [--role member] [--org-id default-org] [--model auto] [--max-steps 10] [--enable-tools t1,t2,...] [--show-trace/--no-show-trace]`
+- `praxia agent tools` — 組込ツール 11 種を説明文付で列挙
 
 ### 2.4 ユーザ管理 (admin)
 - `praxia user create <name> --role ROLE [--email]`

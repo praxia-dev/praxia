@@ -13,9 +13,14 @@ praxia/
 ├── __init__.py          # Re-exports the public API (Praxia, LLM, PersonalMemory, ...)
 ├── config.py            # PraxiaConfig — unified key resolution
 ├── core/
-│   ├── llm.py           # LLM, ProviderConfig, LLMResponse, DEFAULT_ALIASES
+│   ├── llm.py           # LLM, ProviderConfig, LLMResponse (with tool_calls), DEFAULT_ALIASES (27 entries)
 │   ├── agent.py         # Agent (single-turn LLM invocation)
 │   └── orchestrator.py  # Praxia (top-level facade)
+├── agent/               # AutonomousAgent — Claude-Code-style tool-use loop
+│   ├── __init__.py
+│   ├── autonomous.py    # AutonomousAgent
+│   ├── result.py        # AgentResult, ToolCallTrace
+│   └── tools.py         # AgentTool + 11 built-in tools (memory/skills/connectors/frozen)
 ├── flows/               # FlowResult, Flow, built-in flows
 ├── skills/
 │   ├── skill.py         # Skill, SkillManifest
@@ -129,7 +134,9 @@ class LLM:
 Internals:
 - `complete()` builds a kwargs dict from `ProviderConfig` + per-call overrides → calls `litellm.completion(**kwargs)`.
 - LiteLLM is **lazy-imported** so users can browse skills / flows without installing it.
-- `auto_detect()` reads env vars in fixed order: ANTHROPIC > OPENAI > GEMINI > DASHSCOPE > local (`PRAXIA_LOCAL_MODEL`, default `qwen-local`).
+- `LLMResponse` exposes `tool_calls: list[dict]` extracted from `choice.tool_calls` — each entry has `id` / `name` / `arguments` (JSON-encoded string). This is the contract the autonomous agent loop reads from.
+- `auto_detect()` priority: ANTHROPIC > OPENAI > GEMINI > DEEPSEEK > MISTRAL > XAI > DASHSCOPE > COHERE > PERPLEXITY > GROQ > TOGETHERAI > local (`PRAXIA_LOCAL_MODEL`, default `qwen-local`; valid local aliases include `qwen-local` / `gemma` / `phi` / `llama-local`).
+- `DEFAULT_ALIASES` ships 27 entries spanning Anthropic, OpenAI, Google (Gemini + Gemma), Alibaba (Qwen), DeepSeek, Mistral (incl. Codestral), xAI Grok, Cohere Command R+, Perplexity Sonar (web-search-augmented), Groq-hosted Llama 3.3, local Ollama (Llama / Phi / Qwen / Gemma).
 
 ### 2.3 `MemoryBackend` protocol
 
@@ -253,6 +260,58 @@ Implementation note: the regex pattern combines an ASCII fragment (with `\b`) an
 ```
 
 `ResolvedMemoryConfig.reason` carries the trace for debugging.
+
+### 2.7 `AutonomousAgent` (LLM-driven tool-use loop)
+
+```python
+class AutonomousAgent:
+    user_id: str
+    role: str = "member"
+    org_id: str = "default-org"
+    llm: LLM
+    tools: dict[str, AgentTool]   # 11 built-in + extras the host registered
+    auth: AuthManager             # injected; never optional in production
+    max_steps: int = 10
+    max_tokens_per_step: int = 4096
+
+    def run(self, user_input, *, history=None, system_prompt=None) -> AgentResult: ...
+```
+
+**Loop invariants** (one iteration = one step):
+
+1. Build `messages = [system, *history?, user]` on first iteration; thereafter
+   carry forward.
+2. Call `llm.complete(messages, tools=tool_schemas, max_tokens=...)` — schemas
+   come from `AgentTool.to_litellm_schema()`.
+3. If `resp.tool_calls == []` → loop exits with `resp.text` as the final answer.
+4. Otherwise, append an `assistant` message that mirrors the model's `tool_calls`,
+   then iterate them:
+   - Look up the handler; unknown name → record an `ok=False` trace and continue.
+   - Parse `arguments` as JSON; malformed → empty dict (not raised).
+   - `pull_from_connector` → `auth.policies.require(...)` first (denial returns
+     `{"ok": false, "error": "access denied"}` instead of raising).
+   - `record_fact` → no-op when `pm.mode == "read_only"`.
+   - Append a `tool` message with `tool_call_id` so the next LLM turn sees it.
+   - If the call was `final_answer` and `ok` → exit early with the supplied answer.
+5. After `max_steps` without termination, set `stopped_reason="max_steps"`.
+
+**Audit contract**:
+- `agent.run.start` recorded once per invocation (with `input_chars`).
+- Every connector pull recorded with outcome `success` / `denied` / `error`.
+- Every skill run recorded with outcome.
+- `agent.run.end` recorded once with `steps` / `tool_calls` / `reason`.
+
+**Failure modes**:
+- LLM call raises → caught, `final_text` set to `"[agent error] LLM failed: …"`,
+  `stopped_reason="error"`, audit ends with `outcome="error"`.
+- Tool handler raises → caught, recorded into `ToolCallTrace.error`, loop
+  continues so the model can recover.
+- Audit recording itself fails → swallowed (the loop must never break for
+  bookkeeping).
+
+`praxia.mcp.server.build_tools()` adds an `autonomous_agent` MCP meta-tool
+that constructs an `AutonomousAgent` per call (`user_id`, `task`, optional
+`role` / `org_id` / `max_steps`) and returns `result.final_text`.
 
 ---
 

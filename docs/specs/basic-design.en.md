@@ -83,8 +83,9 @@ The system is designed to be:
 | Layer | Module | Responsibility |
 |---|---|---|
 | 0 | `praxia.config` | Unified config resolution: env > .env > `.praxia/config.toml` |
-| 1 | `praxia.core.llm` | Multi-provider LLM client (LiteLLM-backed) |
+| 1 | `praxia.core.llm` | Multi-provider LLM client (LiteLLM-backed; 27 first-class aliases incl. Anthropic / OpenAI / Google / DeepSeek / Mistral / xAI / Cohere / Perplexity / Qwen / Llama / Gemma / Phi). `LLMResponse.tool_calls` exposes function-call structure for the autonomous agent loop. |
 | 2 | `praxia.core.agent` / `flows` / `skills` | Single agent + multi-agent flow + skill registry |
+| 2a | `praxia.agent` | **Autonomous agent** — LLM-driven tool-use loop over the full stack (memory / skills / connectors / frozen layer). 11 built-in tools, ACL-gated, audit-logged. Exposed as a CLI command and an MCP meta-tool. |
 | 3 | `praxia.memory` | 5-layer memory stack + policy + multi-LTM composition |
 | 4 | `praxia.auth` | AuthN (API key + JWT + SSO) / AuthZ (RBAC + ACL) / audit |
 | 5 | `praxia.connectors` | Storage / SaaS connectors + per-user OAuth |

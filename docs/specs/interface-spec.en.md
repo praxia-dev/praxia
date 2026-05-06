@@ -33,16 +33,36 @@ LLM(
     **extra,
 )
 ```
-Aliases: `claude`, `claude-sonnet`, `claude-haiku`, `chatgpt`, `gpt-4o`, `o1`, `gemini`, `gemini-flash`, `qwen`, `qwen-72b`, `qwen-local`, **`gemma`**, **`gemma-2b`**, **`gemma-9b`**, **`gemma-27b`**, **`gemma-cloud`**.
+Aliases (27 first-class):
+
+| Group | Aliases |
+|---|---|
+| Anthropic | `claude`, `claude-sonnet`, `claude-haiku` |
+| OpenAI | `chatgpt`, `gpt-4o`, `o1` |
+| Google | `gemini`, `gemini-flash` |
+| Google Gemma (open) | `gemma`, `gemma-2b`, `gemma-9b`, `gemma-27b`, `gemma-cloud` |
+| Alibaba | `qwen`, `qwen-72b`, `qwen-local` |
+| **DeepSeek** | `deepseek`, `deepseek-reasoner` |
+| **Mistral** | `mistral`, `mistral-small`, `codestral` |
+| **xAI** | `grok` |
+| **Cohere** | `command-r` |
+| **Perplexity** | `perplexity` (web-search-augmented) |
+| **Llama** | `llama` (Groq fast), `llama-local` (Ollama) |
+| **Microsoft Phi** | `phi` (Ollama) |
+
+Anything else LiteLLM supports works via the raw `provider/model` string.
 
 ```python
 LLM.complete(messages: list[dict], *, tools=None, response_format="text"|"json", **overrides) -> LLMResponse
 LLM.acomplete(messages: list[dict], **kwargs) -> LLMResponse        # async
 LLM.list_supported_providers() -> list[str]                         # static
-LLM.auto_detect() -> str                                            # static
+LLM.auto_detect() -> str                                            # static — env-var driven priority order
 ```
 
-`LLMResponse`: `text: str`, `model: str`, `usage: dict[str, int]`, `raw: Any`.
+`LLMResponse`: `text: str`, `model: str`, `usage: dict[str, int]`, `raw: Any`,
+**`tool_calls: list[dict]`** (each entry has `id` / `name` / `arguments` —
+a JSON-encoded string of the function call's arguments). The `tool_calls`
+field is what `praxia.agent.AutonomousAgent` reads to drive its loop.
 
 ### 1.3 `praxia.PersonalMemory`
 
@@ -191,6 +211,74 @@ result: FlowResult = flow.run({"customer_name": ..., "product": ...})
 ```
 
 Built-in: `SalesAgentFlow`, `LogicCheckerFlow`, `RAGOptimizationFlow`. Custom flows register via `@FLOWS.register_decorator(name)` or entry-point.
+
+### 1.9.1 `praxia.agent.AutonomousAgent`
+
+LLM-driven tool-use loop over the full Praxia stack. Mirrors how Claude Code
+drives its own tool use, scoped to memory / skills / connectors / frozen layer.
+
+```python
+from praxia.agent import AutonomousAgent, AgentResult, ToolCallTrace
+from praxia.agent.tools import AgentTool, builtin_tools
+
+agent = AutonomousAgent(
+    user_id: str,
+    *,
+    role: str = "member",
+    org_id: str = "default-org",
+    llm: LLM | None = None,                   # defaults to LLM() (auto-detect)
+    memory_dir: str | Path = ".praxia",
+    memory_backend: str = "auto",
+    connector_configs: dict[str, dict] | None = None,    # {"box": {"access_token": "..."}}
+    enable_tools: list[str] | None = None,    # whitelist; final_answer always kept
+    extra_tools: list[AgentTool] | None = None,
+    max_steps: int = 10,
+    max_tokens_per_step: int = 4096,
+    system_prompt: str | None = None,
+    auth: AuthManager | None = None,
+)
+
+result: AgentResult = agent.run(
+    user_input: str,
+    *,
+    history: list[dict] | None = None,
+    system_prompt: str | None = None,
+)
+```
+
+`AgentResult`:
+- `final_text: str`
+- `tool_calls: list[ToolCallTrace]` — every call inspected during the loop
+- `steps: int`
+- `stopped_reason: "completed" | "max_steps" | "error"`
+- `usage: dict[str, int]` — accumulated input/output tokens
+
+`ToolCallTrace`:
+- `step: int`, `name: str`, `arguments: dict`, `arguments_text: str`
+- `result: Any`, `result_text: str`
+- `ok: bool`, `error: str`
+
+**Built-in tools** (`praxia.agent.tools.builtin_tools()` returns the dict):
+
+| Tool | Layer | Notes |
+|---|---|---|
+| `search_personal_memory` | 1 | hits + count |
+| `search_org_memory` | 3 | hits + count |
+| `search_frozen_layer` | 4 | substring match over `.praxia/frozen/**.md` |
+| `list_skills` | — | optional `domain=` filter |
+| `list_personal_skills` | 6 | per-user catalog |
+| `list_org_skills` | 6 | effective: org + distributed + personal |
+| `run_skill` | 6 | invokes by name with text input |
+| `list_connectors` | — | from `CONNECTORS` registry |
+| `pull_from_connector` | — | **ACL-checked** (`auth.policies.require`), audited |
+| `record_fact` | 1 | no-op when memory mode is `read_only` |
+| `final_answer` | — | sentinel that terminates the loop |
+
+Every tool call is recorded via `auth.audit.record(...)` regardless of outcome.
+
+The agent is also exposed as a single MCP meta-tool `autonomous_agent` (see
+`praxia.mcp.server.build_tools`) so remote MCP clients can delegate an entire
+investigation rather than orchestrating individual tools.
 
 ### 1.10 `praxia.auth`
 
@@ -387,6 +475,10 @@ All commands accept `--help` for full args. Categories below.
 - `praxia skill run <name> "<input>"`
 - `praxia skill promote <name>`
 - `praxia skill distribute <name> --target-roles role1,role2`
+
+### 2.3.1 Autonomous agent
+- `praxia agent run "<task>" [--user-id alice] [--role member] [--org-id default-org] [--model auto] [--max-steps 10] [--enable-tools t1,t2,...] [--show-trace/--no-show-trace]`
+- `praxia agent tools` — list the 11 built-in agent tools with descriptions
 
 ### 2.4 Users (admin)
 - `praxia user create <name> --role ROLE [--email]`

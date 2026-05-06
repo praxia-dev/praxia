@@ -6,15 +6,16 @@ Regression-prevention test suite that runs on every code change.
 
 ## What it covers
 
-364 deterministic regression tests + 6 LLM quality tests across 12 feature areas:
+431 deterministic regression tests + 6 LLM quality tests across 13 feature areas:
 
 | File | Area | Tests |
 |---|---|---|
-| `tests/test_smoke.py` | High-level smoke (always run) | 60 |
+| `tests/test_smoke.py` | High-level smoke (always run) — incl. LLM alias resolution + auto-detect priority | 65 |
 | `tests/evaluation/test_eval_auth.py` | Authentication / RBAC / ACL / audit log | ~25 |
 | `tests/evaluation/test_eval_memory.py` | Memory backends + mode + admin policy | ~30 |
 | `tests/evaluation/test_eval_composite.py` | Multi-LTM fusion + routing | ~30 |
 | `tests/evaluation/test_eval_skills.py` | Skill registry + flows | ~15 |
+| `tests/evaluation/test_eval_agent.py` | **AutonomousAgent** loop + tool ACL + audit + max_steps | 13 |
 | `tests/evaluation/test_eval_exporters.py` | Output exporters (md/html/pptx/docx/json) | ~30 |
 | `tests/evaluation/test_eval_oauth.py` | Per-user OAuth (token store + flow) | ~15 |
 | `tests/evaluation/test_eval_parsers.py` | File parsers (PDF/Office/CSV/HTML/TXT) | ~20 |
