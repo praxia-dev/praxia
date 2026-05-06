@@ -170,6 +170,51 @@ class TestMCPServer:
 
 # ----------------------------------------------------------------- SCIM ---
 
+class TestMCPHttp:
+    def test_routes_mounted_in_fastapi_app(self, tmp_storage):
+        try:
+            from fastapi import FastAPI  # noqa: F401
+        except ImportError:
+            pytest.skip("FastAPI not installed")
+        from praxia.server.app import create_app
+
+        app = create_app(storage_dir=tmp_storage)
+        paths = {
+            (m, r.path)
+            for r in app.routes
+            for m in (getattr(r, "methods", set()) or set())
+            if m not in ("HEAD", "OPTIONS")
+        }
+        assert ("POST", "/api/v1/mcp") in paths
+        assert ("GET", "/api/v1/mcp") in paths
+        assert ("POST", "/api/v1/mcp/messages") in paths
+        assert ("GET", "/api/v1/mcp/sse") in paths
+        assert ("GET", "/api/v1/mcp/info") in paths
+
+    def test_unauthenticated_post_rejected(self, tmp_storage):
+        try:
+            from fastapi.testclient import TestClient
+        except ImportError:
+            pytest.skip("FastAPI / httpx not installed")
+        from praxia.server.app import create_app
+
+        app = create_app(storage_dir=tmp_storage)
+        client = TestClient(app)
+        # No auth header — handler raises HTTPException(401)
+        resp = client.post(
+            "/api/v1/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+        )
+        # FastAPI may surface 401 (auth check) or 422 (header parse) for an
+        # unauth'd request — both prove the unauth path is rejected.
+        assert resp.status_code in (401, 422)
+        # Authenticated path needs PRAXIA_MCP_TOKEN — verify the absence
+        # error message points to that.
+        if resp.status_code == 401:
+            detail = resp.json().get("detail", "")
+            assert "MCP" in detail or "credentials" in detail or "Invalid" in detail
+
+
 class TestSCIMMapping:
     def test_praxia_user_to_scim(self):
         from praxia.scim import map_praxia_user_to_scim

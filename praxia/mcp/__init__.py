@@ -28,8 +28,16 @@ from praxia.mcp.server import (
     serve_stdio,
 )
 
+
+def mcp_router(*args, **kwargs):
+    """Lazy factory — defers FastAPI import until actually mounted."""
+    from praxia.mcp.http import mcp_router as _impl
+    return _impl(*args, **kwargs)
+
+
 __all__ = [
     "MCPServer",
     "build_tools",
     "serve_stdio",
+    "mcp_router",
 ]

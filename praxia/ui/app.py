@@ -19,13 +19,19 @@ from praxia.core.llm import DEFAULT_ALIASES
 from praxia.flows import LogicCheckerFlow, RAGOptimizationFlow, SalesAgentFlow
 from praxia.skills import BUSINESS_SKILLS
 from praxia.ui.i18n import t, language_selector_in_sidebar
+from praxia.ui.responsive import (
+    compact_mode_toggle_in_sidebar,
+    inject_mobile_css,
+)
 
 st.set_page_config(page_title="Praxia", page_icon="🪡", layout="wide")
+inject_mobile_css()  # responsive overrides for mobile / tablet
 
 # --- Sidebar: settings -----------------------------------------------------
 
 # Language selector first so all subsequent labels use the chosen language
 language_selector_in_sidebar()
+compact_mode_toggle_in_sidebar(t("sidebar.compact"))
 
 st.sidebar.title(t("app.title"))
 st.sidebar.caption(t("app.tagline"))

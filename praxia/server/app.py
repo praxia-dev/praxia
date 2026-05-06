@@ -328,11 +328,21 @@ def create_app(
     # --- SCIM provisioning (optional) ---------------------------------------
     # Mount only if PRAXIA_SCIM_TOKEN is set — keeps the surface area minimal
     # for operators who don't need it.
+    import os
     if os.environ.get("PRAXIA_SCIM_TOKEN"):
         try:
             from praxia.scim import scim_router
             app.include_router(scim_router(auth=auth), prefix="/scim/v2")
         except ImportError:
             pass  # SCIM module imports cleanly even without FastAPI
+
+    # --- MCP HTTP transport (always available) -----------------------------
+    # Remote MCP clients connect via /api/v1/mcp (Streamable HTTP) or
+    # /api/v1/mcp/{sse,messages} (legacy SSE).
+    try:
+        from praxia.mcp.http import mcp_router
+        app.include_router(mcp_router(), prefix="/api/v1")
+    except ImportError:
+        pass  # MCP HTTP needs FastAPI which is already required by this module
 
     return app

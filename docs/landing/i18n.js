@@ -279,14 +279,14 @@
       "pt-BR": "Por que Praxia",
     },
     "features.h2": {
-      en: "33+ advantages no other framework offers in one package.",
-      ja: "1 パッケージに 33+ の独自優位性。他にないラインナップ。",
-      "zh-CN": "33+ 项独特优势,无其他框架可比。",
-      ko: "다른 프레임워크에는 없는 33+ 가지 강점.",
-      es: "33+ ventajas que ningún otro framework ofrece en un solo paquete.",
-      fr: "33+ avantages qu'aucun autre framework n'offre en un seul package.",
-      de: "33+ Vorteile, die kein anderes Framework in einem Paket bietet.",
-      "pt-BR": "33+ vantagens que nenhum outro framework oferece em um pacote.",
+      en: "37+ advantages no other framework offers in one package.",
+      ja: "1 パッケージに 37+ の独自優位性。他にないラインナップ。",
+      "zh-CN": "37+ 项独特优势,无其他框架可比。",
+      ko: "다른 프레임워크에는 없는 37+ 가지 강점.",
+      es: "37+ ventajas que ningún otro framework ofrece en un solo paquete.",
+      fr: "37+ avantages qu'aucun autre framework n'offre en un seul package.",
+      de: "37+ Vorteile, die kein anderes Framework in einem Paket bietet.",
+      "pt-BR": "37+ vantagens que nenhum outro framework oferece em um pacote.",
     },
 
     "who.kicker": {

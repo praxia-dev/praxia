@@ -104,7 +104,10 @@
         <span>🌐 SDK · Streamlit UI · FastAPI HTTP</span>
         <span>🔑 KMS-backed encryption (AWS / Azure / GCP / Vault)</span>
         <span>⚖️ A/B experiments + LLM-quality eval</span>
-        <span>✅ 342 regression tests</span>
+        <span>🪐 MCP (stdio + remote HTTP/SSE)</span>
+        <span>🔗 20 connectors (Box / Notion / Slack / Jira / GitHub / S3 / …)</span>
+        <span>📱 Mobile-responsive</span>
+        <span>✅ 429 regression tests</span>
       </div>
     </div>
   </header>
@@ -113,7 +116,7 @@
     <div class="container">
       <div class="section-head">
         <span class="kicker" data-i18n="features.kicker">Why Praxia</span>
-        <h2 data-i18n="features.h2">33+ advantages no other framework offers in one package.</h2>
+        <h2 data-i18n="features.h2">37+ advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
         <article class="card">
@@ -283,8 +286,23 @@
         </article>
         <article class="card">
           <div class="card-icon">🧮</div>
-          <h3>342 regression tests</h3>
-          <p>Auth / memory / fusion / exporters / OAuth / parsers / CLI / extensions / experiments — every public surface has a hermetic test. CI runs on every PR. Add features without breaking existing ones.</p>
+          <h3>429 regression tests</h3>
+          <p>Auth / memory / fusion / exporters / OAuth / parsers / CLI / extensions / experiments / connectors — every public surface has a hermetic test. CI runs on every PR. Add features without breaking existing ones.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔗</div>
+          <h3>20 storage / SaaS connectors</h3>
+          <p>Box / SharePoint / Dropbox / Drive / kintone / Salesforce + Notion / Confluence / Jira / Slack / Teams / GitHub / HubSpot / Zendesk / Linear / S3 / Azure Blob / GCS / WebDAV / Email. Per-user OAuth means alice only sees what alice can in each system.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🪐</div>
+          <h3>MCP server (stdio + remote HTTP/SSE)</h3>
+          <p>Use Praxia from Claude Desktop / Cursor / Continue.dev. Local: <code>praxia mcp serve</code>. Remote (multi-host): <code>praxia serve</code> exposes <code>/api/v1/mcp</code> with auth + audit log. Every skill + flow becomes an MCP tool automatically.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📱</div>
+          <h3>Mobile-responsive UI + landing</h3>
+          <p>Landing has chip-style nav on phones, scrollable tabs, ≥44px touch targets, prefers-reduced-motion respected. Streamlit UI injects responsive CSS + a "Compact mode" toggle for slow connections.</p>
         </article>
       </div>
     </div>
@@ -739,12 +757,12 @@ praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account
         <div class="uc-row uc-head">
           <div>Function</div><div>Before</div><div>After Praxia</div><div>Lift</div>
         </div>
-        <div class="uc-row"><div>Investment DD</div><div>4–6h / deck</div><div>45–60 min</div><div class="lift">−80%</div></div>
-        <div class="uc-row"><div>Sales prep</div><div>Hit-or-miss prep</div><div>Storyboard + FAQ + RAG</div><div class="lift">+15–20pt acceptance</div></div>
-        <div class="uc-row"><div>Design review</div><div>16h / week senior load</div><div>4h / week</div><div class="lift">−75%</div></div>
-        <div class="uc-row"><div>Procurement RFQ</div><div>Direct cost only</div><div>Full TCO + ESG</div><div class="lift">+30% true cost surfaced</div></div>
-        <div class="uc-row"><div>Patent prior art</div><div>1–2 days + counsel</div><div>2–4h internal</div><div class="lift">−50–70% counsel fees</div></div>
-        <div class="uc-row"><div>Legal M&A</div><div>4–8 weeks</div><div>2–3 weeks</div><div class="lift">−50% external costs</div></div>
+        <div class="uc-row"><div data-label="Function">Investment DD</div><div data-label="Before">4–6h / deck</div><div data-label="After">45–60 min</div><div class="lift" data-label="Lift">−80%</div></div>
+        <div class="uc-row"><div data-label="Function">Sales prep</div><div data-label="Before">Hit-or-miss prep</div><div data-label="After">Storyboard + FAQ + RAG</div><div class="lift" data-label="Lift">+15–20pt acceptance</div></div>
+        <div class="uc-row"><div data-label="Function">Design review</div><div data-label="Before">16h / week senior load</div><div data-label="After">4h / week</div><div class="lift" data-label="Lift">−75%</div></div>
+        <div class="uc-row"><div data-label="Function">Procurement RFQ</div><div data-label="Before">Direct cost only</div><div data-label="After">Full TCO + ESG</div><div class="lift" data-label="Lift">+30% true cost surfaced</div></div>
+        <div class="uc-row"><div data-label="Function">Patent prior art</div><div data-label="Before">1–2 days + counsel</div><div data-label="After">2–4h internal</div><div class="lift" data-label="Lift">−50–70% counsel fees</div></div>
+        <div class="uc-row"><div data-label="Function">Legal M&A</div><div data-label="Before">4–8 weeks</div><div data-label="After">2–3 weeks</div><div class="lift" data-label="Lift">−50% external costs</div></div>
       </div>
       <p class="cta-line">
         See full Before/After tables in
@@ -1183,6 +1201,10 @@ P  = Praxia cost (license + infra)</code></pre>
         <details>
           <summary>Can I A/B test a new prompt before rolling it out?</summary>
           <p>Yes — built into the OSS. Define an experiment with control / treatment variants, set traffic split, restrict the audience (roles / users / time window). Each user's assignment is deterministic (SHA-256 hash) so they always see the same variant during the experiment. Outcomes auto-track via the existing <code>record_outcome()</code> API. <code>praxia experiment results &lt;id&gt;</code> shows tentative winner.</p>
+        </details>
+        <details>
+          <summary>Can I use Praxia from Claude Desktop / Cursor over the network?</summary>
+          <p>Yes. Praxia is an MCP server in two flavors. <strong>Local</strong> (recommended for desktop): <code>praxia mcp serve</code> → configure Claude Desktop's <code>mcp.json</code> to spawn it via stdio. <strong>Remote</strong> (multi-host / team): run <code>praxia serve</code> and the MCP HTTP+SSE endpoints under <code>/api/v1/mcp</code> are available. Auth via API key, JWT, or a shared <code>X-MCP-Token</code>. Every business skill + multi-agent flow + memory search becomes an MCP tool automatically — no per-tool wiring required.</p>
         </details>
         <details>
           <summary>How do I prevent prompt changes from silently degrading quality?</summary>

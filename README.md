@@ -11,9 +11,10 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
-[![Tests: 427](https://img.shields.io/badge/tests-427%20passing-green.svg)]()
+[![Tests: 429](https://img.shields.io/badge/tests-429%20passing-green.svg)]()
 [![Connectors: 20](https://img.shields.io/badge/connectors-20-blueviolet.svg)]()
 [![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
+[![MCP: stdio + HTTP/SSE](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP%2FSSE-orange.svg)]()
 
 > 🇯🇵 日本語版の各業務別記事 (Zenn): [docs/zenn/](docs/zenn/)
 > 🔍 Complete feature reference: [docs/FEATURES.md](docs/FEATURES.md)
@@ -560,6 +561,9 @@ Full guide: [docs/quickstart.md](docs/quickstart.md).
 > **Regression suite?** 364 tests covering auth/memory/exporters/CLI/i18n/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
 > **Multilingual?** Landing page + Streamlit UI ship in 8 languages (en / ja / zh-CN / ko / es / fr / de / pt-BR) with browser-language auto-detection — see [docs/i18n.md](docs/i18n.md).
 > **Contributing?** PRs require a DCO sign-off (`git commit -s …`). Trademark policy + GDPR notes for operators are in [docs/legal/](docs/legal/).
+> **MCP for Claude Desktop / Cursor?** Local stdio (`praxia mcp serve`) or remote HTTP+SSE (`/api/v1/mcp` after `praxia serve`). Every skill + flow becomes an MCP tool automatically.
+> **OAuth scopes for connectors?** Per-provider scopes, app registration steps, least-privilege alternatives in [docs/OAUTH_SCOPES.md](docs/OAUTH_SCOPES.md).
+> **Mobile-friendly?** Both the landing page and the Streamlit UI are responsive — chip-style nav on phones, scrollable tabs, ≥44px touch targets, compact mode toggle.
 
 ---
 

@@ -108,6 +108,16 @@ _T: dict[str, dict[str, str]] = {
         "de": "Sprache",
         "pt-BR": "Idioma",
     },
+    "sidebar.compact": {
+        "en": "Compact mode",
+        "ja": "コンパクト表示",
+        "zh-CN": "紧凑模式",
+        "ko": "컴팩트 모드",
+        "es": "Modo compacto",
+        "fr": "Mode compact",
+        "de": "Kompaktansicht",
+        "pt-BR": "Modo compacto",
+    },
     "tab.run_flow": {
         "en": "🎬 Run Flow",
         "ja": "🎬 フロー実行",
