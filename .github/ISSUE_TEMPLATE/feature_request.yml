@@ -8,18 +8,3 @@ body:
     attributes: {label: Proposed solution}
   - type: textarea
     attributes: {label: Alternatives considered}
-.github/PULL_REQUEST_TEMPLATE.md:
-
-
-## What
-<!-- One-line summary of the change -->
-
-## Why
-<!-- Motivation / linked issue -->
-
-## Tests
-- [ ] `pytest tests/ --ignore=tests/llm_eval` passes
-- [ ] If applicable, also ran `tests/llm_eval/` (`-m llm_eval`)
-
-## Docs
-- [ ] Updated README / FEATURES / specs where applicable
