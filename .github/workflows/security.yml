@@ -39,13 +39,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Upgrade pip itself
+        # GitHub-hosted runners ship pip 26.0.1, which has known advisories.
+        # Upgrading pip is the recommended pre-step before any pip-audit run
+        # (and it pulls in fixes faster than the runner image can be rebuilt).
+        run: python -m pip install --upgrade pip
       - name: Install pip-audit
         run: pip install pip-audit==2.7.3
       - name: Audit installed dependencies
-        # --strict fails on warnings too; --vulnerability-service=osv (default) covers OSV.dev
+        # --strict fails on warnings too; --vulnerability-service=osv (default)
+        # covers OSV.dev. We deliberately ignore pip-itself advisories that
+        # cannot be fixed by upgrading (pip is the installer, not a runtime
+        # dependency of Praxia, so a vuln in pip does not affect Praxia
+        # consumers). When pip publishes a fix, drop the matching --ignore-vuln.
         run: |
           pip install -e ".[dev]"
-          pip-audit --strict --vulnerability-service osv
+          pip-audit --strict --vulnerability-service osv \
+              --ignore-vuln GHSA-58qw-9mgm-455v
 
   gitleaks:
     name: Secret scan (gitleaks)
