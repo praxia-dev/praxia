@@ -38,22 +38,20 @@ header[data-testid="stHeader"] { display: none !important; height: 0 !important;
 footer { visibility: hidden !important; height: 0 !important; }
 
 /* Push main content to the very top — no padding above the nav bar. */
-.main .block-container {
+.main .block-container,
+[data-testid="stMainBlockContainer"] {
     padding-top: 0 !important;
     padding-left: 1rem !important;
     padding-right: 1rem !important;
 }
-section.main { padding-top: 0 !important; }
+section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 
-/* --- Top-bar nav: the FIRST st.columns row in the script becomes a
-       sticky solid bar. We render the nav as the very first widget so
-       this targeting is reliable. */
-.main .block-container [data-testid="stVerticalBlock"]
-    > [data-testid="element-container"]:first-child
-    [data-testid="stHorizontalBlock"] {
-    position: sticky;
-    top: 0;
-    z-index: 9999;
+/* --- Top-bar nav: pinned to the top via st.container(key="praxia_topnav")
+       which Streamlit renders with the class .st-key-praxia_topnav. */
+.st-key-praxia_topnav {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 9999 !important;
     background-color: #ffffff;  /* light; dark overrides below */
     padding: 0.5rem 1rem !important;
     margin: 0 -1rem 1rem -1rem !important;
@@ -63,25 +61,27 @@ section.main { padding-top: 0 !important; }
 
 /* No gaps between buttons + flush button radii so the bar reads as
    one continuous strip. */
-.main .block-container [data-testid="stVerticalBlock"]
-    > [data-testid="element-container"]:first-child
-    [data-testid="stHorizontalBlock"] .stButton button {
+.st-key-praxia_topnav .stButton button {
     border-radius: 0 !important;
     border-right: none !important;
     margin: 0 !important;
 }
-.main .block-container [data-testid="stVerticalBlock"]
-    > [data-testid="element-container"]:first-child
-    [data-testid="stHorizontalBlock"] [data-testid="column"]:first-child .stButton button {
+.st-key-praxia_topnav [data-testid="column"]:first-child .stButton button {
     border-top-left-radius: 6px !important;
     border-bottom-left-radius: 6px !important;
 }
-.main .block-container [data-testid="stVerticalBlock"]
-    > [data-testid="element-container"]:first-child
-    [data-testid="stHorizontalBlock"] [data-testid="column"]:last-child .stButton button {
+.st-key-praxia_topnav [data-testid="column"]:last-child .stButton button {
     border-top-right-radius: 6px !important;
     border-bottom-right-radius: 6px !important;
     border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
+}
+
+/* Sticky requires no ancestor with overflow:hidden — make sure none of
+   the wrapping Streamlit containers clip our nav. */
+.stApp, [data-testid="stMain"], section.main, .main,
+.main .block-container, [data-testid="stMainBlockContainer"],
+[data-testid="stVerticalBlock"] {
+    overflow: visible !important;
 }
 
 /* --- Praxia UI mobile / responsive overrides --- */

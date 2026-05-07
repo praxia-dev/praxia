@@ -288,9 +288,7 @@ if theme_choice == "dark":
   [data-testid="stAlert"] { background-color: rgba(255,255,255,0.04) !important; }
 
   /* Sticky top nav — solid dark bg with subtle gold underline */
-  .main .block-container [data-testid="stVerticalBlock"]
-    > [data-testid="element-container"]:first-child
-    [data-testid="stHorizontalBlock"] {
+  .st-key-praxia_topnav {
     background-color: #15171f !important;
     border-bottom: 1px solid rgba(201,164,86,0.25) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
@@ -453,20 +451,20 @@ if st.session_state.get("praxia_mode") not in NAV_KEYS:
 
 nav_labels = [t(f"mode.{k}") for k in NAV_KEYS]
 
-# Top nav: the FIRST widget rendered in the main area. The CSS in
-# responsive.py targets the first stHorizontalBlock under the main
-# vertical block and makes it sticky.
-cols = st.columns(len(NAV_KEYS))
-for col, key in zip(cols, NAV_KEYS):
-    is_active = st.session_state["praxia_mode"] == key
-    if col.button(
-        t(f"mode.{key}"),
-        use_container_width=True,
-        type="primary" if is_active else "secondary",
-        key=f"top_nav_{key}",
-    ):
-        st.session_state["praxia_mode"] = key
-        st.rerun()
+# Top nav: wrapped in a keyed container so CSS can target it reliably
+# via the .st-key-praxia_topnav class that Streamlit auto-generates.
+with st.container(key="praxia_topnav"):
+    cols = st.columns(len(NAV_KEYS))
+    for col, key in zip(cols, NAV_KEYS):
+        is_active = st.session_state["praxia_mode"] == key
+        if col.button(
+            t(f"mode.{key}"),
+            use_container_width=True,
+            type="primary" if is_active else "secondary",
+            key=f"top_nav_{key}",
+        ):
+            st.session_state["praxia_mode"] = key
+            st.rerun()
 
 mode = st.session_state["praxia_mode"]
 
