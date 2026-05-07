@@ -209,11 +209,17 @@
 }
 .cta-row .btn { flex: 1 1 auto; min-width: 0; justify-content: center; }
 
-/* Tally iframe sits inside the form-card; tame default white bg flash */
+/* Tally iframe — present as a clean white card framed in brand gold,
+   floating above the dark portal page. */
 .form-signup iframe {
-  background: transparent;
-  margin-top: 0.5rem;
-  border-radius: var(--radius-sm);
+  background: #ffffff;
+  margin-top: 0.75rem;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(201, 164, 86, 0.32),       /* thin gold hairline ring */
+    0 24px 60px -16px rgba(0, 0, 0, 0.55),    /* deep separation shadow */
+    0 4px 16px rgba(0, 0, 0, 0.25);           /* close ambient shadow */
+  display: block;
 }
 
 @media (max-width: 880px) {
