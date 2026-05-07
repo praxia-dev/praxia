@@ -155,19 +155,28 @@ praxia ui --port 8501
 # Open http://localhost:8501
 ```
 
-11 tabs are available:
+### Sign-in
 
-- **Run Flow** — pick flow, attach files (PDF / Office / etc.), watch each agent run
-- **Skill** — invoke any of the 6 business skills with file or 🎙 voice input
-- **Memory** — browse personal memory and shared org blocks
-- **Consolidate** — trigger sleep-time personal-to-org promotion
-- **Dashboard** — personal + org usage metrics
-- **Prompts** — manage custom prompts (personal / org / distributed)
-- **Users** — admin: create / update / delete / rotate keys
-- **Connectors** — Pull / Push to Box / SharePoint / Dropbox / Drive / kintone / Salesforce
-- **Policies** — admin: resource access policies (ACL)
-- **Admin** — export audit log, users, usage, memory, policies (CSV / JSON / JSONL)
-- **About**
+The UI opens on a login screen:
+
+- **Single-user dev mode** (no users created via CLI yet): just type any User ID and click Sign in. You get unrestricted access. Suitable for laptop / trusted-LAN.
+- **Multi-user mode** (after `praxia user create alice --role admin` issues at least one user): User ID + Password (the API key issued at user-create time). Sign-in resolves to that user's role.
+
+Internet-exposed multi-user deployments should use `praxia serve` (FastAPI + OIDC SSO) instead — the Streamlit UI is designed for trusted environments.
+
+### Layout
+
+A sticky top-bar nav (Run / Knowledge / Prompts / Data / Stats / Preferences, plus Admin for admin role), a sidebar dedicated to the **Context picker** (which folders / memory layers feed the current run), and a workspace per view.
+
+| View | What's there |
+|------|------|
+| **🎬 Run** | Two sub-tabs. **🤖 Agent** = chat interface backed by `AutonomousAgent`; goal in, agent picks tools (search, connectors, skills) and iterates. **🛠 Skill** = pick a business skill (investment / sales / design / purchasing / patent / legal), submit input, get one answer. Selected Context folders feed both via grep-relevance filter on large folders. |
+| **🧠 Knowledge** | Browse personal + shared memory entries, plus the Skill registry (your skills + org-promoted ones). |
+| **📁 Data** | Manage data folders. Local folders = files you upload here. Connector folders = registered external paths (Box / SharePoint / Notion / etc.). |
+| **📝 Prompts** | Three sub-tabs: Generate (PromptDesigner — task in, polished template back), Browse & edit (CRUD on your prompt library), Distribute (admin only — push curated prompts to specific users / roles). |
+| **📊 Stats** | Three KPIs + horizontal bar charts. Personal: total runs, success rate, memory entries. Org: active users, org runs, success rate. |
+| **👤 Preferences** | Per-user persistent settings: language, color theme (auto/light/dark). Saved to `.praxia/preferences/<user>.json`. |
+| **⚙ Admin** | Admin role only. Seven sub-tabs: Settings (runtime LLM/backend + persistent KNOWN_KEYS), Users, Connectors, Policies (ACL), Consolidate (sleep-time promotion), Exports (CSV/JSON/JSONL), About. |
 
 ## 7. Multi-LTM fusion + dynamic routing (optional, accuracy boost)
 

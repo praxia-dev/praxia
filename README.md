@@ -482,25 +482,44 @@ Built-in rubrics: keyword match, structure (heading) match, length band, must-no
 Pull data into agent flows; push agent outputs back to your system of record. All access subject to admin policies. **Per-user OAuth** means alice only sees what alice has access to in each system.
 
 ### Dashboards
-- **Personal**: flow runs, skill invocations, memory entries, outcome success rate, token usage, top skills, recent episodes
-- **Organizational**: active users, total invocations, promoted/frozen/distributed counts, top users, top skills, audit event counts
+- **Personal**: 3 headline KPIs (total runs · success rate · memory entries) + Top skills horizontal bar chart
+- **Organizational**: 3 headline KPIs (active users · org runs · success rate) + Top users / Top skills side-by-side bar charts
+- Charts use plotly with the Praxia gold palette; tabular fallback if plotly isn't installed
 
 ---
 
 ## 🖼 UI Tour
 
-The bundled Streamlit UI gives non-technical users access to flows, skills, memory, dashboards, prompts, user / policy management, and connectors.
+The bundled Streamlit UI puts the **non-power-user surface area** of Praxia on a clean 3-zone layout: a sticky top-bar navigation, a sidebar dedicated to data context, and a workspace per view.
 
-| Tab | Screenshot |
-|---|---|
-| 🎬 Run Flow | ![Run Flow](docs/images/ui-run-flow.svg) |
-| 🛠 Skill | ![Business Skill](docs/images/ui-skills.svg) |
-| 📊 Dashboard | ![Dashboard](docs/images/ui-dashboard.svg) |
-| 📝 Prompts | ![Custom Prompts](docs/images/ui-prompts.svg) |
-| 👥 Users | ![User management](docs/images/ui-users.svg) |
-| 🔌 Connectors | ![External connectors](docs/images/ui-connectors.svg) |
-| 🛡 Policies | ![Resource access policies](docs/images/ui-policies.svg) |
-| 💾 Admin Downloads | ![Admin downloads](docs/images/ui-admin-exports.svg) |
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  [🎬 Run] [🧠 Knowledge] [📝 Prompts] [📁 Data] [📊 Stats]            │ ← sticky top bar
+│                  [👤 Preferences] [⚙ Admin]*                         │   (* admin/dev only)
+├────────────────────────┬─────────────────────────────────────────────┤
+│  🪡 Praxia              │                                             │
+│  👤 alice · admin       │                                             │
+│  [Sign out]             │   Selected view's workspace                 │
+│  ───────────────        │                                             │
+│  📁 Context             │   (Run = Agent chat or Skill form,          │
+│  ☑ Personal memory      │    Knowledge = memories + skill registry,   │
+│  ☑ Org memory           │    Data = folder CRUD,                      │
+│  ☐ Frozen layer         │    Prompts = generate/edit/distribute,      │
+│  📁 Q3 Sales (12)       │    Stats = charts,                          │
+│  🔌 Box: /Customers     │    Preferences = language/theme,            │
+│                         │    Admin = settings/users/policies/...)     │
+└────────────────────────┴─────────────────────────────────────────────┘
+```
+
+**Login**: just User ID for single-user dev mode, or User ID + Password (= API key issued by `praxia user create`) for role-gated multi-user mode.
+
+**Run** is the high-frequency view with two sub-tabs:
+- **🤖 Agent** — chat interface backed by `AutonomousAgent`. Type a goal; the LLM picks tools (search, connectors, skills) and iterates. Selected Context folders are passed in as additional reference data, with grep-based relevance filtering on large folders.
+- **🛠 Skill** — pick a domain skill (investment / sales / design / purchasing / patent / legal), fill the input, click Run. Single-call, single-answer.
+
+**Knowledge** shows browseable personal + shared memory, plus the skill registry (your skills + org-promoted ones). **Data folders** are how you create/manage local-upload folders or register external paths (Box / SharePoint / Notion / etc.). Selected folders feed the Run workspace via the sidebar Context picker.
+
+**Admin** (admin role only) consolidates 7 sub-tabs: Settings (language, runtime LLM/backend, persistent API keys), Users, Connectors, Policies (ACL), Consolidate (sleep-time promotion), Exports (audit / users / memory / policies CSV/JSON/JSONL), About.
 
 CLI users get the same functionality with rich-formatted output:
 
@@ -534,7 +553,10 @@ praxia run rag --question "What license is Praxia released under?"
 praxia skill run investment "Mid-term thesis on a hypothetical mid-cap electronics issuer"
 praxia skill run legal "Review the risk in this services agreement"
 
-# Launch the UI (11 tabs incl. Dashboard / Policies / Admin / Connectors)
+# Launch the UI — sticky top-bar nav: Run / Knowledge / Prompts / Data /
+# Stats / Preferences (+ Admin for admin role). Login is User ID alone in
+# single-user dev mode; User ID + Password (= API key from `praxia user
+# create`) for role-gated multi-user mode.
 praxia ui --port 8501
 
 # Personal → org memory distillation

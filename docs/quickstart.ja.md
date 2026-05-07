@@ -151,19 +151,28 @@ praxia ui --port 8501
 # http://localhost:8501 を開く
 ```
 
-11 タブ:
+### サインイン
 
-- **🎬 Run Flow** — フロー選択、ファイル添付 (PDF / Office 等)、各エージェントの実行
-- **🛠 Skill** — 6 ビジネススキル + ファイル添付 + 🎙 音声入力
-- **🧠 Memory** — 個人メモリ + 共有ブロックのブラウズ
-- **🌙 Consolidate** — 個人 → 組織への自動昇格
-- **📊 Dashboard** — 個人 + 組織の利用状況
-- **📝 Prompts** — カスタムプロンプト管理 (3 スコープ)
-- **👥 Users** — 管理者: ユーザ CRUD
-- **🔌 Connectors** — Box / SharePoint / Dropbox / Drive / kintone / Salesforce
-- **🛡 Policies** — 管理者: アクセスポリシー (ACL)
-- **💾 Admin** — 監査ログ・ユーザ・利用ログ・メモリ・ポリシー エクスポート
-- **ℹ About**
+UI はログイン画面から始まります:
+
+- **単一ユーザ開発モード** (CLI でユーザ未作成): User ID 入力のみで Sign in。全機能アクセス可。ローカル / 信頼 LAN 用。
+- **複数ユーザモード** (`praxia user create alice --role admin` 等で 1 人以上登録済): User ID + Password (= ユーザ作成時に発行された API key)。サインインでそのユーザのロールが反映。
+
+インターネット公開のマルチユーザ環境では `praxia serve` (FastAPI + OIDC SSO) を併用してください。Streamlit UI は信頼環境向け設計です。
+
+### レイアウト
+
+画面上部に固定ナビ (Run / Knowledge / Prompts / Data / Stats / Preferences、admin role なら + Admin)、サイドバーは **Context picker** 専用 (どのフォルダ / メモリ層を実行に渡すか)、メインに各 view のワークスペース。
+
+| View | 内容 |
+|------|------|
+| **🎬 Run** | 2 サブタブ。**🤖 Agent** = `AutonomousAgent` バックエンドの chat。ゴールを書くと LLM が tool (検索 / コネクタ / スキル) を選んで反復実行。**🛠 Skill** = ドメインスキル (投資 / 営業 / 設計 / 購買 / 特許 / 法務) を選んで 1 回呼出。サイドバーで選んだ Context フォルダが両モードに供給され、大きいフォルダは grep ベースで関連箇所だけ抽出。 |
+| **🧠 Knowledge** | 個人 + 共有メモリのブラウズ + Skill registry (個人スキル + 組織昇格スキル) の表示。 |
+| **📁 Data** | データフォルダの管理。ローカル = UI でアップしたファイル群。コネクタ = 外部の特定パス (Box / SharePoint / Notion 等) を登録。 |
+| **📝 Prompts** | 3 サブタブ: Generate (PromptDesigner — 1 行依頼でテンプレ自動生成)、Browse & edit (プロンプト CRUD)、Distribute (管理者のみ — 特定ユーザ / ロールに配信)。 |
+| **📊 Stats** | 3 KPI + 横棒グラフ。個人: 総実行回数 · 成功率 · メモリ件数。組織: アクティブユーザ · 組織実行 · 成功率。 |
+| **👤 Preferences** | ユーザ毎の永続設定: 言語、カラーテーマ (auto / light / dark)。`.praxia/preferences/<user>.json` に保存。 |
+| **⚙ Admin** | admin ロール限定。7 サブタブ: Settings (ランタイム LLM/バックエンド + 永続 KNOWN_KEYS)、Users、Connectors、Policies (ACL)、Consolidate (sleep-time 昇格)、Exports (CSV/JSON/JSONL)、About。 |
 
 ## 7. 複数 LTM の融合 + 動的ルーティング (任意・精度向上)
 
