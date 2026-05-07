@@ -28,6 +28,7 @@ import streamlit as st
 
 from praxia import Praxia, LLM
 from praxia.core.llm import DEFAULT_ALIASES
+from praxia.data.scopes import DataScope, ScopeRegistry
 from praxia.flows import LogicCheckerFlow, RAGOptimizationFlow, SalesAgentFlow
 from praxia.skills import BUSINESS_SKILLS
 from praxia.ui.i18n import t, language_selector_in_sidebar
@@ -62,6 +63,7 @@ MODE_OPTIONS = [
     "flow",
     "skill",
     "memory",
+    "data",
     "consolidate",
     "dashboard",
     "prompts",
@@ -96,6 +98,117 @@ def get_loom(_user_id: str, _org_id: str, _model: str) -> Praxia:
 
 
 loom = get_loom(user_id, org_id, model_choice)
+
+
+# === Data scope registry + sidebar selector ================================
+
+scope_registry = ScopeRegistry(loom.config.memory_dir / "data")
+user_scopes = scope_registry.list_for_user(user_id)
+
+st.sidebar.divider()
+st.sidebar.markdown(f"**📁 {t('sidebar.scope.h')}**")
+
+# Built-in scopes — always available
+selected_builtin: list[str] = []
+if st.sidebar.checkbox(t("scope.personal_memory"), value=True, key="scope_personal"):
+    selected_builtin.append("personal_memory")
+if st.sidebar.checkbox(t("scope.org_memory"), value=True, key="scope_org"):
+    selected_builtin.append("org_memory")
+if st.sidebar.checkbox(t("scope.frozen"), value=False, key="scope_frozen"):
+    selected_builtin.append("frozen")
+
+# Custom scopes (local + connector folders the user has registered)
+selected_custom_ids: list[str] = []
+local_scopes = [s for s in user_scopes if s.kind == "local"]
+connector_scopes = [s for s in user_scopes if s.kind == "connector"]
+
+if local_scopes:
+    st.sidebar.caption(t("sidebar.scope.local_h"))
+    for s in local_scopes:
+        n_files = len(scope_registry.list_local_files(s))
+        if st.sidebar.checkbox(
+            f"📁 {s.name} ({n_files})",
+            value=False,
+            key=f"scope_local_{s.id}",
+        ):
+            selected_custom_ids.append(s.id)
+
+if connector_scopes:
+    st.sidebar.caption(t("sidebar.scope.connector_h"))
+    for s in connector_scopes:
+        if st.sidebar.checkbox(
+            f"🔌 {s.name} ({s.connector})",
+            value=False,
+            key=f"scope_conn_{s.id}",
+        ):
+            selected_custom_ids.append(s.id)
+
+if not user_scopes:
+    st.sidebar.caption(t("sidebar.scope.empty_hint"))
+
+st.session_state["praxia_selected_scopes"] = {
+    "builtin": selected_builtin,
+    "custom_ids": selected_custom_ids,
+}
+
+
+def _gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
+    """Read selected custom scopes' contents as additional execution context.
+
+    Local scopes: parse all files via the unified parser, concatenate.
+    Connector scopes: pull from the configured connector path at run time.
+
+    Truncates per-file at 5000 chars and total at max_chars to keep token use
+    bounded. Errors are surfaced as inline notes rather than raised.
+    """
+    if not scope_ids:
+        return ""
+    parts: list[str] = []
+    used = 0
+    for sid in scope_ids:
+        scope = scope_registry.get(user_id, sid)
+        if scope is None:
+            continue
+        if scope.kind == "local":
+            from praxia.io.parsers import parse_file
+            for f in scope_registry.list_local_files(scope):
+                if used >= max_chars:
+                    break
+                try:
+                    parsed = parse_file(f.read_bytes(), filename=f.name)
+                    chunk = (
+                        f"## File [{scope.name}/{f.name}]\n"
+                        f"{parsed.content[:5000]}\n"
+                    )
+                except Exception as exc:
+                    chunk = f"## File [{scope.name}/{f.name}] (parse error: {exc})\n"
+                parts.append(chunk)
+                used += len(chunk)
+        elif scope.kind == "connector" and scope.connector and scope.connector_path:
+            from praxia.connectors import get_connector
+            cfg_prefix = f"PRAXIA_CONN_{scope.connector.upper()}_"
+            cfg = {
+                k.replace(cfg_prefix, "").lower(): v
+                for k, v in os.environ.items()
+                if k.startswith(cfg_prefix)
+            }
+            try:
+                items = get_connector(scope.connector, **cfg).pull(
+                    scope.connector_path, limit=10
+                )
+                for it in items:
+                    if used >= max_chars:
+                        break
+                    body = it.content if isinstance(it.content, str) else f"<binary {len(it.content)} bytes>"
+                    chunk = (
+                        f"## {scope.connector}:{scope.connector_path}/{it.name}\n"
+                        f"{body[:5000]}\n"
+                    )
+                    parts.append(chunk)
+                    used += len(chunk)
+            except Exception as exc:
+                parts.append(f"## Connector {scope.name} pull error: {exc}\n")
+    return "\n\n".join(parts)
 
 
 # === Mode: Flow ============================================================
@@ -192,6 +305,16 @@ if mode == "flow":
         flow_inputs["retriever"] = _personal_memory_retriever
         flow_cls = RAGOptimizationFlow
 
+    # Inject selected Data-scope content into the flow as additional context.
+    if selected_custom_ids:
+        scope_ctx = _gather_scope_context(selected_custom_ids)
+        if scope_ctx:
+            current = flow_inputs.get("additional_context", "") or ""
+            flow_inputs["additional_context"] = (
+                current + ("\n\n" if current else "") + scope_ctx
+            )
+            st.caption(t("data.injected").format(n=len(selected_custom_ids)))
+
     if st.button("▶ 実行", type="primary", disabled=not any(flow_inputs.values())):
         with st.spinner(f"Running {flow_cls.name}…"):
             result = loom.run(flow_cls, inputs=flow_inputs)
@@ -272,6 +395,17 @@ elif mode == "skill":
 
     enable_tts = st.checkbox("🔊 出力を音声で読み上げ (任意)", value=False, key="skill_tts")
 
+    # Inject selected Data-scope content into the skill prompt as reference data.
+    if selected_custom_ids and user_input:
+        scope_ctx = _gather_scope_context(selected_custom_ids)
+        if scope_ctx:
+            user_input = (
+                user_input
+                + "\n\n--- Reference data from selected Data scopes ---\n"
+                + scope_ctx
+            )
+            st.caption(t("data.injected").format(n=len(selected_custom_ids)))
+
     if st.button("▶ 実行", key="skill_run", type="primary", disabled=not user_input):
         llm = LLM(model_choice)
         skill_obj = skill_cls(llm=llm)
@@ -319,6 +453,181 @@ elif mode == "memory":
                     st.caption(block.description)
                     st.text(block.value)
                     st.caption(f"contributors: {', '.join(block.promoted_from)}")
+
+
+# === Mode: Data folders (manage local + connector scopes) ==================
+
+elif mode == "data":
+    st.header(t("mode.data"))
+    st.markdown(t("data.intro"))
+
+    sub_local, sub_connector, sub_browse = st.tabs([
+        t("data.tab.local"),
+        t("data.tab.connector"),
+        t("data.tab.browse"),
+    ])
+
+    # ---- Local folders ---------------------------------------------------
+    with sub_local:
+        st.caption(t("data.local.intro"))
+
+        if local_scopes:
+            for s in local_scopes:
+                files = scope_registry.list_local_files(s)
+                with st.expander(f"📁 {s.name} · {len(files)} files", expanded=False):
+                    if s.description:
+                        st.caption(s.description)
+                    st.caption(f"id: `{s.id}`  ·  path: `{s.path}`")
+
+                    # File list with per-file delete
+                    for f in files:
+                        col_n, col_s, col_d = st.columns([6, 2, 1])
+                        col_n.text(f.name)
+                        col_s.caption(f"{f.stat().st_size:,} B")
+                        if col_d.button("🗑", key=f"delf_{s.id}_{f.name}"):
+                            scope_registry.delete_file(s, f.name)
+                            st.rerun()
+
+                    st.divider()
+                    new_files = st.file_uploader(
+                        t("data.local.add_files"),
+                        accept_multiple_files=True,
+                        key=f"upload_more_{s.id}",
+                    )
+                    col_save, col_del = st.columns(2)
+                    if col_save.button(t("data.local.save_uploads"), key=f"save_{s.id}"):
+                        if new_files:
+                            saved = scope_registry.save_uploaded_files(s, new_files)
+                            st.success(t("data.local.saved").format(n=len(saved)))
+                            st.rerun()
+                        else:
+                            st.warning(t("data.local.no_files_to_save"))
+                    if col_del.button(t("data.local.delete_folder"), type="secondary", key=f"delfol_{s.id}"):
+                        scope_registry.delete(user_id, s.id)
+                        st.success(t("data.local.folder_deleted").format(name=s.name))
+                        st.rerun()
+        else:
+            st.info(t("data.local.empty"))
+
+        st.divider()
+        st.subheader(t("data.local.create_h"))
+        with st.form("data_local_create_form", clear_on_submit=True):
+            new_name = st.text_input(t("data.local.create_name"))
+            new_desc = st.text_input(t("data.local.create_desc"))
+            init_files = st.file_uploader(
+                t("data.local.create_files"),
+                accept_multiple_files=True,
+                key="create_local_files",
+            )
+            if st.form_submit_button(t("data.local.create_btn"), type="primary"):
+                if not new_name:
+                    st.warning(t("data.local.create_name_required"))
+                else:
+                    s = scope_registry.create_local(user_id, new_name, new_desc)
+                    if init_files:
+                        scope_registry.save_uploaded_files(s, init_files)
+                    st.success(t("data.local.created").format(name=new_name))
+                    st.rerun()
+
+    # ---- Connector folders ----------------------------------------------
+    with sub_connector:
+        st.caption(t("data.connector.intro"))
+
+        if connector_scopes:
+            for s in connector_scopes:
+                with st.expander(
+                    f"🔌 {s.name} ({s.connector}: {s.connector_path})",
+                    expanded=False,
+                ):
+                    if s.description:
+                        st.caption(s.description)
+                    st.caption(f"id: `{s.id}`")
+                    if st.button(t("data.connector.delete"), key=f"delcon_{s.id}"):
+                        scope_registry.delete(user_id, s.id)
+                        st.success(t("data.local.folder_deleted").format(name=s.name))
+                        st.rerun()
+        else:
+            st.info(t("data.connector.empty"))
+
+        st.divider()
+        st.subheader(t("data.connector.create_h"))
+        from praxia.connectors.registry import list_builtin
+        with st.form("data_connector_create_form", clear_on_submit=True):
+            cn_name = st.text_input(
+                t("data.connector.create_name"), placeholder="Customer Acme"
+            )
+            cn_desc = st.text_input(t("data.connector.create_desc"))
+            cn_connector = st.selectbox(
+                t("data.connector.create_connector"),
+                options=list_builtin(),
+            )
+            cn_path = st.text_input(
+                t("data.connector.create_path"),
+                placeholder="/Customers/Acme  ·  https://… ·  app:42",
+            )
+            if st.form_submit_button(t("data.connector.create_btn"), type="primary"):
+                if not (cn_name and cn_path):
+                    st.warning(t("data.connector.create_required"))
+                else:
+                    scope_registry.create_connector(
+                        user_id, cn_name, cn_connector, cn_path, cn_desc
+                    )
+                    st.success(t("data.local.created").format(name=cn_name))
+                    st.rerun()
+
+    # ---- Browse: peek at one scope's contents ---------------------------
+    with sub_browse:
+        if not user_scopes:
+            st.info(t("data.browse.empty"))
+        else:
+            picked_id = st.selectbox(
+                t("data.browse.pick"),
+                options=[s.id for s in user_scopes],
+                format_func=lambda i: next(
+                    (f"📁 {s.name}" if s.kind == "local" else f"🔌 {s.name}")
+                    for s in user_scopes if s.id == i
+                ),
+            )
+            picked = scope_registry.get(user_id, picked_id)
+            if picked is None:
+                st.warning(t("data.browse.not_found"))
+            elif picked.kind == "local":
+                files = scope_registry.list_local_files(picked)
+                st.markdown(f"**{picked.name}** · {len(files)} files")
+                for f in files:
+                    with st.expander(f.name, expanded=False):
+                        try:
+                            from praxia.io.parsers import parse_file
+                            parsed = parse_file(f.read_bytes(), filename=f.name)
+                            st.text(parsed.content[:5000])
+                            st.caption(f"parsed {len(parsed.content):,} chars")
+                        except Exception as exc:
+                            st.text(f"<could not parse: {exc}>")
+            else:  # connector
+                st.markdown(
+                    f"**{picked.name}** ({picked.connector}: `{picked.connector_path}`)"
+                )
+                if st.button(t("data.browse.connector_pull"), key=f"prev_{picked.id}"):
+                    from praxia.connectors import get_connector
+                    cfg_prefix = f"PRAXIA_CONN_{picked.connector.upper()}_"
+                    cfg = {
+                        k.replace(cfg_prefix, "").lower(): v
+                        for k, v in os.environ.items()
+                        if k.startswith(cfg_prefix)
+                    }
+                    try:
+                        items = get_connector(picked.connector, **cfg).pull(
+                            picked.connector_path, limit=10
+                        )
+                        st.success(f"Pulled {len(items)} items")
+                        for it in items:
+                            with st.expander(f"📥 {it.name}", expanded=False):
+                                if isinstance(it.content, str):
+                                    st.text(it.content[:2000])
+                                else:
+                                    st.text(f"<binary, {len(it.content)} bytes>")
+                    except Exception as exc:
+                        st.error(str(exc))
 
 
 # === Mode: Consolidate =====================================================
