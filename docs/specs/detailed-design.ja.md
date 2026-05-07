@@ -564,4 +564,4 @@ class Registry(Generic[T]):
 | FastAPI サーバ | 最小エンドポイントのみ | 必要に応じて追加 — プロトコルパターンは文書化済み |
 | マルチテナント | 1 プロセス 1 テナント | SaaS 版はロードマップ |
 
-優先順位ロードマップ: [`OSS/_internal/NEXT_ACTIONS.ja.md`](../../OSS/_internal/NEXT_ACTIONS.ja.md) (内部資料)。
+公開ロードマップは GitHub の `roadmap` ラベル付き Issue を参照。

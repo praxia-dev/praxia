@@ -593,4 +593,4 @@ Why this matters: every plug point in Praxia uses **the same** `Registry`. A cus
 | FastAPI server | Minimal endpoint set | Add as needed; protocol pattern is documented |
 | Multi-tenancy | One tenant per process | SaaS variant on roadmap |
 
-See [`OSS/_internal/NEXT_ACTIONS.ja.md`](../../OSS/_internal/NEXT_ACTIONS.ja.md) for the prioritized roadmap (internal).
+For the public roadmap, track Issues labeled `roadmap` on the GitHub repo.

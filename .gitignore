@@ -5,6 +5,14 @@
 *.key
 credentials.json
 
+# Internal / operational notes — NEVER commit to the public repo.
+# Strategic content (launch playbook, marketing targets, business plans,
+# pricing strategy, internal decisions) lives in OSS/_internal/ at the
+# parent directory and is intentionally outside this repo.
+NEXT_ACTIONS.ja.md
+NEXT_ACTIONS.md
+_internal/
+
 # Python
 __pycache__/
 *.py[cod]
