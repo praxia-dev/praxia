@@ -71,7 +71,7 @@ After DNS propagates, update:
 
 ### One-time
 
-1. Push to `praxia-dev/praxia` (Step 4 of [PUBLISH.md](../../PUBLISH.md))
+1. Push to `praxia-dev/praxia`
 2. **Settings → Pages**:
    ```
    Source:                 Deploy from a branch

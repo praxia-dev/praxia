@@ -26,7 +26,7 @@ Example:
 
     designer = PromptDesignerSkill()
     out = designer.design(
-        task="社内法務に契約書のリスクを 5 段階で評価させたい",
+        task="Have in-house legal score contract risk on a 5-point scale",
         target_llm="claude",
         output_format="json",
         include_examples=True,

@@ -1518,7 +1518,7 @@ The same task description yields different idioms depending on `target_llm`:
 ### CLI
 
 ```bash
-praxia skill run prompt_designer "社内法務に契約書のリスクを 5 段階で評価させたい"
+praxia skill run prompt_designer "Have in-house legal score contract risk on a 5-point scale"
 # → outputs Markdown: system / user / examples / rubric
 ```
 

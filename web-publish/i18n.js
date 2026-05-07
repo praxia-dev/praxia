@@ -734,7 +734,7 @@
     "how.s1":                    {en:"You just work", ja:"普通に使うだけ", "zh-CN":"只管正常工作", ko:"평소대로 사용", es:"Solo trabajas normal", fr:"Travaillez normalement", de:"Sie arbeiten einfach", "pt-BR":"Você apenas trabalha"},
     "how.s2":                    {en:"Outcomes get attached", ja:"成果が紐付く", "zh-CN":"成果自动关联", ko:"성과가 연결됨", es:"Los resultados se vinculan", fr:"Les résultats s'attachent", de:"Ergebnisse werden zugeordnet", "pt-BR":"Resultados são anexados"},
     "how.s3":                    {en:"Nightly distillation", ja:"夜間に蒸留", "zh-CN":"夜间蒸馏", ko:"야간 증류", es:"Destilación nocturna", fr:"Distillation nocturne", de:"Nächtliche Destillation", "pt-BR":"Destilação noturna"},
-    "how.s4":                    {en:"Living → frozen", ja:"生 → 凍結化", "zh-CN":"活动 → 凍結", ko:"라이브 → 동결", es:"Vivo → congelado", fr:"Vivant → figé", de:"Lebend → eingefroren", "pt-BR":"Vivo → congelado"},
+    "how.s4":                    {en:"Living → frozen", ja:"ライブ → 凍結", "zh-CN":"活动 → 冻结", ko:"라이브 → 동결", es:"Vivo → congelado", fr:"Vivant → figé", de:"Lebend → eingefroren", "pt-BR":"Vivo → congelado"},
 
     // ===== Pricing tier names (3) =====================================
     "editions.kicker":           {en:"Editions", ja:"エディション", "zh-CN":"版本", ko:"에디션", es:"Ediciones", fr:"Éditions", de:"Editionen", "pt-BR":"Edições"},

@@ -660,13 +660,10 @@ with tab_policies:
                     else:
                         st.error(f"🚫 Denied — {decision.reason}")
 
-# Tab 10: Admin downloads ----------------------------------------------
+# Tab 10: Admin (Settings + Downloads) ----------------------------------
 with tab_admin:
-    st.header("💾 Admin Downloads")
-    st.markdown(
-        "Export audit logs, users, skill usage, memories, and policies for "
-        "compliance, SIEM ingestion, or backups. Every export action is logged."
-    )
+    st.header(t("admin.header"))
+
     try:
         from praxia.auth import AuthManager
         auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
@@ -674,68 +671,165 @@ with tab_admin:
         st.error(f"Auth not available: {e}")
         auth = None
 
-    if auth:
-        kind = st.selectbox(
-            "What to export",
-            [
-                "Audit log",
-                "Users",
-                "Skill usage",
-                "Personal memory (one user)",
-                "All personal memories",
-                "Shared memory blocks",
-                "Access policies",
-            ],
+    # Resolve actor identity + role from the sidebar's user_id (advisory only —
+    # UI auth is not enforced; audit log captures whoever is at the keyboard).
+    actor_role = "unknown"
+    if auth is not None:
+        try:
+            _u = auth.users.get_by_username(user_id)
+            if _u is not None:
+                actor_role = _u.role
+        except Exception:
+            pass
+
+    settings_st, downloads_st = st.tabs([
+        t("admin.settings.subtab"),
+        t("admin.downloads.subtab"),
+    ])
+
+    # --- Sub-tab: Settings (configure API keys + runtime knobs) ----------
+    with settings_st:
+        from praxia.config import KNOWN_KEYS, PraxiaConfig
+
+        st.markdown(t("admin.settings.intro"))
+
+        if actor_role == "admin":
+            st.success(t("admin.settings.role_ok").format(user=user_id))
+        elif actor_role == "unknown":
+            st.warning(t("admin.settings.role_unknown").format(user=user_id))
+        else:
+            st.error(t("admin.settings.role_blocked").format(user=user_id, role=actor_role))
+
+        st.caption(t("admin.settings.precedence_hint"))
+
+        def _mask_for_display(value: str) -> str:
+            if len(value) <= 12:
+                return "****"
+            return f"{value[:4]}…{value[-4:]}"
+
+        from collections import OrderedDict
+        grouped: "OrderedDict[str, list[tuple[str, bool]]]" = OrderedDict()
+        for _key, (_cat, _is_secret) in KNOWN_KEYS.items():
+            grouped.setdefault(_cat, []).append((_key, _is_secret))
+
+        # Render one form per category — categories with at least one secret
+        # default-collapsed; LLM defaults open since most setups need a key here.
+        for category, keys in grouped.items():
+            with st.expander(
+                f"**{category}**  ·  {len(keys)} {t('admin.settings.keys_label')}",
+                expanded=(category == "LLM"),
+            ):
+                with st.form(f"settings_form_{category}", clear_on_submit=True):
+                    pending: dict[str, str] = {}
+                    for key, is_secret in keys:
+                        current = PraxiaConfig.get(key)
+                        if current is None:
+                            help_text = t("admin.settings.help.unset")
+                        elif is_secret:
+                            help_text = t("admin.settings.help.secret_set").format(masked=_mask_for_display(current))
+                        else:
+                            help_text = t("admin.settings.help.value_set").format(value=current)
+                        new_val = st.text_input(
+                            key,
+                            value="",
+                            type="password" if is_secret else "default",
+                            placeholder=t("admin.settings.placeholder.unchanged"),
+                            help=help_text,
+                            key=f"setting_input_{category}_{key}",
+                        )
+                        if new_val:
+                            pending[key] = new_val
+                    submit = st.form_submit_button(t("admin.settings.save_btn"))
+                    if submit:
+                        if actor_role not in ("admin", "unknown"):
+                            st.error(t("admin.settings.role_required"))
+                        elif not pending:
+                            st.info(t("admin.settings.no_changes"))
+                        else:
+                            for k, v in pending.items():
+                                PraxiaConfig.set_persistent(k, v)
+                                if auth is not None:
+                                    auth.audit.record(
+                                        actor_id=user_id,
+                                        actor_role=actor_role,
+                                        action="config.set",
+                                        resource=f"config:{k}",
+                                        metadata={
+                                            "category": KNOWN_KEYS[k][0],
+                                            "is_secret": KNOWN_KEYS[k][1],
+                                        },
+                                    )
+                            st.success(t("admin.settings.saved").format(count=len(pending)))
+                            st.info(t("admin.settings.restart_hint"))
+
+    # --- Sub-tab: Downloads (existing export functionality) --------------
+    with downloads_st:
+        st.markdown(
+            "Export audit logs, users, skill usage, memories, and policies for "
+            "compliance, SIEM ingestion, or backups. Every export action is logged."
         )
-        fmt = st.selectbox("Format", ["csv", "json", "jsonl"])
-        out_dir = Path(loom.config.memory_dir) / "exports"
-        out_dir.mkdir(parents=True, exist_ok=True)
+        if auth:
+            kind = st.selectbox(
+                "What to export",
+                [
+                    "Audit log",
+                    "Users",
+                    "Skill usage",
+                    "Personal memory (one user)",
+                    "All personal memories",
+                    "Shared memory blocks",
+                    "Access policies",
+                ],
+            )
+            fmt = st.selectbox("Format", ["csv", "json", "jsonl"])
+            out_dir = Path(loom.config.memory_dir) / "exports"
+            out_dir.mkdir(parents=True, exist_ok=True)
 
-        extra_input = None
-        if kind == "Personal memory (one user)":
-            extra_input = st.text_input("user_id", value="default-user")
-        elif kind == "Skill usage":
-            extra_input = st.text_input("Optional skill name filter")
-
-        if st.button("Export"):
-            ts = int(__import__("time").time())
-            path: Path | list[Path]
-            if kind == "Audit log":
-                path = auth.exports.export_audit(output_path=out_dir / f"audit_{ts}.{fmt}", format=fmt)
-            elif kind == "Users":
-                path = auth.exports.export_users(output_path=out_dir / f"users_{ts}.{fmt}", format=fmt)
+            extra_input = None
+            if kind == "Personal memory (one user)":
+                extra_input = st.text_input("user_id", value="default-user")
             elif kind == "Skill usage":
-                path = auth.exports.export_skill_usage(
-                    output_path=out_dir / f"skill_usage_{ts}.{fmt}",
-                    format=fmt,
-                    skill_name=extra_input or None,
-                )
-            elif kind == "Personal memory (one user)":
-                path = auth.exports.export_personal_memory(
-                    user_id=extra_input or "default-user",
-                    output_path=out_dir / f"memory_{extra_input}_{ts}.{fmt}",
-                    format=fmt,
-                )
-            elif kind == "All personal memories":
-                path = auth.exports.export_all_personal_memory(
-                    output_dir=out_dir / f"all_memory_{ts}", format=fmt
-                )
-            elif kind == "Shared memory blocks":
-                path = auth.exports.export_shared_memory(
-                    output_path=out_dir / f"shared_{ts}.{fmt}", format=fmt
-                )
-            else:  # Access policies
-                path = auth.exports.export_policies(
-                    output_path=out_dir / f"policies_{ts}.{fmt}", format=fmt
-                )
-            st.success(f"Exported → {path}")
-            if isinstance(path, Path) and path.exists():
-                st.download_button(
-                    "⬇️ Download",
-                    data=path.read_bytes(),
-                    file_name=path.name,
-                    mime="application/octet-stream",
-                )
+                extra_input = st.text_input("Optional skill name filter")
+
+            if st.button("Export"):
+                ts = int(__import__("time").time())
+                path: Path | list[Path]
+                if kind == "Audit log":
+                    path = auth.exports.export_audit(output_path=out_dir / f"audit_{ts}.{fmt}", format=fmt)
+                elif kind == "Users":
+                    path = auth.exports.export_users(output_path=out_dir / f"users_{ts}.{fmt}", format=fmt)
+                elif kind == "Skill usage":
+                    path = auth.exports.export_skill_usage(
+                        output_path=out_dir / f"skill_usage_{ts}.{fmt}",
+                        format=fmt,
+                        skill_name=extra_input or None,
+                    )
+                elif kind == "Personal memory (one user)":
+                    path = auth.exports.export_personal_memory(
+                        user_id=extra_input or "default-user",
+                        output_path=out_dir / f"memory_{extra_input}_{ts}.{fmt}",
+                        format=fmt,
+                    )
+                elif kind == "All personal memories":
+                    path = auth.exports.export_all_personal_memory(
+                        output_dir=out_dir / f"all_memory_{ts}", format=fmt
+                    )
+                elif kind == "Shared memory blocks":
+                    path = auth.exports.export_shared_memory(
+                        output_path=out_dir / f"shared_{ts}.{fmt}", format=fmt
+                    )
+                else:  # Access policies
+                    path = auth.exports.export_policies(
+                        output_path=out_dir / f"policies_{ts}.{fmt}", format=fmt
+                    )
+                st.success(f"Exported → {path}")
+                if isinstance(path, Path) and path.exists():
+                    st.download_button(
+                        "⬇️ Download",
+                        data=path.read_bytes(),
+                        file_name=path.name,
+                        mime="application/octet-stream",
+                    )
 
 # Tab 11: About ---------------------------------------------------------
 with tab_about:

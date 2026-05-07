@@ -22,23 +22,6 @@
 
 ---
 
-## 📁 Where everything goes (publishing map)
-
-This repo holds three classes of content that are published to **different
-places**. The top-level layout reflects that split:
-
-| Directory | Where it ships | Maintained as |
-|---|---|---|
-| `praxia/`, `tests/`, `docs/`, `examples/`, `pyproject.toml`, etc. | **GitHub repo** (this README is what users see) | Code + technical docs |
-| [`web-publish/`](web-publish/) | **Cloudflare Pages** (`praxia.tools`) + **GitHub Pages** (`praxia-dev.github.io/praxia`) — see [DEPLOY.md](web-publish/DEPLOY.md) | Static landing page + portal |
-| [`zenn-publish/`](zenn-publish/) | **Zenn** (zenn.dev) via `zenn-cli` | 7 long-form Japanese articles |
-
-A change to `web-publish/` only affects the landing page; a change under
-`praxia/` only affects the OSS package. Cross-cutting docs (FEATURES /
-architecture / specs) live under `docs/`.
-
----
-
 ## 🎯 Why Praxia?
 
 General-purpose multi-agent frameworks (CrewAI, AutoGen, LangGraph, …) are powerful but stop short on these four problems:
@@ -199,7 +182,7 @@ Plus two **utility** skills:
 
 ```bash
 # Generate a prompt template for any task
-praxia skill run prompt_designer "社内法務に契約書のリスクを 5 段階で評価させたい"
+praxia skill run prompt_designer "Have in-house legal score contract risk on a 5-point scale"
 ```
 
 ### All Major LLMs

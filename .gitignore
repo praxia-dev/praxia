@@ -11,6 +11,8 @@ credentials.json
 # parent directory and is intentionally outside this repo.
 NEXT_ACTIONS.ja.md
 NEXT_ACTIONS.md
+PUBLISH.md
+PUBLISH.ja.md
 _internal/
 
 # Python
