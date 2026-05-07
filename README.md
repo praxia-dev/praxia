@@ -669,33 +669,25 @@ Detailed Before/After tables for each domain are in **[docs/use-cases.md](docs/u
 
 ---
 
-## 🆚 Compared with Existing Frameworks
+## 🆚 When to pick what
 
-| Capability | CrewAI | AutoGen | LangGraph | Glean | **Praxia** |
-|---|---|---|---|---|---|
-| Multi-agent orchestration | ✅ | ✅ | ✅ | — | ✅ |
-| Workflow-specific templates | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Auto-extracting personal memory | ❌ | ❌ | △ | ✅ | ✅ |
-| Personal → org promotion | ❌ | ❌ | ❌ | △ | ✅ |
-| Sleep-time consolidation | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Skills registry + admin distribution | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Custom prompt distribution | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Hallucination eval bundled | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Built-in auth + RBAC + SSO | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Resource access policies (ACL) | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Audit log + admin data exports | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Personal & org dashboards | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Storage / SaaS connectors (Pull + Push) | ❌ | ❌ | △ | △ | ✅ ×6 |
-| Multi-LTM fusion + dynamic routing | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Memory mode toggle (accumulate / read-only) | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Output exporters (HTML / PPTX / DOCX) | ❌ | ❌ | ❌ | ❌ | ✅ |
-| HTTP API + your-own-frontend mode | ❌ | ❌ | △ | (hosted) | ✅ |
-| KMS-backed token encryption (5 adapters) | ❌ | ❌ | ❌ | (hosted) | ✅ |
-| OAuth callback web handler (production) | ❌ | ❌ | ❌ | (hosted) | ✅ |
-| Built-in A/B experiments | ❌ | ❌ | ❌ | ❌ | ✅ |
-| LLM-output quality eval framework | ❌ | ❌ | ❌ | ❌ | ✅ |
-| MCP / Claude Skills compatible | △ | △ | △ | ❌ | ✅ |
-| License | MIT | MIT | MIT | Commercial | Apache 2.0 |
+Praxia is opinionated for organizations that want **OSS + workflow templates
++ auto personal-to-org memory cycling + integrated auth/ACL/audit** all in
+one library. Adjacent tools have different goals — pick the one that fits
+your need:
+
+- **[LangGraph](https://github.com/langchain-ai/langgraph)** — generic agent graph builder, fine-grained state machines, deep LangChain integration
+- **[CrewAI](https://github.com/crewAIInc/crewAI)** — lightweight role-based crew abstraction
+- **[AutoGen](https://github.com/microsoft/autogen)** — research-grade conversational multi-agents from Microsoft Research
+- **[Glean](https://www.glean.com/)** — hosted enterprise knowledge platform (no operational burden, commercial)
+- **[Mem0](https://github.com/mem0ai/mem0) / [LangMem](https://github.com/langchain-ai/langmem) / [Letta](https://github.com/letta-ai/letta) / [Zep](https://github.com/getzep/zep) / [HindSight](https://github.com/vectorize-io/hindsight)** — memory backends (Praxia uses them as plug-in backends, you can run several at once)
+
+These are not mutually exclusive — Praxia uses Mem0 as a backend and can be
+embedded inside a LangGraph node.
+
+For a feature-level matrix, see [`docs/COMPARISON.md`](docs/COMPARISON.md)
+(verifiable against each project's public documentation; corrections welcome
+via Issues).
 
 ---
 
