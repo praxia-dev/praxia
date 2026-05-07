@@ -7,7 +7,7 @@ from praxia.skills.skill import Skill, SkillManifest
 class InvestmentSkill(Skill):
     manifest = SkillManifest(
         name="investment_analyst",
-        description="株式・債券・スタートアップへの投資判断を支援する分析エージェント",
+        description="Investment analysis: equities, bonds, startups, due diligence.",
         domain="investment",
         tags=["finance", "valuation", "due-diligence"],
     )

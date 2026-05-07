@@ -286,6 +286,13 @@ if theme_choice == "dark":
 
   /* Alerts */
   [data-testid="stAlert"] { background-color: rgba(255,255,255,0.04) !important; }
+
+  /* Sticky top nav — solid dark bg with subtle gold underline */
+  #praxia-topnav-wrapper + div[data-testid="stHorizontalBlock"] {
+    background-color: #15171f !important;
+    border-bottom: 1px solid rgba(201,164,86,0.25) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  }
 </style>
         """,
         unsafe_allow_html=True,
@@ -446,50 +453,26 @@ if st.session_state.get("praxia_mode") not in NAV_KEYS:
 
 nav_labels = [t(f"mode.{k}") for k in NAV_KEYS]
 
-if HAS_OPTION_MENU:
-    ICON_MAP = {
-        "run": "play-circle", "memory": "brain", "data": "folder",
-        "consolidate": "moon", "dashboard": "bar-chart",
-        "prompts": "pencil-square", "preferences": "sliders",
-        "admin": "gear",
-    }
-    selected_label = option_menu(
-        menu_title=None,
-        options=nav_labels,
-        icons=[ICON_MAP[k] for k in NAV_KEYS],
-        default_index=NAV_KEYS.index(st.session_state["praxia_mode"]),
-        orientation="horizontal",
-        styles={
-            "container": {"padding": "0", "background-color": "transparent"},
-            "icon": {"font-size": "16px"},
-            "nav-link": {
-                "font-size": "14px", "padding": "10px 14px",
-                "margin": "0 2px", "border-radius": "8px",
-                "--hover-color": "rgba(201,164,86,0.08)",
-            },
-            "nav-link-selected": {
-                "background-color": "rgba(201,164,86,0.18)",
-                "color": "inherit", "font-weight": "600",
-            },
-        },
-        key="praxia_nav_top",
-    )
-    st.session_state["praxia_mode"] = NAV_KEYS[nav_labels.index(selected_label)]
-else:
-    cols = st.columns(len(NAV_KEYS))
-    for col, key in zip(cols, NAV_KEYS):
-        is_active = st.session_state["praxia_mode"] == key
-        if col.button(
-            t(f"mode.{key}"),
-            use_container_width=True,
-            type="primary" if is_active else "secondary",
-            key=f"top_nav_{key}",
-        ):
-            st.session_state["praxia_mode"] = key
-            st.rerun()
+# Render the top nav as native st.columns + st.button so we can style
+# it as a sticky solid bar via CSS. (streamlit-option-menu renders into
+# an iframe, which can't be styled from outside, so it can't be made
+# sticky reliably — we fall back to native widgets and tag them with a
+# wrapper class.)
+st.markdown('<div id="praxia-topnav-wrapper">', unsafe_allow_html=True)
+cols = st.columns(len(NAV_KEYS))
+for col, key in zip(cols, NAV_KEYS):
+    is_active = st.session_state["praxia_mode"] == key
+    if col.button(
+        t(f"mode.{key}"),
+        use_container_width=True,
+        type="primary" if is_active else "secondary",
+        key=f"top_nav_{key}",
+    ):
+        st.session_state["praxia_mode"] = key
+        st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 
 mode = st.session_state["praxia_mode"]
-st.divider()
 
 
 # =====================================================================
@@ -697,6 +680,30 @@ elif mode == "memory":
                     st.caption(
                         f"contributors: {', '.join(block.promoted_from)}"
                     )
+
+    st.divider()
+    st.subheader(t("memory.skills_h"))
+    st.caption(t("memory.skills_intro"))
+    if loom.skill_registry:
+        my_skills = loom.skill_registry.list_personal(user_id)
+        org_skills = loom.skill_registry.list_org()
+        scol1, scol2 = st.columns(2)
+        with scol1:
+            st.markdown(f"**{t('memory.skills_personal')}**")
+            st.metric(t("memory.skills_count"), len(my_skills))
+            if my_skills:
+                for sk in my_skills:
+                    st.text(f"📄 {sk.name}")
+            else:
+                st.caption(t("memory.skills_empty"))
+        with scol2:
+            st.markdown(f"**{t('memory.skills_org')}**")
+            st.metric(t("memory.skills_count"), len(org_skills))
+            if org_skills:
+                for sk in org_skills:
+                    st.text(f"⭐ {sk.name}")
+            else:
+                st.caption(t("memory.skills_empty_org"))
 
 
 # =====================================================================

@@ -7,7 +7,7 @@ from praxia.skills.skill import Skill, SkillManifest
 class PurchasingSkill(Skill):
     manifest = SkillManifest(
         name="purchasing_analyst",
-        description="サプライヤー評価・RFQ 比較・購買戦略立案を支援する購買エージェント",
+        description="Supplier evaluation, RFQ comparison, procurement strategy.",
         domain="purchasing",
         tags=["procurement", "supplier", "rfq", "tco"],
     )

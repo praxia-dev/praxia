@@ -7,7 +7,7 @@ from praxia.skills.skill import Skill, SkillManifest
 class LegalSkill(Skill):
     manifest = SkillManifest(
         name="legal_reviewer",
-        description="契約書レビュー・コンプライアンス・社内規程整備を支援する法務エージェント",
+        description="Contract review, compliance checks, and internal-policy drafting.",
         domain="legal",
         tags=["contract", "compliance", "review"],
     )

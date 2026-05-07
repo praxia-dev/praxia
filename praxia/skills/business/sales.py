@@ -7,7 +7,7 @@ from praxia.skills.skill import Skill, SkillManifest
 class SalesSkill(Skill):
     manifest = SkillManifest(
         name="sales_strategist",
-        description="B2B 営業の事前調査・提案ストーリー設計・FAQ 作成を支援",
+        description="B2B account prep, proposal narrative design, FAQ generation.",
         domain="sales",
         tags=["b2b", "account-research", "proposal"],
     )

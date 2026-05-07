@@ -7,7 +7,7 @@ from praxia.skills.skill import Skill, SkillManifest
 class PatentSkill(Skill):
     manifest = SkillManifest(
         name="patent_analyst",
-        description="先行技術調査・クレーム作成支援・特許マップ作成を行う特許エージェント",
+        description="Prior-art search, claim drafting, patent landscape mapping.",
         domain="patent",
         tags=["ip", "prior-art", "claims"],
     )

@@ -7,7 +7,7 @@ from praxia.skills.skill import Skill, SkillManifest
 class DesignSkill(Skill):
     manifest = SkillManifest(
         name="design_reviewer",
-        description="システム設計・要件定義・アーキテクチャレビューを行う設計エージェント",
+        description="System design, requirements, and architecture review.",
         domain="design",
         tags=["architecture", "requirements", "review"],
     )

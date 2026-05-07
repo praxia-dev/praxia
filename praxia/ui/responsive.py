@@ -34,8 +34,48 @@ _MOBILE_CSS = """
 [data-testid="stStatusWidget"] { visibility: hidden !important; height: 0 !important; position: fixed !important; }
 .stDeployButton { display: none !important; }
 #MainMenu { visibility: hidden !important; height: 0 !important; }
-header[data-testid="stHeader"] { background: transparent; }
+header[data-testid="stHeader"] { display: none !important; height: 0 !important; }
 footer { visibility: hidden !important; height: 0 !important; }
+
+/* Push the main content to the very top now that we hid the header. */
+.main .block-container {
+    padding-top: 0 !important;
+}
+
+/* --- Top-bar nav: a sticky solid bar using native st.button widgets.
+       The trick: wrap the columns row in #praxia-topnav-wrapper so we
+       can target the immediate next sibling — the columns row — and
+       make IT sticky with a solid background. */
+#praxia-topnav-wrapper { display: none; }
+#praxia-topnav-wrapper + div[data-testid="stHorizontalBlock"] {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background-color: #ffffff;  /* light fallback; dark overrides below */
+    padding: 0.5rem 1rem !important;
+    margin: 0 -1rem 1rem -1rem !important;
+    border-bottom: 1px solid rgba(127, 127, 127, 0.18);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+/* No gaps between buttons in the top nav */
+#praxia-topnav-wrapper + div[data-testid="stHorizontalBlock"] [data-testid="column"] {
+    gap: 0 !important;
+    padding: 0 !important;
+}
+#praxia-topnav-wrapper + div[data-testid="stHorizontalBlock"] .stButton button {
+    border-radius: 0 !important;
+    border-right: none !important;
+    margin: 0 !important;
+}
+#praxia-topnav-wrapper + div[data-testid="stHorizontalBlock"] [data-testid="column"]:first-child .stButton button {
+    border-top-left-radius: 6px !important;
+    border-bottom-left-radius: 6px !important;
+}
+#praxia-topnav-wrapper + div[data-testid="stHorizontalBlock"] [data-testid="column"]:last-child .stButton button {
+    border-top-right-radius: 6px !important;
+    border-bottom-right-radius: 6px !important;
+    border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
+}
 
 /* --- Praxia UI mobile / responsive overrides --- */
 
