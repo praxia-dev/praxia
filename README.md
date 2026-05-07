@@ -1,4 +1,5 @@
 # Praxia
+[![tests](https://github.com/praxia-dev/praxia/actions/workflows/test.yml/badge.svg)](https://github.com/praxia-dev/praxia/actions/workflows/test.yml)
 
 🌐 **Live**: [praxia.tools](https://praxia.tools/) (primary, Cloudflare) · [praxia-dev.github.io/praxia](https://praxia-dev.github.io/praxia/) (mirror, GitHub Pages)
 
