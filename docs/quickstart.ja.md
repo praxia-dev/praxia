@@ -351,4 +351,4 @@ praxia connector list     # 外部コネクタ
 
 **OAuth で 「Unknown state」** → 現在の state 管理はインメモリ。本番環境では Redis 等に置き換えてください ([FEATURES.md § 25](FEATURES.md#25-user-delegated-oauth-per-user-external-system-access))。
 
-詳細は [docs/FEATURES.md](FEATURES.md) / [docs/PLUGINS.md](PLUGINS.md)、または <https://github.com/genarch/praxia/issues> へ。
+詳細は [docs/FEATURES.md](FEATURES.md) / [docs/PLUGINS.md](PLUGINS.md)、または <https://github.com/praxia-dev/praxia/issues> へ。

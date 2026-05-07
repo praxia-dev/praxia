@@ -14,7 +14,7 @@
 ## 1. Acceptance
 
 By accessing or using the Praxia website (`praxia.tools`,
-`praxia.tools`, `genarch.github.io/praxia`), the Praxia portal, or
+`praxia.tools`, `praxia-dev.github.io/praxia`), the Praxia portal, or
 any hosted service operated by the Provider (collectively, the
 "Service"), you agree to be bound by these Terms of Service ("Terms").
 

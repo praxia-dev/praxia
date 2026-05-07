@@ -366,4 +366,4 @@ For production, replace the in-memory state store with Redis / DB; see
 [FEATURES.md § 25](FEATURES.md#25-user-delegated-oauth-per-user-external-system-access).
 
 For more, see [docs/FEATURES.md](FEATURES.md), [docs/PLUGINS.md](PLUGINS.md),
-or open an issue at <https://github.com/genarch/praxia/issues>.
+or open an issue at <https://github.com/praxia-dev/praxia/issues>.

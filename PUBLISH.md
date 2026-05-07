@@ -42,8 +42,8 @@ praxia run sales --model qwen-local --customer-name "Acme"
 
 ## ✅ Step 3: GitHub Org / リポジトリ作成
 
-1. GitHub にログイン → 個人 / GenArch Organization のどちらに作るか決める
-   - **推奨**: GenArch という Organization を新規作成 (https://github.com/organizations/new)
+1. GitHub にログイン → 個人 / praxia-dev Organization のどちらに作るか決める
+   - **推奨**: praxia-dev という Organization を新規作成 (https://github.com/organizations/new)
    - Org にすると後でメンテナを追加しやすい
 2. README.md / CONTRIBUTING.md / docs/ 内の `your-org` を実 Org 名に置換:
 
@@ -51,7 +51,7 @@ praxia run sales --model qwen-local --customer-name "Acme"
 grep -rl "your-org" .
 # 一括置換 (Linux/macOS / Git Bash)
 find . -type f \( -name "*.md" -o -name "*.toml" -o -name "*.html" -o -name "*.svg" \) \
-  -exec sed -i 's|your-org|genarch|g' {} +
+  -exec sed -i 's|your-org|praxia-dev|g' {} +
 ```
 
 ---
@@ -60,7 +60,7 @@ find . -type f \( -name "*.md" -o -name "*.toml" -o -name "*.html" -o -name "*.s
 
 ```bash
 # gh CLI 使用 (推奨)
-gh repo create genarch/praxia --public \
+gh repo create praxia-dev/praxia --public \
   --source=. \
   --description "Specialized multi-agent orchestrator with cyclic personal/organizational memory" \
   --push
@@ -68,8 +68,8 @@ gh repo create genarch/praxia --public \
 
 または手動:
 ```bash
-# GitHub.com で genarch/praxia リポジトリを作成 (空)
-git remote add origin git@github.com:genarch/praxia.git
+# GitHub.com で praxia-dev/praxia リポジトリを作成 (空)
+git remote add origin git@github.com:praxia-dev/praxia.git
 git push -u origin main
 ```
 
@@ -126,7 +126,7 @@ praxia/auth/*   @your-github-username
 .github/*       @your-github-username
 ```
 
-Org の場合は `@genarch/maintainers` のようにチーム名でも指定可能。
+Org の場合は `@praxia-dev/maintainers` のようにチーム名でも指定可能。
 
 ### 5-4. リポジトリ設定の追加チェック
 
@@ -169,7 +169,7 @@ Pages creation: Public          ← Pages 公開を許可
 
 | ロール | 誰 | 権限 |
 |---|---|---|
-| Owner | 自分 (GenArch 代表) | 全権 |
+| Owner | 自分 (praxia-dev 代表) | 全権 |
 | Admin | 信頼コア・メンバー (将来) | リポジトリ設定変更可、Org 設定不可 |
 | Maintain | アクティブ・コントリビュータ | push、PR 承認可、設定変更不可 |
 | Triage | コミュニティ・モデレータ | Issue/PR ラベル管理のみ |
@@ -229,7 +229,7 @@ PyPI トークンは https://pypi.org/manage/account/token/ で発行。
 GitHub Pages と Cloudflare Pages の **両方** にデプロイし、相互リンクで運用します。
 
 - **Primary**: Cloudflare Pages (`https://praxia.tools/`) — 国際的に最速、無制限帯域
-- **Secondary**: GitHub Pages (`https://genarch.github.io/praxia/`) — リポジトリ統合、フォールバック
+- **Secondary**: GitHub Pages (`https://praxia-dev.github.io/praxia/`) — リポジトリ統合、フォールバック
 
 両方が main へのプッシュで自動デプロイされ、ランディングページは visitor のいるミラーを検知して相互リンクを表示します。
 
@@ -247,7 +247,7 @@ Folder: /web-publish
 Save
 ```
 
-URL: `https://genarch.github.io/praxia/`
+URL: `https://praxia-dev.github.io/praxia/`
 
 メリット: 設定 5 分、無料、GitHub と完全統合
 デメリット: GitHub の CDN は地域差あり (アジアからのアクセスは遅め、200-400ms)
@@ -259,7 +259,7 @@ URL: `https://genarch.github.io/praxia/`
 ```
 1. https://dash.cloudflare.com/sign-up でアカウント作成 (無料)
 2. Workers & Pages → Create → Pages → Connect to Git
-3. genarch/praxia リポジトリを選択
+3. praxia-dev/praxia リポジトリを選択
 4. Build settings:
      Framework preset:    None
      Build command:       (空欄)
@@ -276,7 +276,7 @@ URL: `https://praxia.tools/`
 ```
 1. https://vercel.com/signup でアカウント作成
 2. Add New → Project → Import Git Repository
-3. genarch/praxia を選択
+3. praxia-dev/praxia を選択
 4. Framework Preset: Other
 5. Root Directory: web-publish
 6. Deploy

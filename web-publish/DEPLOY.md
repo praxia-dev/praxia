@@ -5,7 +5,7 @@ We run **two mirrors** in parallel:
 | Mirror | URL | Role |
 |---|---|---|
 | **Cloudflare Pages** | `https://praxia.tools/` | **Primary / canonical** — fast worldwide (320+ POPs) |
-| **GitHub Pages** | `https://genarch.github.io/praxia/` | **Secondary / fallback** — official, integrated with the repo |
+| **GitHub Pages** | `https://praxia-dev.github.io/praxia/` | **Secondary / fallback** — official, integrated with the repo |
 
 Both mirrors serve the same files from `web-publish/`. Search engines see Cloudflare as canonical (via `<link rel="canonical">`); the GitHub Pages mirror shows a banner nudging visitors to switch.
 
@@ -19,7 +19,7 @@ Both mirrors serve the same files from `web-publish/`. Search engines see Cloudf
 2. **Create project**:
    - Workers & Pages → Create → **Pages** → Connect to Git → GitHub
    - Authorize Cloudflare for the `genarch` org
-   - Pick `genarch/praxia`
+   - Pick `praxia-dev/praxia`
 3. **Build settings**:
    ```
    Production branch:    main
@@ -71,14 +71,14 @@ After DNS propagates, update:
 
 ### One-time
 
-1. Push to `genarch/praxia` (Step 4 of [PUBLISH.md](../../PUBLISH.md))
+1. Push to `praxia-dev/praxia` (Step 4 of [PUBLISH.md](../../PUBLISH.md))
 2. **Settings → Pages**:
    ```
    Source:                 Deploy from a branch
    Branch:                 main
    Folder:                 /web-publish
    ```
-3. Wait ~1 minute. URL: `https://genarch.github.io/praxia/`
+3. Wait ~1 minute. URL: `https://praxia-dev.github.io/praxia/`
 
 ### What's already wired
 
@@ -98,7 +98,7 @@ The landing page detects which mirror the visitor is on and adapts:
 | You're visiting… | Behaviour |
 |---|---|
 | `praxia.tools` (Cloudflare) | Nav shows `🔘 GitHub Pages mirror` pill; no banner |
-| `genarch.github.io/praxia` (GH Pages) | Nav shows `🔘 Faster mirror (Cloudflare)` pill **and** a banner at the top of the page nudging users to switch |
+| `praxia-dev.github.io/praxia` (GH Pages) | Nav shows `🔘 Faster mirror (Cloudflare)` pill **and** a banner at the top of the page nudging users to switch |
 | Local file:// preview | Nav pill points at GitHub repo |
 
 The banner is dismissable per session (uses `sessionStorage`).
@@ -118,11 +118,11 @@ curl -sI https://praxia.tools/ | head -5
 #  → cf-ray: ...
 
 # Verify GitHub Pages returns the page
-curl -sI https://genarch.github.io/praxia/ | head -5
+curl -sI https://praxia-dev.github.io/praxia/ | head -5
 #  → HTTP/2 200
 
 # Sanity-check the canonical tag
-curl -s https://genarch.github.io/praxia/ | grep canonical
+curl -s https://praxia-dev.github.io/praxia/ | grep canonical
 #  → <link rel="canonical" href="https://praxia.tools/" />
 
 # Sanity-check the security headers (Cloudflare only)
@@ -172,7 +172,7 @@ Or use a self-hosted analytics solution (Plausible, Umami) if you want full data
 Push to main
   │
   ├─► Cloudflare Pages builds → https://praxia.tools/  (30 s, primary)
-  └─► GitHub Pages builds      → https://genarch.github.io/praxia/  (1 min, fallback)
+  └─► GitHub Pages builds      → https://praxia-dev.github.io/praxia/  (1 min, fallback)
        │
        └─► Visitor arrives → JS detects mirror → adapts nav + banner
 ```

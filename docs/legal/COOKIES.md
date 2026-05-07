@@ -8,7 +8,7 @@ technologies.
 ## What we use
 
 The Praxia website (`praxia.tools`, `praxia.tools`,
-`genarch.github.io/praxia`) uses **minimal browser storage**:
+`praxia-dev.github.io/praxia`) uses **minimal browser storage**:
 
 | Technology | Purpose | Required? | Retention |
 |---|---|---|---|

@@ -1,6 +1,6 @@
 # Praxia
 
-🌐 **Live**: [praxia.tools](https://praxia.tools/) (primary, Cloudflare) · [genarch.github.io/praxia](https://genarch.github.io/praxia/) (mirror, GitHub Pages)
+🌐 **Live**: [praxia.tools](https://praxia.tools/) (primary, Cloudflare) · [praxia-dev.github.io/praxia](https://praxia-dev.github.io/praxia/) (mirror, GitHub Pages)
 
 ![Praxia hero](docs/images/hero-banner.svg)
 
@@ -30,7 +30,7 @@ places**. The top-level layout reflects that split:
 | Directory | Where it ships | Maintained as |
 |---|---|---|
 | `praxia/`, `tests/`, `docs/`, `examples/`, `pyproject.toml`, etc. | **GitHub repo** (this README is what users see) | Code + technical docs |
-| [`web-publish/`](web-publish/) | **Cloudflare Pages** (`praxia.tools`) + **GitHub Pages** (`genarch.github.io/praxia`) — see [DEPLOY.md](web-publish/DEPLOY.md) | Static landing page + portal |
+| [`web-publish/`](web-publish/) | **Cloudflare Pages** (`praxia.tools`) + **GitHub Pages** (`praxia-dev.github.io/praxia`) — see [DEPLOY.md](web-publish/DEPLOY.md) | Static landing page + portal |
 | [`zenn-publish/`](zenn-publish/) | **Zenn** (zenn.dev) via `zenn-cli` | 7 long-form Japanese articles |
 
 A change to `web-publish/` only affects the landing page; a change under

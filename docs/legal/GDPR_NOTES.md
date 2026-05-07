@@ -205,7 +205,7 @@ confirm they are at least 16 (or the local minimum age for online consent).
 If you believe Praxia has been used in a way that violates GDPR, or if you
 spot a security/privacy issue in the codebase:
 
-- Open an issue with the `privacy` label at <https://github.com/genarch/praxia/issues>
+- Open an issue with the `privacy` label at <https://github.com/praxia-dev/praxia/issues>
 - Or email `security@praxia.tools` (PGP key TBD)
 
 We aim to respond within 7 days.

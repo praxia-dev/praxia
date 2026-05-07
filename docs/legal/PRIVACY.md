@@ -19,7 +19,7 @@ This policy describes how the Provider collects, uses, and protects
 personal data when you use:
 
 - The Praxia website (`praxia.tools`, `praxia.tools`,
-  `genarch.github.io/praxia`)
+  `praxia-dev.github.io/praxia`)
 - The Praxia portal (sign-in / sign-up forms)
 - Any hosted Praxia service operated by the Provider
 

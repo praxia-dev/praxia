@@ -10,7 +10,7 @@
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪡%3C/text%3E%3C/svg%3E" />
   <link rel="canonical" href="https://praxia.tools/" />
-  <link rel="alternate" href="https://genarch.github.io/praxia/" hreflang="en" />
+  <link rel="alternate" href="https://praxia-dev.github.io/praxia/" hreflang="en" />
   <link rel="alternate" href="https://praxia.tools/?lang=ja" hreflang="ja" />
   <link rel="alternate" href="https://praxia.tools/?lang=zh-CN" hreflang="zh-CN" />
   <link rel="alternate" href="https://praxia.tools/?lang=ko" hreflang="ko" />
@@ -27,7 +27,7 @@
       const isGithubPages = location.hostname.endsWith('.github.io');
       if (isCloudflare) {
         document.documentElement.dataset.mirror = 'cf';
-        document.documentElement.dataset.altUrl = 'https://genarch.github.io/praxia/';
+        document.documentElement.dataset.altUrl = 'https://praxia-dev.github.io/praxia/';
         document.documentElement.dataset.altLabel = 'GitHub Pages mirror';
       } else if (isGithubPages) {
         document.documentElement.dataset.mirror = 'gh';
@@ -35,7 +35,7 @@
         document.documentElement.dataset.altLabel = 'Faster mirror (Cloudflare)';
       } else {
         document.documentElement.dataset.mirror = 'local';
-        document.documentElement.dataset.altUrl = 'https://github.com/genarch/praxia';
+        document.documentElement.dataset.altUrl = 'https://github.com/praxia-dev/praxia';
         document.documentElement.dataset.altLabel = 'View on GitHub';
       }
     })();
@@ -64,7 +64,7 @@
         <span class="mirror-label">Mirror</span>
       </a>
       <a href="portal/index.html" class="nav-cta" data-i18n="nav.portal">Open Portal</a>
-      <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="nav-github">GitHub →</a>
+      <a href="https://github.com/praxia-dev/praxia" target="_blank" rel="noopener" class="nav-github">GitHub →</a>
     </div>
   </nav>
 
@@ -87,7 +87,7 @@
       </p>
       <div class="hero-cta">
         <a href="#install" class="btn btn-primary" data-i18n="hero.cta_get_started">Get started</a>
-        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-ghost" data-i18n="hero.cta_star">★ Star on GitHub</a>
+        <a href="https://github.com/praxia-dev/praxia" target="_blank" rel="noopener" class="btn btn-ghost" data-i18n="hero.cta_star">★ Star on GitHub</a>
       </div>
       <p id="i18n-notice" class="i18n-notice" hidden></p>
       <div class="hero-meta">
@@ -805,7 +805,7 @@ praxia consolidate
 praxia policy add deny connector <span class="str">"box:/Confidential/*"</span> --principals <span class="str">"role:member"</span>
 praxia admin export-audit audit.csv --since-days 30
 praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account"</span></code></pre>
-      <p class="install-note">Bring your own LLM key — Anthropic, OpenAI, Google (Gemini / Gemma), Alibaba (Qwen), or run Gemma / Qwen locally via Ollama. Two deployment modes: full-stack <code>praxia ui</code> or backend-only <code>praxia serve</code> behind your own frontend — see <a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
+      <p class="install-note">Bring your own LLM key — Anthropic, OpenAI, Google (Gemini / Gemma), Alibaba (Qwen), or run Gemma / Qwen locally via Ollama. Two deployment modes: full-stack <code>praxia ui</code> or backend-only <code>praxia serve</code> behind your own frontend — see <a href="https://github.com/praxia-dev/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
     </div>
   </section>
 
@@ -828,7 +828,7 @@ praxia connector pull salesforce <span class="str">"SELECT Id, Name FROM Account
       </div>
       <p class="cta-line">
         See full Before/After tables in
-        <a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
+        <a href="https://github.com/praxia-dev/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
       </p>
     </div>
   </section>
@@ -1107,7 +1107,7 @@ group by approach, flag contradictions.
       </div>
       <p class="cta-line">
         Full Before/After tables (10 industries × 3 use cases each) in
-        <a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
+        <a href="https://github.com/praxia-dev/praxia/blob/main/docs/use-cases.md">docs/use-cases.md</a>.
       </p>
     </div>
   </section>
@@ -1227,10 +1227,10 @@ P  = Praxia cost (license + infra)</code></pre>
       </div>
       <p class="cta-line">
         Detailed extension guides:
-        <a href="https://github.com/genarch/praxia/blob/main/docs/PLUGINS.md">PLUGINS.md</a> ·
-        <a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>
+        <a href="https://github.com/praxia-dev/praxia/blob/main/docs/PLUGINS.md">PLUGINS.md</a> ·
+        <a href="https://github.com/praxia-dev/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>
         ·
-        <a href="https://github.com/genarch/praxia/blob/main/docs/specs/">design specs (EN + JA)</a>.
+        <a href="https://github.com/praxia-dev/praxia/blob/main/docs/specs/">design specs (EN + JA)</a>.
       </p>
     </div>
   </section>
@@ -1273,7 +1273,7 @@ P  = Praxia cost (license + infra)</code></pre>
       </div>
       <p class="cta-line">
         Detailed feature inventory and integration matrix in
-        <a href="https://github.com/genarch/praxia/blob/main/docs/FEATURES.md">docs/FEATURES.md</a>.
+        <a href="https://github.com/praxia-dev/praxia/blob/main/docs/FEATURES.md">docs/FEATURES.md</a>.
       </p>
     </div>
   </section>
@@ -1327,7 +1327,7 @@ P  = Praxia cost (license + infra)</code></pre>
         </details>
         <details>
           <summary data-i18n="faq.q11">Can I use Praxia behind my own frontend (Next.js / mobile / Slack bot)?</summary>
-          <p data-i18n="faq.a11">Yes — that's <strong>mode B</strong>. Two paths: embed the Python SDK directly if your backend is Python, or run <code>praxia serve</code> (FastAPI, 8 endpoints under <code>/api/v1</code>) and call it from any HTTP client. Same auth, RBAC, ACL, and audit log as the Streamlit UI. Setup recipe: <a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
+          <p data-i18n="faq.a11">Yes — that's <strong>mode B</strong>. Two paths: embed the Python SDK directly if your backend is Python, or run <code>praxia serve</code> (FastAPI, 8 endpoints under <code>/api/v1</code>) and call it from any HTTP client. Same auth, RBAC, ACL, and audit log as the Streamlit UI. Setup recipe: <a href="https://github.com/praxia-dev/praxia/blob/main/docs/deployment-modes.md">deployment-modes.md</a>.</p>
         </details>
         <details>
           <summary data-i18n="faq.q12">Does the user have to write to memory every time?</summary>
@@ -1339,7 +1339,7 @@ P  = Praxia cost (license + infra)</code></pre>
         </details>
         <details>
           <summary data-i18n="faq.q14">Can I plug in a connector to a system you don't ship?</summary>
-          <p data-i18n="faq.a14">Yes. The <code>Connector</code> protocol is two methods (<code>pull</code> / <code>push</code>) and ~50 lines. Per-user OAuth, ACL enforcement, and audit logging plug in for free. End-to-end Notion example: <a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>.</p>
+          <p data-i18n="faq.a14">Yes. The <code>Connector</code> protocol is two methods (<code>pull</code> / <code>push</code>) and ~50 lines. Per-user OAuth, ACL enforcement, and audit logging plug in for free. End-to-end Notion example: <a href="https://github.com/praxia-dev/praxia/blob/main/docs/CUSTOM_CONNECTORS.md">CUSTOM_CONNECTORS.md</a>.</p>
         </details>
         <details>
           <summary data-i18n="faq.q15">Is Gemma supported?</summary>
@@ -1419,9 +1419,9 @@ P  = Praxia cost (license + infra)</code></pre>
       <p class="cta-line" data-i18n="editions.foot">
         Looking for OSS license interpretation, embedded use, or revenue
         share? See
-        <a href="https://github.com/genarch/praxia/blob/main/LICENSE">LICENSE</a>
+        <a href="https://github.com/praxia-dev/praxia/blob/main/LICENSE">LICENSE</a>
         and
-        <a href="https://github.com/genarch/praxia/blob/main/NOTICE.md">NOTICE</a>.
+        <a href="https://github.com/praxia-dev/praxia/blob/main/NOTICE.md">NOTICE</a>.
       </p>
     </div>
   </section>
@@ -1431,7 +1431,7 @@ P  = Praxia cost (license + infra)</code></pre>
       <h2 data-i18n="contact.h2">Ready to make your team's tacit knowledge unforgettable?</h2>
       <p data-i18n="contact.p">Star us on GitHub, run the quickstart, or reach out for a tailored PoC.</p>
       <div class="hero-cta">
-        <a href="https://github.com/genarch/praxia" target="_blank" rel="noopener" class="btn btn-primary" data-i18n="contact.star">★ Star on GitHub</a>
+        <a href="https://github.com/praxia-dev/praxia" target="_blank" rel="noopener" class="btn btn-primary" data-i18n="contact.star">★ Star on GitHub</a>
         <a href="portal/index.html" class="btn btn-ghost" data-i18n="contact.portal">Open Portal</a>
         <a href="mailto:hello@praxia.tools" class="btn btn-ghost" data-i18n="contact.contact">Contact us</a>
       </div>
@@ -1459,31 +1459,31 @@ P  = Praxia cost (license + infra)</code></pre>
       <div>
         <h4 data-i18n="footer.resources">Resources</h4>
         <ul>
-          <li><a href="https://github.com/genarch/praxia" data-i18n="footer.res.github">GitHub</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/quickstart.md" data-i18n="footer.res.quickstart">Quickstart</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/architecture.md" data-i18n="footer.res.arch">Architecture</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/deployment-modes.md" data-i18n="footer.res.deploy">Deployment modes</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/CUSTOM_CONNECTORS.md" data-i18n="footer.res.connectors">Custom connector guide</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/specs/" data-i18n="footer.res.specs">Design specs (EN + JA)</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/use-cases.md" data-i18n="footer.res.usecases">Use cases</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia" data-i18n="footer.res.github">GitHub</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/quickstart.md" data-i18n="footer.res.quickstart">Quickstart</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/architecture.md" data-i18n="footer.res.arch">Architecture</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/deployment-modes.md" data-i18n="footer.res.deploy">Deployment modes</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/CUSTOM_CONNECTORS.md" data-i18n="footer.res.connectors">Custom connector guide</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/specs/" data-i18n="footer.res.specs">Design specs (EN + JA)</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/use-cases.md" data-i18n="footer.res.usecases">Use cases</a></li>
         </ul>
       </div>
       <div>
         <h4 data-i18n="footer.community">Community</h4>
         <ul>
-          <li><a href="https://github.com/genarch/praxia/discussions" data-i18n="footer.com.discuss">Discussions</a></li>
-          <li><a href="https://github.com/genarch/praxia/issues" data-i18n="footer.com.issues">Issues</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/CONTRIBUTING.md" data-i18n="footer.com.contribute">Contributing</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/NOTICE.md" data-i18n="footer.com.licenses">Third-party licenses</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/discussions" data-i18n="footer.com.discuss">Discussions</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/issues" data-i18n="footer.com.issues">Issues</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/CONTRIBUTING.md" data-i18n="footer.com.contribute">Contributing</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/NOTICE.md" data-i18n="footer.com.licenses">Third-party licenses</a></li>
         </ul>
       </div>
       <div>
         <h4 data-i18n="footer.legal">Legal</h4>
         <ul>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/TERMS.md" data-i18n="footer.legal.terms">Terms of Service</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/PRIVACY.md" data-i18n="footer.legal.privacy">Privacy Policy</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/ACCEPTABLE_USE.md" data-i18n="footer.legal.aup">Acceptable Use</a></li>
-          <li><a href="https://github.com/genarch/praxia/blob/main/docs/legal/COOKIES.md" data-i18n="footer.legal.cookies">Cookies</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/legal/TERMS.md" data-i18n="footer.legal.terms">Terms of Service</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/legal/PRIVACY.md" data-i18n="footer.legal.privacy">Privacy Policy</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/legal/ACCEPTABLE_USE.md" data-i18n="footer.legal.aup">Acceptable Use</a></li>
+          <li><a href="https://github.com/praxia-dev/praxia/blob/main/docs/legal/COOKIES.md" data-i18n="footer.legal.cookies">Cookies</a></li>
         </ul>
       </div>
     </div>
@@ -1492,7 +1492,7 @@ P  = Praxia cost (license + infra)</code></pre>
       <span class="mirror-info">
         Mirrors:
         <a href="https://praxia.tools/">praxia.tools</a> ·
-        <a href="https://genarch.github.io/praxia/">genarch.github.io/praxia</a>
+        <a href="https://praxia-dev.github.io/praxia/">praxia-dev.github.io/praxia</a>
       </span>
     </div>
   </footer>
