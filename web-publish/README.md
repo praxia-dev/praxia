@@ -36,11 +36,11 @@ python -m http.server 8000
 
 ## Customization
 
-If you forked the repo to a different GitHub org, replace `genarch` in HTML/href links accordingly. A bulk find-replace works:
+If you forked the repo to a different GitHub org, replace `praxia-dev` in HTML/href links accordingly. A bulk find-replace works:
 
 ```bash
 find web-publish -type f \( -name "*.html" -o -name "*.md" \) \
-  -exec sed -i 's|genarch|your-org|g' {} +
+  -exec sed -i 's|praxia-dev|your-org|g' {} +
 ```
 
 For the **portal**, the SSO buttons and forms are wired with placeholder

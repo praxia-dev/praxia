@@ -18,7 +18,7 @@ Both mirrors serve the same files from `web-publish/`. Search engines see Cloudf
 1. **Sign up**: <https://dash.cloudflare.com/sign-up> (free, no credit card).
 2. **Create project**:
    - Workers & Pages → Create → **Pages** → Connect to Git → GitHub
-   - Authorize Cloudflare for the `genarch` org
+   - Authorize Cloudflare for the `praxia-dev` org
    - Pick `praxia-dev/praxia`
 3. **Build settings**:
    ```

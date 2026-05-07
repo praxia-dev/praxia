@@ -1,21 +1,21 @@
 # Code owners — anyone listed here is automatically requested for review
 # when matching files change in a PR.
 #
-# REPLACE @your-github-username with your actual GitHub handle before pushing.
-# For an Org-owned repo, use @genarch/maintainers (a team) instead.
+# For an Org-owned repo with a maintainers team, replace @gen99 below with
+# @praxia-dev/maintainers (the team name).
 
 # Default owner for everything
-*               @your-github-username
+*               @gen99
 
 # Hot files — extra protection
-LICENSE         @your-github-username
-NOTICE.md       @your-github-username
-pyproject.toml  @your-github-username
+LICENSE         @gen99
+NOTICE.md       @gen99
+pyproject.toml  @gen99
 
 # Auth / security boundary
-praxia/auth/*   @your-github-username
-praxia/auth/**  @your-github-username
+praxia/auth/*   @gen99
+praxia/auth/**  @gen99
 
 # CI / repo configuration
-.github/*       @your-github-username
-.github/**      @your-github-username
+.github/*       @gen99
+.github/**      @gen99

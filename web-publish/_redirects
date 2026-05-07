@@ -1,26 +1,27 @@
 # Cloudflare Pages redirects
 # Format: from-path  to-path  status
 # Docs: https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# Valid status codes: 200, 301, 302, 303, 307, 308.
+# 404 fallback is NOT configured here — instead, web-publish/404.html is
+# served automatically for unmatched paths via wrangler.jsonc's
+# "not_found_handling": "404-page" setting.
 
 # --- Convenience aliases ---
-/docs       https://github.com/genarch/praxia/tree/main/docs   302
-/docs/*     https://github.com/genarch/praxia/blob/main/docs/:splat   302
-/github     https://github.com/genarch/praxia                  302
-/repo       https://github.com/genarch/praxia                  302
-/issues     https://github.com/genarch/praxia/issues           302
-/discussions https://github.com/genarch/praxia/discussions     302
-/install    /#install                                          301
-/quickstart https://github.com/genarch/praxia/blob/main/docs/quickstart.md  302
-/features   https://github.com/genarch/praxia/blob/main/docs/FEATURES.md    302
-/use-cases  https://github.com/genarch/praxia/blob/main/docs/use-cases.md   302
-/plugins    https://github.com/genarch/praxia/blob/main/docs/PLUGINS.md     302
+/docs       https://github.com/praxia-dev/praxia/tree/main/docs   302
+/docs/*     https://github.com/praxia-dev/praxia/blob/main/docs/:splat   302
+/github     https://github.com/praxia-dev/praxia                  302
+/repo       https://github.com/praxia-dev/praxia                  302
+/issues     https://github.com/praxia-dev/praxia/issues           302
+/discussions https://github.com/praxia-dev/praxia/discussions     302
+/install    /#install                                             301
+/quickstart https://github.com/praxia-dev/praxia/blob/main/docs/quickstart.md  302
+/features   https://github.com/praxia-dev/praxia/blob/main/docs/FEATURES.md    302
+/use-cases  https://github.com/praxia-dev/praxia/blob/main/docs/use-cases.md   302
+/plugins    https://github.com/praxia-dev/praxia/blob/main/docs/PLUGINS.md     302
 
 # Mirror reference — GitHub Pages copy
-/mirror     https://genarch.github.io/praxia/                  302
+/mirror     https://praxia-dev.github.io/praxia/                  302
 
 # PyPI package
-/pypi       https://pypi.org/project/praxia/                   302
-
-# 404 fallback (Cloudflare serves /404.html for unmatched paths anyway,
-# but explicit catch-all helps if you add subpaths later)
-/*          /404.html                                          404
+/pypi       https://pypi.org/project/praxia/                      302
