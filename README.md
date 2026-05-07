@@ -1,7 +1,8 @@
 # Praxia
 [![tests](https://github.com/praxia-dev/praxia/actions/workflows/test.yml/badge.svg)](https://github.com/praxia-dev/praxia/actions/workflows/test.yml)
+[![Follow on X](https://img.shields.io/twitter/follow/praxia_dev?style=social)](https://x.com/praxia_dev)
 
-🌐 **Live**: [praxia.tools](https://praxia.tools/) (primary, Cloudflare) · [praxia-dev.github.io/praxia](https://praxia-dev.github.io/praxia/) (mirror, GitHub Pages)
+🌐 **Live**: [praxia.tools](https://praxia.tools/) (primary, Cloudflare) · [praxia-dev.github.io/praxia](https://praxia-dev.github.io/praxia/) (mirror, GitHub Pages) · [@praxia_dev](https://x.com/praxia_dev) on X
 
 ![Praxia hero](docs/images/hero-banner.svg)
 

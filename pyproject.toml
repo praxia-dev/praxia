@@ -141,9 +141,11 @@ praxia = "praxia.cli.main:app"
 praxia-ui = "praxia.ui.launcher:main"
 
 [project.urls]
-Homepage = "https://github.com/your-org/praxia"
-Documentation = "https://github.com/your-org/praxia/tree/main/docs"
-Issues = "https://github.com/your-org/praxia/issues"
+Homepage = "https://praxia.tools/"
+Repository = "https://github.com/praxia-dev/praxia"
+Documentation = "https://github.com/praxia-dev/praxia/tree/main/docs"
+Issues = "https://github.com/praxia-dev/praxia/issues"
+X = "https://x.com/praxia_dev"
 
 # --- Plug-in extension points ------------------------------------------------
 # Third-party packages declare their own connectors / backends / skills / flows

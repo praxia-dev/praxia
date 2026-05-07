@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Praxia">
+  <title>Praxia — multi-agent orchestrator with cyclic memory</title>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9c378"/>
+      <stop offset="1" stop-color="#c9a456"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="50%" cy="20%" r="90%">
+      <stop offset="0" stop-color="#1d1d28"/>
+      <stop offset="0.85" stop-color="#0a0a0f"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded-square background; safe for both square + circular crops -->
+  <rect width="400" height="400" rx="88" fill="url(#bg)"/>
+
+  <!-- 5-layer memory stack, brightest at bottom (Layer 1, raw personal memory)
+       fading upward toward Layer 5 (graph / refined). Centered horizontally. -->
+  <g>
+    <rect x="118" y="100" width="164" height="22" rx="6" fill="url(#gold)" opacity="0.38"/>
+    <rect x="118" y="138" width="164" height="22" rx="6" fill="url(#gold)" opacity="0.54"/>
+    <rect x="118" y="176" width="164" height="22" rx="6" fill="url(#gold)" opacity="0.70"/>
+    <rect x="118" y="214" width="164" height="22" rx="6" fill="url(#gold)" opacity="0.86"/>
+    <rect x="118" y="252" width="164" height="22" rx="6" fill="url(#gold)"/>
+  </g>
+
+  <!-- Promotion / cycle arc: from Layer 1 (bottom-right) up to Layer 5 (top-right) -->
+  <path d="M 286 263 C 340 263, 340 111, 286 111"
+        fill="none" stroke="url(#gold)" stroke-width="5"
+        stroke-linecap="round" opacity="0.9"/>
+  <!-- Arrow head pointing into Layer 5 -->
+  <path d="M 277 102 L 286 111 L 277 120"
+        fill="none" stroke="url(#gold)" stroke-width="5"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+</svg>

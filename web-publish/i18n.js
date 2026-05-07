@@ -662,6 +662,7 @@
     "footer.res.connectors":   {en:"Custom connector guide", ja:"カスタムコネクタガイド", "zh-CN":"自定义连接器指南", ko:"커스텀 커넥터 가이드", es:"Guía de conectores personalizados", fr:"Guide connecteurs personnalisés", de:"Custom-Konnektor-Leitfaden", "pt-BR":"Guia de conectores personalizados"},
     "footer.res.specs":        {en:"Design specs (EN + JA)", ja:"設計仕様書 (英 + 日)", "zh-CN":"设计规范(英+日)", ko:"설계 사양서 (영 + 일)", es:"Specs de diseño (EN+JA)", fr:"Specs de conception (EN+JA)", de:"Designspezifikationen (EN+JA)", "pt-BR":"Specs de design (EN+JA)"},
     "footer.res.usecases":     {en:"Use cases", ja:"ユースケース", "zh-CN":"用例", ko:"사용 사례", es:"Casos de uso", fr:"Cas d'usage", de:"Anwendungsfälle", "pt-BR":"Casos de uso"},
+    "footer.com.x":            {en:"Follow on X (@praxia_dev)", ja:"X でフォロー (@praxia_dev)", "zh-CN":"在 X 关注 (@praxia_dev)", ko:"X 에서 팔로우 (@praxia_dev)", es:"Síguenos en X (@praxia_dev)", fr:"Suivre sur X (@praxia_dev)", de:"Auf X folgen (@praxia_dev)", "pt-BR":"Seguir no X (@praxia_dev)"},
     "footer.com.discuss":      {en:"Discussions", ja:"ディスカッション", "zh-CN":"讨论", ko:"디스커션", es:"Discusiones", fr:"Discussions", de:"Diskussionen", "pt-BR":"Discussões"},
     "footer.com.issues":       {en:"Issues", ja:"Issue", "zh-CN":"Issue", ko:"이슈", es:"Issues", fr:"Issues", de:"Issues", "pt-BR":"Issues"},
     "footer.com.contribute":   {en:"Contributing", ja:"コントリビュート", "zh-CN":"参与贡献", ko:"기여하기", es:"Contribuir", fr:"Contribuer", de:"Mitwirken", "pt-BR":"Contribuir"},
