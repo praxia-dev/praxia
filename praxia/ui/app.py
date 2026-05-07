@@ -70,8 +70,8 @@ MODE_OPTIONS = [
     "admin",
 ]
 
-mode = st.sidebar.radio(
-    t("sidebar.mode"),
+mode = st.sidebar.selectbox(
+    t("sidebar.view"),
     options=MODE_OPTIONS,
     format_func=lambda m: t(f"mode.{m}"),
     key="praxia_mode",
@@ -765,9 +765,9 @@ elif mode == "admin":
         st.error(f"Auth not available: {e}")
         auth = None
 
-    # Resolve actor identity + role from the sidebar's user_id (advisory only —
-    # UI auth is not enforced; audit log captures whoever is at the keyboard).
+    # Resolve actor identity + role from the sidebar's user_id.
     actor_role = "unknown"
+    users_exist = False
     if auth is not None:
         try:
             _u = auth.users.get_by_username(user_id)
@@ -775,6 +775,21 @@ elif mode == "admin":
                 actor_role = _u.role
         except Exception:
             pass
+        try:
+            users_exist = bool(auth.users.list_all())
+        except Exception:
+            pass
+
+    # Access gate: if the auth store has any users registered, only allow
+    # signed-in admin users into Admin. If no users exist (single-user dev
+    # mode), allow access but show a clear warning.
+    if users_exist and actor_role != "admin":
+        st.error(t("admin.gate.denied").format(user=user_id, role=actor_role))
+        st.markdown(t("admin.gate.howto"))
+        st.stop()
+
+    if not users_exist:
+        st.warning(t("admin.gate.dev_mode"))
 
     tab_settings, tab_users, tab_connectors, tab_policies, tab_exports, tab_about = st.tabs([
         t("admin.settings.subtab"),
@@ -1202,18 +1217,25 @@ elif mode == "admin":
 個人で利用するだけで暗黙知が自動蓄積され、有効なものだけが組織知へ昇格する
 **5層メモリ循環機構**を備えています。
 
-#### サポート LLM
-- Anthropic Claude (Opus / Sonnet / Haiku)
-- OpenAI ChatGPT (GPT-4o / o1)
-- Google Gemini (2.0 Pro / Flash)
-- Alibaba Qwen (API: dashscope / Local: Ollama)
-- 他、LiteLLM 対応の全プロバイダ
+#### サポート LLM (15+ 標準 · 100+ via LiteLLM)
+- **Anthropic Claude** (Opus / Sonnet / Haiku)
+- **OpenAI ChatGPT** (GPT-5 / o-series)
+- **Google Gemini** + **Gemma** (cloud + Ollama)
+- **Alibaba Qwen** (API + Ollama)
+- **DeepSeek** (V3 / R1 reasoning) · **Mistral** + **Codestral**
+- **xAI Grok** · **Meta Llama** (Groq fast / Ollama) · **Microsoft Phi**
+- **Cohere Command R+** · **Perplexity Sonar**
+- 他、LiteLLM 経由で 100+
+
+各 LLM ごとに 1 行エイリアスで切替 (`claude` / `gpt-5` / `gemini` 等)、または
+`PRAXIA_LOCAL_MODEL=gemma` でエアギャップ運用。
 
 #### 同梱業務スキル
 - 投資 / 営業 / 設計 / 購買 / 特許 / 法務
 
 #### LTM バックエンド
-- Mem0 (推奨) / LangMem / Letta / Zep / JSON
+- Mem0 / LangMem / Letta / Zep / HindSight / JSON
+- 並列融合 (RRF) または query-routing で複数併用可
 
 [GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0
             """

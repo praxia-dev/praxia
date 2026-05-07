@@ -118,15 +118,15 @@ _T: dict[str, dict[str, str]] = {
         "de": "Kompaktansicht",
         "pt-BR": "Modo compacto",
     },
-    "sidebar.mode": {
-        "en": "Mode",
-        "ja": "モード",
-        "zh-CN": "模式",
-        "ko": "모드",
-        "es": "Modo",
-        "fr": "Mode",
-        "de": "Modus",
-        "pt-BR": "Modo",
+    "sidebar.view": {
+        "en": "View",
+        "ja": "ビュー",
+        "zh-CN": "视图",
+        "ko": "뷰",
+        "es": "Vista",
+        "fr": "Vue",
+        "de": "Ansicht",
+        "pt-BR": "Visão",
     },
     "sidebar.readme": {
         "en": "README",
@@ -1041,6 +1041,77 @@ _T: dict[str, dict[str, str]] = {
         "fr": "Redémarrez le serveur Streamlit (ou rechargez la page) pour que les modifications affectant des modules déjà importés prennent effet.",
         "de": "Starte den Streamlit-Server neu (oder lade die Seite neu), damit Änderungen an bereits importierten Modulen wirksam werden.",
         "pt-BR": "Reinicie o servidor Streamlit (ou recarregue a página) para que mudanças em módulos já importados façam efeito.",
+    },
+    "admin.gate.denied": {
+        "en": "🚫 Admin access denied for **{user}** (role: `{role}`). Only admin users can open this view.",
+        "ja": "🚫 **{user}** (ロール: `{role}`) は Admin にアクセスできません。admin ロールのユーザのみ閲覧可能です。",
+        "zh-CN": "🚫 **{user}** (角色: `{role}`) 无 Admin 访问权限。仅 admin 角色用户可访问。",
+        "ko": "🚫 **{user}** (역할: `{role}`) 는 Admin 에 접근할 수 없습니다. admin 역할만 가능합니다.",
+        "es": "🚫 Acceso a Admin denegado para **{user}** (rol: `{role}`). Solo usuarios admin.",
+        "fr": "🚫 Accès Admin refusé pour **{user}** (rôle : `{role}`). Réservé aux utilisateurs admin.",
+        "de": "🚫 Admin-Zugriff verweigert für **{user}** (Rolle: `{role}`). Nur admin-Nutzer.",
+        "pt-BR": "🚫 Acesso Admin negado para **{user}** (papel: `{role}`). Apenas usuários admin.",
+    },
+    "admin.gate.howto": {
+        "en": (
+            "**Switch user**: change `User ID` in the sidebar to an admin "
+            "username.\n\n"
+            "**Create an admin user** (CLI):\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "Then re-open this page with `User ID = alice`."
+        ),
+        "ja": (
+            "**ユーザを切替**: サイドバーの `User ID` を admin ユーザ名に変更。\n\n"
+            "**admin ユーザを作成** (CLI):\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "その後 `User ID = alice` でこのページを開き直してください。"
+        ),
+        "zh-CN": (
+            "**切换用户**: 在侧边栏将 `User ID` 改为 admin 用户名。\n\n"
+            "**创建 admin 用户**(CLI):\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "随后以 `User ID = alice` 重新打开本页。"
+        ),
+        "ko": (
+            "**사용자 전환**: 사이드바의 `User ID` 를 admin 사용자명으로 변경.\n\n"
+            "**admin 사용자 생성** (CLI):\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "그 후 `User ID = alice` 로 본 페이지를 다시 여세요."
+        ),
+        "es": (
+            "**Cambiar usuario**: cambia `User ID` en la sidebar a un nombre admin.\n\n"
+            "**Crear usuario admin** (CLI):\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "Luego abre esta página con `User ID = alice`."
+        ),
+        "fr": (
+            "**Changer d'utilisateur** : modifiez `User ID` dans la sidebar vers un nom admin.\n\n"
+            "**Créer un admin** (CLI) :\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "Puis rouvrez cette page avec `User ID = alice`."
+        ),
+        "de": (
+            "**Nutzer wechseln**: ändere `User ID` in der Sidebar zu einem admin-Namen.\n\n"
+            "**Admin-Nutzer anlegen** (CLI):\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "Danach diese Seite mit `User ID = alice` neu öffnen."
+        ),
+        "pt-BR": (
+            "**Trocar usuário**: mude `User ID` na sidebar para um nome admin.\n\n"
+            "**Criar usuário admin** (CLI):\n\n"
+            "```bash\npraxia user create alice --role admin\n```\n\n"
+            "Depois reabra esta página com `User ID = alice`."
+        ),
+    },
+    "admin.gate.dev_mode": {
+        "en": "⚠️ **Dev / single-user mode** — no users have been created yet, so anyone hitting this URL can change settings. Run `praxia user create <name> --role admin` to enable proper role gating.",
+        "ja": "⚠️ **開発 / 単一ユーザモード** — ユーザ未作成のため、このページにアクセスできる人は誰でも設定を変更可能。`praxia user create <名前> --role admin` でロールベース制御を有効化してください。",
+        "zh-CN": "⚠️ **开发/单用户模式** — 尚未创建任何用户,因此访问此 URL 的任何人都可更改设置。运行 `praxia user create <名字> --role admin` 启用角色控制。",
+        "ko": "⚠️ **개발 / 단일 사용자 모드** — 사용자가 아직 생성되지 않아 이 URL 에 접근하는 누구든 설정을 변경할 수 있습니다. `praxia user create <이름> --role admin` 으로 역할 기반 제어를 활성화하세요.",
+        "es": "⚠️ **Modo dev / usuario único** — aún no hay usuarios creados, por lo que cualquiera con la URL puede cambiar ajustes. Ejecuta `praxia user create <nombre> --role admin` para activar control por rol.",
+        "fr": "⚠️ **Mode dev / mono-utilisateur** — aucun utilisateur créé, n'importe qui ayant l'URL peut modifier les réglages. Exécutez `praxia user create <nom> --role admin` pour activer le contrôle par rôle.",
+        "de": "⚠️ **Dev-/Einzelnutzer-Modus** — noch keine Nutzer angelegt, jeder mit der URL kann Einstellungen ändern. Führe `praxia user create <name> --role admin` aus, um rollenbasierte Kontrolle zu aktivieren.",
+        "pt-BR": "⚠️ **Modo dev / usuário único** — sem usuários criados ainda; qualquer um com a URL pode alterar ajustes. Execute `praxia user create <nome> --role admin` para ativar controle por papel.",
     },
     "admin.settings.role_required": {
         "en": "🚫 Save blocked — only `admin` users can change settings.",
