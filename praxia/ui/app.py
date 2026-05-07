@@ -585,6 +585,17 @@ mode = st.session_state["praxia_mode"]
 if mode == "run":
     st.header(t("run.h"))
 
+    # Ephemeral mode — applies to both Agent and Skill sub-tabs. When
+    # checked, this run does NOT accumulate to personal memory (read_only
+    # mode) and does NOT log skill usage to the registry. Default OFF so
+    # normal use builds memory + skill stats.
+    ephemeral = st.checkbox(
+        ("🔒 " if st.session_state.get("run_ephemeral") else "") + t("run.ephemeral"),
+        value=False,
+        key="run_ephemeral",
+        help=t("run.ephemeral_help"),
+    )
+
     # Agent first (default tab) — the user's primary entry point.
     tab_agent, tab_skill = st.tabs([
         t("run.tab.agent"),
@@ -646,6 +657,12 @@ if mode == "run":
                 for m in recent
             ]
 
+            # Ephemeral mode: set PRAXIA_MEMORY_MODE=read_only so the
+            # AutonomousAgent's freshly-constructed PersonalMemory drops
+            # episode/fact writes silently. Restore env after the run.
+            _saved_mem_mode = os.environ.get("PRAXIA_MEMORY_MODE")
+            if ephemeral:
+                os.environ["PRAXIA_MEMORY_MODE"] = "read_only"
             try:
                 from praxia.agent import AutonomousAgent
                 agent = AutonomousAgent(
@@ -661,6 +678,12 @@ if mode == "run":
             except Exception as exc:
                 response_text = f"❌ {exc}"
                 trace = []
+            finally:
+                if ephemeral:
+                    if _saved_mem_mode is None:
+                        os.environ.pop("PRAXIA_MEMORY_MODE", None)
+                    else:
+                        os.environ["PRAXIA_MEMORY_MODE"] = _saved_mem_mode
 
             st.session_state["praxia_chat"].append({
                 "role": "assistant",
@@ -801,7 +824,9 @@ if mode == "run":
             with st.spinner(f"Running {skill_obj.manifest.name}…"):
                 output = skill_obj.run(user_input)
             st.markdown(output)
-            if loom.skill_registry:
+            # Ephemeral mode: skip the skill_registry usage log + the
+            # promotion-engine signals it feeds. Default mode logs as usual.
+            if loom.skill_registry and not ephemeral:
                 loom.skill_registry.log_usage(
                     skill_name=skill_obj.manifest.name, user_id=user_id,
                 )
