@@ -26,6 +26,140 @@ _log = logging.getLogger(__name__)
 
 _MOBILE_CSS = """
 <style>
+/* --- Praxia UI: design polish — typography, spacing, refined widgets.
+       Goal: feel like a modern product, not a dev tool. */
+
+/* Better web font stack — system UI on each OS, with Inter fallback for
+   web users who have it installed. */
+.stApp, body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                 "Segoe UI", "Roboto", "Inter", "Helvetica Neue",
+                 "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif !important;
+    font-feature-settings: "cv11", "ss01", "ss03";
+}
+code, pre, [data-testid="stCode"], .stCode {
+    font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code",
+                 "Menlo", monospace !important;
+    font-size: 0.875rem !important;
+}
+
+/* Tighter, more confident heading hierarchy */
+.stMarkdown h1, h1 { font-weight: 700 !important; letter-spacing: -0.02em !important; line-height: 1.2 !important; }
+.stMarkdown h2, h2 { font-weight: 700 !important; letter-spacing: -0.015em !important; line-height: 1.25 !important; }
+.stMarkdown h3, h3 { font-weight: 600 !important; letter-spacing: -0.01em !important; }
+.stMarkdown h4, h4 { font-weight: 600 !important; }
+
+/* Calmer captions */
+[data-testid="stCaptionContainer"], .stCaption,
+small, [data-testid="stCaption"] {
+    font-size: 0.825rem !important;
+    line-height: 1.45 !important;
+    letter-spacing: 0.005em !important;
+}
+
+/* Buttons: rounded, subtle hover transition, no harsh borders */
+.stButton button, .stDownloadButton button,
+[data-testid="stFormSubmitButton"] button {
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.005em !important;
+    transition: transform 80ms ease, box-shadow 120ms ease,
+                background-color 120ms ease !important;
+    border-width: 1px !important;
+}
+.stButton button:hover, .stDownloadButton button:hover,
+[data-testid="stFormSubmitButton"] button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.stButton button:active { transform: translateY(0); }
+
+/* Form inputs: more breathing room */
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stSelectbox"] div[role="combobox"],
+[data-testid="stNumberInput"] input,
+[data-testid="stDateInput"] input {
+    border-radius: 8px !important;
+    font-size: 0.9rem !important;
+}
+
+/* Checkbox + radio: align labels nicely */
+[data-testid="stCheckbox"] label,
+[data-testid="stRadio"] label {
+    font-size: 0.9rem !important;
+}
+
+/* Metrics: card look */
+[data-testid="stMetric"] {
+    background: rgba(127, 127, 127, 0.04);
+    border-radius: 10px;
+    padding: 0.85rem 1rem !important;
+    border: 1px solid rgba(127, 127, 127, 0.1);
+}
+[data-testid="stMetricValue"] {
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+}
+
+/* Expanders: cleaner edges */
+[data-testid="stExpander"] {
+    border-radius: 10px !important;
+    border: 1px solid rgba(127, 127, 127, 0.12) !important;
+    background: rgba(127, 127, 127, 0.02);
+}
+[data-testid="stExpander"] summary {
+    padding: 0.65rem 1rem !important;
+    font-weight: 500 !important;
+}
+
+/* Tabs: underline-style instead of pill */
+[data-testid="stTabs"] [role="tablist"] {
+    gap: 0 !important;
+    border-bottom: 1px solid rgba(127, 127, 127, 0.18);
+}
+[data-testid="stTabs"] [role="tab"] {
+    padding: 0.6rem 1rem !important;
+    font-weight: 500 !important;
+    font-size: 0.92rem !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+    color: #c9a456 !important;
+    border-bottom-color: #c9a456 !important;
+    font-weight: 600 !important;
+}
+
+/* Sidebar: subtle border on the right, slightly less heavy */
+[data-testid="stSidebar"] {
+    border-right: 1px solid rgba(127, 127, 127, 0.08);
+    padding-top: 1rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
+    margin-top: 0 !important;
+    font-size: 1.1rem !important;
+}
+
+/* Chat messages: cleaner bubble */
+[data-testid="stChatMessage"] {
+    padding: 0.85rem 1rem !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(127, 127, 127, 0.08);
+    background: rgba(127, 127, 127, 0.025);
+    margin-bottom: 0.6rem !important;
+}
+
+/* Dividers: thinner, calmer */
+hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; }
+
+/* Alerts: less shouty */
+[data-testid="stAlert"] {
+    border-radius: 10px !important;
+    border-width: 1px !important;
+}
+
 /* --- Praxia UI: hide Streamlit's default chrome that's irrelevant to the
        app user (Deploy button, hamburger menu, "Made with Streamlit" footer).
        These are dev-time conveniences — Praxia is the product, not Streamlit. */
@@ -76,9 +210,9 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
 }
 
-/* Sticky requires no ancestor with overflow:hidden — make sure none of
-   the wrapping Streamlit containers clip our nav. */
-.stApp, [data-testid="stMain"], section.main, .main,
+/* Sticky requires no clip on the inner block containers (but the main
+   scroll area MUST keep its overflow: auto, otherwise the page can't
+   scroll at all and sticky has nothing to stick to). */
 .main .block-container, [data-testid="stMainBlockContainer"],
 [data-testid="stVerticalBlock"] {
     overflow: visible !important;
