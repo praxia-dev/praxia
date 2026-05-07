@@ -507,13 +507,31 @@ with st.sidebar:
     selected_custom_ids: list[str] = []
     if local_scopes:
         st.markdown(f"_{t('sidebar.scope.local_h')}_")
-        for s in local_scopes:
+        # Render in tree order: parents before children, child names
+        # show their full path so the hierarchy is visible.
+        rendered: set[str] = set()
+        def _render_scope_checkbox(s: DataScope, depth: int) -> None:
             n_files = len(scope_registry.list_local_files(s))
+            indent = "　" * depth
             if st.checkbox(
-                f"📁 {s.name} ({n_files})",
+                f"{indent}📁 {s.name} ({n_files})",
                 value=False, key=f"scope_local_{s.id}",
             ):
                 selected_custom_ids.append(s.id)
+            rendered.add(s.id)
+            for child in [c for c in local_scopes if c.parent_id == s.id]:
+                _render_scope_checkbox(child, depth + 1)
+        for s in [r for r in local_scopes if r.parent_id is None]:
+            _render_scope_checkbox(s, depth=0)
+        # Orphans (parent missing): render them at root level for safety.
+        for s in local_scopes:
+            if s.id not in rendered:
+                n_files = len(scope_registry.list_local_files(s))
+                if st.checkbox(
+                    f"📁 {s.name} ({n_files})",
+                    value=False, key=f"scope_local_{s.id}",
+                ):
+                    selected_custom_ids.append(s.id)
     if connector_scopes:
         st.markdown(f"_{t('sidebar.scope.connector_h')}_")
         for s in connector_scopes:
@@ -875,41 +893,60 @@ elif mode == "data":
 
     with sub_local:
         st.caption(t("data.local.intro"))
-        if local_scopes:
-            for s in local_scopes:
-                files = scope_registry.list_local_files(s)
-                with st.expander(f"📁 {s.name} · {len(files)} files",
-                                 expanded=False):
-                    if s.description:
-                        st.caption(s.description)
-                    st.caption(f"id: `{s.id}`  ·  path: `{s.path}`")
-                    for f in files:
-                        col_n, col_s, col_d = st.columns([6, 2, 1])
-                        col_n.text(f.name)
-                        col_s.caption(f"{f.stat().st_size:,} B")
-                        if col_d.button("🗑", key=f"delf_{s.id}_{f.name}"):
-                            scope_registry.delete_file(s, f.name)
-                            st.rerun()
-                    st.divider()
-                    new_files = st.file_uploader(
-                        t("data.local.add_files"),
-                        accept_multiple_files=True,
-                        key=f"upload_more_{s.id}",
-                    )
-                    col_save, col_del = st.columns(2)
-                    if col_save.button(t("data.local.save_uploads"),
-                                       key=f"save_{s.id}"):
-                        if new_files:
-                            saved = scope_registry.save_uploaded_files(s, new_files)
-                            st.success(t("data.local.saved").format(n=len(saved)))
-                            st.rerun()
-                        else:
-                            st.warning(t("data.local.no_files_to_save"))
-                    if col_del.button(t("data.local.delete_folder"),
-                                      type="secondary", key=f"delfol_{s.id}"):
-                        scope_registry.delete(user_id, s.id)
-                        st.success(t("data.local.folder_deleted").format(name=s.name))
+
+        # Build a quick lookup: scope_id → list of children (only locals)
+        children_of: dict[str | None, list[DataScope]] = {}
+        for s in local_scopes:
+            children_of.setdefault(s.parent_id, []).append(s)
+
+        def _render_local_node(s: DataScope, depth: int = 0) -> None:
+            indent = "　" * depth  # full-width space gives visible indent
+            files = scope_registry.list_local_files(s)
+            kid_count = len(children_of.get(s.id, []))
+            label = f"{indent}📁 {s.name}  ·  {len(files)} files"
+            if kid_count:
+                label += f"  ·  {kid_count} sub"
+            with st.expander(label, expanded=False):
+                if s.description:
+                    st.caption(s.description)
+                st.caption(f"id: `{s.id}`  ·  path: `{s.path}`")
+
+                for f in files:
+                    col_n, col_s, col_d = st.columns([6, 2, 1])
+                    col_n.text(f.name)
+                    col_s.caption(f"{f.stat().st_size:,} B")
+                    if col_d.button("🗑", key=f"delf_{s.id}_{f.name}"):
+                        scope_registry.delete_file(s, f.name)
                         st.rerun()
+
+                st.divider()
+                new_files = st.file_uploader(
+                    t("data.local.add_files"),
+                    accept_multiple_files=True,
+                    key=f"upload_more_{s.id}",
+                )
+                col_save, col_del = st.columns(2)
+                if col_save.button(t("data.local.save_uploads"),
+                                   key=f"save_{s.id}"):
+                    if new_files:
+                        saved = scope_registry.save_uploaded_files(s, new_files)
+                        st.success(t("data.local.saved").format(n=len(saved)))
+                        st.rerun()
+                    else:
+                        st.warning(t("data.local.no_files_to_save"))
+                if col_del.button(t("data.local.delete_folder"),
+                                  type="secondary", key=f"delfol_{s.id}"):
+                    scope_registry.delete(user_id, s.id)
+                    st.success(t("data.local.folder_deleted").format(name=s.name))
+                    st.rerun()
+
+            # Recurse into sub-folders (after parent's expander closes)
+            for child in children_of.get(s.id, []):
+                _render_local_node(child, depth + 1)
+
+        if local_scopes:
+            for root in children_of.get(None, []):
+                _render_local_node(root, depth=0)
         else:
             st.info(t("data.local.empty"))
 
@@ -918,6 +955,20 @@ elif mode == "data":
         with st.form("data_local_create_form", clear_on_submit=True):
             new_name = st.text_input(t("data.local.create_name"))
             new_desc = st.text_input(t("data.local.create_desc"))
+
+            # Parent-folder picker — empty string == top-level
+            parent_options: list[str] = [""]
+            parent_labels: dict[str, str] = {"": t("data.local.parent_root")}
+            for s in local_scopes:
+                parent_options.append(s.id)
+                parent_labels[s.id] = "📁 " + scope_registry.full_path(user_id, s.id)
+            new_parent = st.selectbox(
+                t("data.local.parent_label"),
+                options=parent_options,
+                format_func=lambda x: parent_labels.get(x, x),
+                key="create_local_parent",
+            )
+
             init_files = st.file_uploader(
                 t("data.local.create_files"),
                 accept_multiple_files=True,
@@ -927,7 +978,10 @@ elif mode == "data":
                 if not new_name:
                     st.warning(t("data.local.create_name_required"))
                 else:
-                    s = scope_registry.create_local(user_id, new_name, new_desc)
+                    s = scope_registry.create_local(
+                        user_id, new_name, new_desc,
+                        parent_id=new_parent or None,
+                    )
                     if init_files:
                         scope_registry.save_uploaded_files(s, init_files)
                     st.success(t("data.local.created").format(name=new_name))

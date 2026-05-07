@@ -31,6 +31,10 @@ class DataScope:
     # connector-only
     connector: str | None = None
     connector_path: str | None = None
+    # tree structure — parent's id, or None for top-level folders.
+    # Only meaningful for kind == 'local' currently; connector folders
+    # stay flat (their hierarchy lives in the external system).
+    parent_id: str | None = None
     # metadata
     created_at: float = field(default_factory=time.time)
 
@@ -77,10 +81,17 @@ class ScopeRegistry:
         user_id: str,
         name: str,
         description: str = "",
+        parent_id: str | None = None,
     ) -> DataScope:
         scope_id = uuid.uuid4().hex[:12]
         folder = self.data_dir / user_id / scope_id
         folder.mkdir(parents=True, exist_ok=True)
+        # Validate parent_id refers to an existing local scope owned by
+        # this user; otherwise demote to root.
+        if parent_id is not None:
+            parent = self.get(user_id, parent_id)
+            if parent is None or parent.kind != "local":
+                parent_id = None
         scope = DataScope(
             id=scope_id,
             user_id=user_id,
@@ -88,11 +99,52 @@ class ScopeRegistry:
             kind="local",
             path=str(folder),
             description=description,
+            parent_id=parent_id,
         )
         scopes = self._load(user_id)
         scopes.append(scope)
         self._save(user_id, scopes)
         return scope
+
+    def list_children(self, user_id: str, parent_id: str | None) -> list[DataScope]:
+        """Return scopes whose parent_id == parent_id (None = top-level)."""
+        return [s for s in self._load(user_id) if s.parent_id == parent_id]
+
+    def full_path(self, user_id: str, scope_id: str) -> str:
+        """Return slash-joined path like 'Customers/Acme/Q3' for display.
+
+        Walks parent_id chain up to root. Limits walk depth to avoid
+        infinite loops on corrupted data.
+        """
+        parts: list[str] = []
+        seen: set[str] = set()
+        current = self.get(user_id, scope_id)
+        depth = 0
+        while current is not None and depth < 32 and current.id not in seen:
+            seen.add(current.id)
+            parts.append(current.name)
+            if current.parent_id is None:
+                break
+            current = self.get(user_id, current.parent_id)
+            depth += 1
+        return "/".join(reversed(parts))
+
+    def descendants(self, user_id: str, scope_id: str) -> list[DataScope]:
+        """Return all descendants of scope_id (recursive)."""
+        all_scopes = self._load(user_id)
+        out: list[DataScope] = []
+        frontier = [scope_id]
+        seen: set[str] = set()
+        while frontier:
+            pid = frontier.pop()
+            if pid in seen:
+                continue
+            seen.add(pid)
+            for s in all_scopes:
+                if s.parent_id == pid:
+                    out.append(s)
+                    frontier.append(s.id)
+        return out
 
     def create_connector(
         self,
@@ -118,20 +170,40 @@ class ScopeRegistry:
         return scope
 
     def delete(self, user_id: str, scope_id: str) -> bool:
+        """Delete a scope. For local scopes, recursively delete all
+        descendants too (sub-folders go with the parent)."""
         scopes = self._load(user_id)
         target = next((s for s in scopes if s.id == scope_id), None)
         if target is None:
             return False
+
+        # Collect descendants if local (so sub-folders also go away)
+        if target.kind == "local":
+            doomed_ids = {scope_id}
+            doomed_paths = [target.path] if target.path else []
+            # BFS over descendants
+            frontier = [scope_id]
+            while frontier:
+                pid = frontier.pop()
+                for s in scopes:
+                    if s.parent_id == pid and s.id not in doomed_ids:
+                        doomed_ids.add(s.id)
+                        if s.kind == "local" and s.path:
+                            doomed_paths.append(s.path)
+                        frontier.append(s.id)
+
+            scopes = [s for s in scopes if s.id not in doomed_ids]
+            self._save(user_id, scopes)
+            for p in doomed_paths:
+                try:
+                    shutil.rmtree(p)
+                except (FileNotFoundError, OSError):
+                    pass
+            return True
+
+        # connector — single delete, no descendants
         scopes = [s for s in scopes if s.id != scope_id]
         self._save(user_id, scopes)
-        if target.kind == "local" and target.path:
-            try:
-                shutil.rmtree(target.path)
-            except FileNotFoundError:
-                pass
-            except OSError:
-                # leave the folder if removal fails — registry is consistent.
-                pass
         return True
 
     # ---------- file-level helpers (local scopes) -------------------------
