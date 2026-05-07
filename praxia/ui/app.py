@@ -331,12 +331,71 @@ local_scopes = [s for s in user_scopes if s.kind == "local"]
 connector_scopes = [s for s in user_scopes if s.kind == "connector"]
 
 
-def gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
-    """Concatenate selected custom-scope contents as additional context."""
+def _grep_relevant(text: str, query: str, max_chars: int = 5000) -> str:
+    """Return chunks of ``text`` that look relevant to ``query``.
+
+    Splits the query into keywords (length >= 3), greps each line,
+    then includes ±2 lines of context around each match. Merges
+    overlapping ranges. Falls back to the first ``max_chars`` of
+    ``text`` if nothing matches or no usable keywords.
+    """
+    import re
+
+    keywords = [w.lower() for w in re.findall(r"\w{3,}", query or "")]
+    if not keywords:
+        return text[:max_chars]
+
+    lines = text.split("\n")
+    matches: list[tuple[int, int]] = []
+    for i, line in enumerate(lines):
+        ll = line.lower()
+        if any(kw in ll for kw in keywords):
+            matches.append((max(0, i - 2), min(len(lines), i + 3)))
+
+    if not matches:
+        return text[:max_chars]
+
+    # Merge overlapping ranges
+    merged: list[list[int]] = []
+    for s, e in sorted(matches):
+        if merged and s <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], e)
+        else:
+            merged.append([s, e])
+
+    out: list[str] = []
+    used = 0
+    for s, e in merged:
+        chunk = "\n".join(lines[s:e]) + "\n──\n"
+        if used + len(chunk) > max_chars:
+            break
+        out.append(chunk)
+        used += len(chunk)
+    return "".join(out) if out else text[:max_chars]
+
+
+def gather_scope_context(
+    scope_ids: list[str],
+    query: str = "",
+    max_chars: int = 20000,
+) -> str:
+    """Concatenate selected custom-scope contents as additional context.
+
+    Behaviour:
+      - If everything fits in ``max_chars``: include all of it.
+      - If too big AND ``query`` is non-empty: grep relevant lines
+        (keyword-based) and return only matching chunks with context.
+      - If too big and no query: include the first 5000 chars of each
+        file as a best-effort sample.
+
+    For Agent mode the agent calls this iteratively (current message
+    is the query); for Skill mode the user input is the query.
+    """
     if not scope_ids:
         return ""
-    parts: list[str] = []
-    used = 0
+
+    # First pass: collect (label, full_content) per file.
+    items: list[tuple[str, str]] = []
     for sid in scope_ids:
         scope = scope_registry.get(user_id, sid)
         if scope is None:
@@ -344,21 +403,16 @@ def gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
         if scope.kind == "local":
             from praxia.io.parsers import parse_file
             for f in scope_registry.list_local_files(scope):
-                if used >= max_chars:
-                    break
                 try:
                     parsed = parse_file(f.read_bytes(), filename=f.name)
-                    chunk = (
-                        f"## File [{scope.name}/{f.name}]\n"
-                        f"{parsed.content[:5000]}\n"
+                    items.append(
+                        (f"File [{scope.name}/{f.name}]", parsed.content)
                     )
                 except Exception as exc:
-                    chunk = (
-                        f"## File [{scope.name}/{f.name}] "
-                        f"(parse error: {exc})\n"
+                    items.append(
+                        (f"File [{scope.name}/{f.name}]",
+                         f"(parse error: {exc})")
                     )
-                parts.append(chunk)
-                used += len(chunk)
         elif scope.kind == "connector" and scope.connector and scope.connector_path:
             from praxia.connectors import get_connector
             cfg_prefix = f"PRAXIA_CONN_{scope.connector.upper()}_"
@@ -368,25 +422,62 @@ def gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
                 if k.startswith(cfg_prefix)
             }
             try:
-                items = get_connector(scope.connector, **cfg).pull(
+                pulled = get_connector(scope.connector, **cfg).pull(
                     scope.connector_path, limit=10,
                 )
-                for it in items:
-                    if used >= max_chars:
-                        break
+                for it in pulled:
                     body = (
                         it.content if isinstance(it.content, str)
                         else f"<binary {len(it.content)} bytes>"
                     )
-                    chunk = (
-                        f"## {scope.connector}:{scope.connector_path}/{it.name}\n"
-                        f"{body[:5000]}\n"
+                    items.append(
+                        (f"{scope.connector}:{scope.connector_path}/{it.name}",
+                         body)
                     )
-                    parts.append(chunk)
-                    used += len(chunk)
             except Exception as exc:
-                parts.append(f"## Connector {scope.name} pull error: {exc}\n")
-    return "\n\n".join(parts)
+                items.append(
+                    (f"Connector {scope.name}", f"pull error: {exc}")
+                )
+
+    if not items:
+        return ""
+
+    total_chars = sum(len(c) for _, c in items)
+
+    # Path 1 — everything fits comfortably; include verbatim.
+    if total_chars <= max_chars:
+        return "\n\n".join(f"## {label}\n{content}\n" for label, content in items)
+
+    # Path 2 — too big AND we have a query; grep relevant chunks per file.
+    if query.strip():
+        per_file_budget = max(2000, max_chars // max(1, len(items)))
+        out: list[str] = []
+        used = 0
+        for label, content in items:
+            if used >= max_chars:
+                break
+            relevant = _grep_relevant(content, query, max_chars=per_file_budget)
+            if not relevant.strip():
+                continue
+            chunk = f"## {label} (relevant excerpts)\n{relevant}\n"
+            out.append(chunk)
+            used += len(chunk)
+        if out:
+            return "\n\n".join(out)
+
+    # Path 3 — fallback: first 5000 chars of each file (best-effort sample).
+    out = []
+    used = 0
+    per_file = 5000
+    for label, content in items:
+        if used >= max_chars:
+            break
+        snippet = content[:per_file]
+        marker = " (truncated)" if len(content) > per_file else ""
+        chunk = f"## {label}{marker}\n{snippet}\n"
+        out.append(chunk)
+        used += len(chunk)
+    return "\n\n".join(out)
 
 
 # =====================================================================
@@ -475,7 +566,6 @@ mode = st.session_state["praxia_mode"]
 
 if mode == "run":
     st.header(t("run.h"))
-    st.caption(t("run.intro"))
 
     # Agent first (default tab) — the user's primary entry point.
     tab_agent, tab_skill = st.tabs([
@@ -485,7 +575,6 @@ if mode == "run":
 
     # ---- Agent (LLM-driven chat with tool use) ----------------------
     with tab_agent:
-        st.markdown(t("run.agent.what"))
 
         # Maintain chat history per user in session_state.
         if "praxia_chat" not in st.session_state:
@@ -522,8 +611,10 @@ if mode == "run":
             })
 
             # Inject selected scopes as additional reference data.
+            # Pass the user's prompt as `query` so large folders get
+            # grep-filtered to just the relevant chunks.
             scope_ctx = (
-                gather_scope_context(selected_custom_ids)
+                gather_scope_context(selected_custom_ids, query=prompt)
                 if selected_custom_ids else ""
             )
             full_task = prompt + (
@@ -562,8 +653,6 @@ if mode == "run":
 
     # ---- Skill (single domain skill) --------------------------------
     with tab_skill:
-        st.markdown(t("run.skill.what"))
-
         skill_options = {
             f"{s.manifest.domain} — {s.manifest.name}": s
             for s in BUSINESS_SKILLS
@@ -673,9 +762,10 @@ if mode == "run":
             t("skill.tts_toggle"), value=False, key="skill_tts",
         )
 
-        # Sidebar data-scope picker drives this
+        # Sidebar data-scope picker drives this; the user's input is
+        # the query for grep-filtering large folders.
         if selected_custom_ids and user_input:
-            scope_ctx = gather_scope_context(selected_custom_ids)
+            scope_ctx = gather_scope_context(selected_custom_ids, query=user_input)
             if scope_ctx:
                 user_input = (
                     user_input
@@ -995,49 +1085,132 @@ elif mode == "dashboard":
     st.header(t("dashboard.h"))
     from praxia.analytics import Dashboard
 
+    try:
+        import plotly.express as _px
+        _HAS_PLOTLY = True
+    except ImportError:
+        _HAS_PLOTLY = False
+
     d = Dashboard(memory_dir=loom.config.memory_dir)
-    scope = st.radio("Scope", ["personal", "org"], horizontal=True)
+    scope = st.radio(
+        t("dashboard.scope_label"),
+        options=["personal", "org"],
+        format_func=lambda x: t(f"dashboard.scope.{x}"),
+        horizontal=True,
+        key="dash_scope",
+    )
+
     if scope == "personal":
         s = d.personal_summary(user_id)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Flow runs", s.flow_runs)
-        c2.metric("Skill runs", s.skill_runs)
-        c3.metric("Memory entries", s.memory_entries)
-        c4.metric("Success rate", f"{s.success_rate:.0%}")
-        c5, c6, c7 = st.columns(3)
-        c5.metric("Episodes", s.episodes)
-        c6.metric("Outcomes", s.outcomes_recorded)
-        c7.metric(
-            "Tokens (in/out)",
-            f"{s.total_input_tokens:,} / {s.total_output_tokens:,}",
-        )
+
+        # Headline KPIs only (3 most-watched)
+        c1, c2, c3 = st.columns(3)
+        c1.metric(t("dashboard.runs_total"), s.flow_runs + s.skill_runs)
+        c2.metric(t("dashboard.success_rate"), f"{s.success_rate:.0%}")
+        c3.metric(t("dashboard.memory_entries"), s.memory_entries)
+
+        # Chart: top skills (the actual signal worth visualising)
         if s.top_skills:
-            st.subheader("Top skills")
-            st.table([{"skill": n, "count": c} for n, c in s.top_skills])
-        if s.recent_episodes:
-            st.subheader("Recent episodes")
-            for ep in s.recent_episodes:
-                st.text(ep)
-    else:
+            st.subheader(t("dashboard.top_skills"))
+            data = sorted(
+                [{"skill": n, "count": c} for n, c in s.top_skills],
+                key=lambda x: x["count"],
+                reverse=True,
+            )[:8]
+            if _HAS_PLOTLY:
+                fig = _px.bar(
+                    data, x="count", y="skill",
+                    orientation="h",
+                    color="count",
+                    color_continuous_scale=[[0, "#8b6f30"], [1, "#e9c378"]],
+                    height=max(220, 36 * len(data) + 80),
+                )
+                fig.update_layout(
+                    showlegend=False,
+                    yaxis=dict(autorange="reversed", title=""),
+                    xaxis=dict(title=""),
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    coloraxis_showscale=False,
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.table(data)
+        else:
+            st.caption(t("dashboard.empty"))
+
+    else:  # org
         s = d.org_summary(org_id)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Active users", s.active_users)
-        c2.metric("Flow runs", s.total_flow_runs)
-        c3.metric("Skill runs", s.total_skill_runs)
-        c4.metric("Org success rate", f"{s.org_success_rate:.0%}")
-        c5, c6, c7 = st.columns(3)
-        c5.metric("Promoted blocks", s.promoted_blocks)
-        c6.metric("Frozen MD files", s.frozen_files)
-        c7.metric(
-            "Distributed (skills/prompts)",
-            f"{s.distributed_skills}/{s.distributed_prompts}",
-        )
-        if s.top_users:
-            st.subheader("Top users")
-            st.table([{"user_id": u, "events": c} for u, c in s.top_users])
-        if s.top_skills:
-            st.subheader("Top skills")
-            st.table([{"skill": n, "count": c} for n, c in s.top_skills])
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric(t("dashboard.active_users"), s.active_users)
+        c2.metric(t("dashboard.org_runs_total"), s.total_flow_runs + s.total_skill_runs)
+        c3.metric(t("dashboard.success_rate"), f"{s.org_success_rate:.0%}")
+
+        cols = st.columns(2)
+
+        # Top users (left)
+        with cols[0]:
+            st.subheader(t("dashboard.top_users"))
+            if s.top_users:
+                tu = sorted(
+                    [{"user_id": u, "events": c} for u, c in s.top_users],
+                    key=lambda x: x["events"], reverse=True,
+                )[:8]
+                if _HAS_PLOTLY:
+                    fig = _px.bar(
+                        tu, x="events", y="user_id",
+                        orientation="h",
+                        color="events",
+                        color_continuous_scale=[[0, "#3a4a6e"], [1, "#7895d6"]],
+                        height=max(220, 36 * len(tu) + 80),
+                    )
+                    fig.update_layout(
+                        showlegend=False,
+                        yaxis=dict(autorange="reversed", title=""),
+                        xaxis=dict(title=""),
+                        margin=dict(l=10, r=10, t=10, b=10),
+                        coloraxis_showscale=False,
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.table(tu)
+            else:
+                st.caption(t("dashboard.empty"))
+
+        # Top skills (right)
+        with cols[1]:
+            st.subheader(t("dashboard.top_skills"))
+            if s.top_skills:
+                ts = sorted(
+                    [{"skill": n, "count": c} for n, c in s.top_skills],
+                    key=lambda x: x["count"], reverse=True,
+                )[:8]
+                if _HAS_PLOTLY:
+                    fig = _px.bar(
+                        ts, x="count", y="skill",
+                        orientation="h",
+                        color="count",
+                        color_continuous_scale=[[0, "#8b6f30"], [1, "#e9c378"]],
+                        height=max(220, 36 * len(ts) + 80),
+                    )
+                    fig.update_layout(
+                        showlegend=False,
+                        yaxis=dict(autorange="reversed", title=""),
+                        xaxis=dict(title=""),
+                        margin=dict(l=10, r=10, t=10, b=10),
+                        coloraxis_showscale=False,
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.table(ts)
+            else:
+                st.caption(t("dashboard.empty"))
 
 
 # =====================================================================

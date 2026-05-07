@@ -899,14 +899,14 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "Memória org",
     },
     "scope.frozen": {
-        "en": "Frozen layer (Markdown)",
-        "ja": "凍結層 (Markdown)",
-        "zh-CN": "冻结层 (Markdown)",
-        "ko": "동결 레이어 (Markdown)",
-        "es": "Capa congelada (Markdown)",
-        "fr": "Couche figée (Markdown)",
-        "de": "Frozen-Layer (Markdown)",
-        "pt-BR": "Camada congelada (Markdown)",
+        "en": "Frozen layer",
+        "ja": "凍結層",
+        "zh-CN": "冻结层",
+        "ko": "동결 레이어",
+        "es": "Capa congelada",
+        "fr": "Couche figée",
+        "de": "Frozen-Layer",
+        "pt-BR": "Camada congelada",
     },
     "sidebar.scope.local_h": {
         "en": "Local folders",
@@ -1834,6 +1834,116 @@ _T: dict[str, dict[str, str]] = {
         "fr": "📊 Tableau de bord",
         "de": "📊 Dashboard",
         "pt-BR": "📊 Painel",
+    },
+    "dashboard.scope_label": {
+        "en": "Scope",
+        "ja": "範囲",
+        "zh-CN": "范围",
+        "ko": "범위",
+        "es": "Alcance",
+        "fr": "Portée",
+        "de": "Bereich",
+        "pt-BR": "Escopo",
+    },
+    "dashboard.scope.personal": {
+        "en": "Personal",
+        "ja": "個人",
+        "zh-CN": "个人",
+        "ko": "개인",
+        "es": "Personal",
+        "fr": "Personnel",
+        "de": "Persönlich",
+        "pt-BR": "Pessoal",
+    },
+    "dashboard.scope.org": {
+        "en": "Organization",
+        "ja": "組織",
+        "zh-CN": "组织",
+        "ko": "조직",
+        "es": "Organización",
+        "fr": "Organisation",
+        "de": "Organisation",
+        "pt-BR": "Organização",
+    },
+    "dashboard.runs_total": {
+        "en": "Total runs",
+        "ja": "総実行回数",
+        "zh-CN": "总运行次数",
+        "ko": "총 실행 횟수",
+        "es": "Ejecuciones totales",
+        "fr": "Exécutions totales",
+        "de": "Gesamtläufe",
+        "pt-BR": "Total de execuções",
+    },
+    "dashboard.org_runs_total": {
+        "en": "Org runs",
+        "ja": "組織実行回数",
+        "zh-CN": "组织运行次数",
+        "ko": "조직 실행 횟수",
+        "es": "Ejecuciones org",
+        "fr": "Exécutions org",
+        "de": "Org-Läufe",
+        "pt-BR": "Execuções org",
+    },
+    "dashboard.success_rate": {
+        "en": "Success rate",
+        "ja": "成功率",
+        "zh-CN": "成功率",
+        "ko": "성공률",
+        "es": "Tasa de éxito",
+        "fr": "Taux de réussite",
+        "de": "Erfolgsrate",
+        "pt-BR": "Taxa de sucesso",
+    },
+    "dashboard.memory_entries": {
+        "en": "Memory entries",
+        "ja": "メモリエントリ数",
+        "zh-CN": "记忆条目数",
+        "ko": "메모리 항목 수",
+        "es": "Entradas de memoria",
+        "fr": "Entrées mémoire",
+        "de": "Speicher-Einträge",
+        "pt-BR": "Entradas de memória",
+    },
+    "dashboard.active_users": {
+        "en": "Active users",
+        "ja": "アクティブユーザ",
+        "zh-CN": "活跃用户",
+        "ko": "활성 사용자",
+        "es": "Usuarios activos",
+        "fr": "Utilisateurs actifs",
+        "de": "Aktive Nutzer",
+        "pt-BR": "Usuários ativos",
+    },
+    "dashboard.top_skills": {
+        "en": "Top skills",
+        "ja": "よく使うスキル",
+        "zh-CN": "热门技能",
+        "ko": "주요 스킬",
+        "es": "Habilidades principales",
+        "fr": "Compétences principales",
+        "de": "Top-Skills",
+        "pt-BR": "Habilidades principais",
+    },
+    "dashboard.top_users": {
+        "en": "Top users",
+        "ja": "アクティブユーザ TOP",
+        "zh-CN": "活跃用户 TOP",
+        "ko": "주요 사용자",
+        "es": "Usuarios principales",
+        "fr": "Principaux utilisateurs",
+        "de": "Top-Nutzer",
+        "pt-BR": "Principais usuários",
+    },
+    "dashboard.empty": {
+        "en": "Not enough data yet — usage history will appear here once you start running flows or skills.",
+        "ja": "データがまだ少ないため表示できません — フロー / スキルを実行するとここに利用履歴が出ます。",
+        "zh-CN": "数据还不足 — 运行流程或技能后,使用历史会显示在此处。",
+        "ko": "데이터가 아직 부족합니다 — 플로우 / 스킬을 실행하면 사용 이력이 여기에 표시됩니다.",
+        "es": "Aún no hay suficientes datos — el historial aparecerá tras ejecutar flujos o skills.",
+        "fr": "Pas encore assez de données — l'historique apparaîtra après quelques exécutions.",
+        "de": "Noch nicht genug Daten — der Verlauf erscheint nach einigen Läufen.",
+        "pt-BR": "Ainda não há dados suficientes — o histórico aparecerá após algumas execuções.",
     },
     # ===== Prompts mode =====================================================
     "prompts.h": {
@@ -3156,6 +3266,34 @@ def t(key: str, lang: str | None = None) -> str:
     if not bundle:
         return key
     return bundle.get(lang) or bundle.get("en") or key
+
+
+def assert_complete_translations() -> list[str]:
+    """Validate that every key has every supported language.
+
+    Returns a list of human-readable issues (empty list = all good).
+    Called at import time below to fail-fast on incomplete catalogs in
+    development. The CI also runs ``tests/evaluation/test_eval_i18n.py``
+    which enforces the same invariant.
+    """
+    issues: list[str] = []
+    for key, bundle in _T.items():
+        missing = [lang for lang in SUPPORTED if lang not in bundle]
+        if missing:
+            issues.append(f"{key}: missing {missing}")
+    return issues
+
+
+# Fail-fast in development if any new key skipped translations.
+# Production deployments tolerate incomplete strings (they just fall
+# back to English via t()), but development should surface the gap.
+if os.getenv("PRAXIA_I18N_STRICT", "").lower() in ("1", "true", "yes"):
+    _issues = assert_complete_translations()
+    if _issues:
+        raise RuntimeError(
+            "Praxia i18n catalog is incomplete (PRAXIA_I18N_STRICT=1):\n  "
+            + "\n  ".join(_issues)
+        )
 
 
 def language_selector_in_sidebar() -> str:
