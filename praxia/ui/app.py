@@ -479,26 +479,26 @@ with tab_users:
     with sub_edit:
         if users_list:
             target = st.selectbox("Select user", [u.username for u in users_list])
-            t = next((u for u in users_list if u.username == target), None)
-            if t:
+            user_target = next((u for u in users_list if u.username == target), None)
+            if user_target:
                 colA, colB = st.columns(2)
                 with colA:
                     new_role = st.selectbox(
                         "New role",
                         ["admin", "operator", "member", "viewer"],
-                        index=["admin", "operator", "member", "viewer"].index(t.role),
+                        index=["admin", "operator", "member", "viewer"].index(user_target.role),
                     )
-                    new_email = st.text_input("New email", value=t.email or "")
+                    new_email = st.text_input("New email", value=user_target.email or "")
                     if st.button("Update"):
                         auth.update_user(target, role=new_role, email=new_email or None)
                         st.success("Updated")
                         st.rerun()
                 with colB:
                     if st.button("Rotate API key"):
-                        new_key = auth.users.rotate_api_key(t.id)
+                        new_key = auth.users.rotate_api_key(user_target.id)
                         st.code(new_key, language="text")
-                    if st.button("Deactivate" if t.is_active else "Activate"):
-                        auth.update_user(target, is_active=not t.is_active)
+                    if st.button("Deactivate" if user_target.is_active else "Activate"):
+                        auth.update_user(target, is_active=not user_target.is_active)
                         st.success("Toggled")
                         st.rerun()
                     if st.button("🗑 Delete (cannot undo)", type="primary"):
