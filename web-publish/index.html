@@ -129,16 +129,10 @@
         <h2 data-i18n="features.h2">38+ advantages no other framework offers in one package.</h2>
       </div>
       <div class="grid grid-3">
-        <article class="card">
-          <div class="card-icon">🤖</div>
-          <h3 data-i18n="feat.autonomous_agent">Autonomous agent — LLM-driven tool-use loop</h3>
-          <p data-i18n="feat.autonomous_agent.body">An LLM-driven tool-use loop over your full Praxia stack — personal memory, org memory, frozen layer, skills, connectors. The agent picks tools on its own (search → run skill → pull connector → answer) with ACL gates and audit logging. Ships as <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code>, and an MCP meta-tool for remote clients.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">✨</div>
-          <h3 data-i18n="feat.prompt_designer">Prompt Designer — turn intent into a polished template</h3>
-          <p data-i18n="feat.prompt_designer.body">Describe the task in one line ("score contract risk 1-5 in JSON") → get a production-grade prompt design back: tuned system message, <code>${variable}</code> user template, 2-3 few-shot examples, 5-criterion evaluation rubric. Per-LLM idioms applied automatically (Claude XML / OpenAI JSON-mode / DeepSeek-R1 reasoning channel / Mistral concise / Llama numbered steps). Save to <code>PromptStore</code>, A/B-test multiple variants via the experiments framework.</p>
-        </article>
+        <!-- ========================================================
+             Block 1 — Memory cycling (Praxia's signature)
+             The "why does Praxia exist" cards. Lead the grid.
+             ======================================================== -->
         <article class="card">
           <div class="card-icon">🧠</div>
           <h3 data-i18n="feat.memory_loop">Personal → org memory loop</h3>
@@ -150,19 +144,28 @@
           <p data-i18n="feat.promotion_engine.body">Frequency-based, outcome-correlated, LLM-scored. Run in parallel — never depending on a single signal. Configurable thresholds for auto-promote vs review.</p>
         </article>
         <article class="card">
-          <div class="card-icon">⚙️</div>
-          <h3 data-i18n="feat.workflow_flows">Workflow-specialized flows</h3>
-          <p data-i18n="feat.workflow_flows.body">Sales prep, logic checking, RAG self-correction — three production-ready multi-agent pipelines that run in 5 minutes. No bespoke orchestration code required.</p>
+          <div class="card-icon">🧬</div>
+          <h3 data-i18n="feat.skills_promoted">Skills also promoted</h3>
+          <p data-i18n="feat.skills_promoted.body">Not just memory — your personal skills get tracked, scored, and promoted to the org skill catalog when they prove themselves.</p>
         </article>
         <article class="card">
-          <div class="card-icon">🎯</div>
-          <h3 data-i18n="feat.business_skills">6 default business skills</h3>
-          <p data-i18n="feat.business_skills.body">Investment, sales, design, purchasing, patent, legal — domain-tuned agents with built-in guardrails (tax law, jurisdictional caveats, hallucination guards).</p>
+          <div class="card-icon">📊</div>
+          <h3 data-i18n="feat.outcome_tracking">Outcome tracking built-in</h3>
+          <p data-i18n="feat.outcome_tracking.body"><code>record_outcome()</code> attaches success/failure to episodes. The consolidator uses these signals statistically — no separate analytics pipeline needed.</p>
         </article>
         <article class="card">
-          <div class="card-icon">🛡️</div>
-          <h3 data-i18n="feat.evidence">Evidence by default</h3>
-          <p data-i18n="feat.evidence.body">Sentence-level hallucination detection and retrieval metrics ship as first-class modules. "It works" comes with proof attached.</p>
+          <div class="card-icon">🪪</div>
+          <h3 data-i18n="feat.memory_mode">Memory mode toggle</h3>
+          <p data-i18n="feat.memory_mode.body">Per-user switch: <code>accumulate</code> (default) or <code>read_only</code>. Read-only sessions silently drop writes — useful for sensitive content. Admins can lock the mode tenant-wide or by role.</p>
+        </article>
+
+        <!-- ========================================================
+             Block 2 — No vendor lock-in (multi-everything)
+             ======================================================== -->
+        <article class="card">
+          <div class="card-icon">🧬</div>
+          <h3 data-i18n="feat.multi_ltm">Multi-LTM fusion + routing</h3>
+          <p data-i18n="feat.multi_ltm.body">Run several LTMs in parallel and fuse with Reciprocal Rank Fusion — or route per query (temporal → Zep, audit → JSON, entity → Mem0). English + Japanese keyword detection. Higher recall without picking a winner.</p>
         </article>
         <article class="card">
           <div class="card-icon">🔌</div>
@@ -171,113 +174,23 @@
         </article>
         <article class="card">
           <div class="card-icon">🤖</div>
-          <h3 data-i18n="feat.multi_llm">Multi-LLM (100+ providers)</h3>
-          <p data-i18n="feat.multi_llm.body">Claude, ChatGPT, Gemini, Qwen-API, Qwen-local (Ollama) + 100+ via LiteLLM. Auto-detect from env vars; switch model per-call.</p>
+          <h3 data-i18n="feat.multi_llm">Multi-LLM (15+ first-class · 100+ via LiteLLM)</h3>
+          <p data-i18n="feat.multi_llm.body">Claude, ChatGPT, Gemini, Gemma, Qwen-API, Qwen-local (Ollama), DeepSeek, Mistral, Grok, Llama, Cohere, Perplexity, Phi + 100+ via LiteLLM. Auto-detect from env vars; switch model per-call.</p>
         </article>
+
+        <!-- ========================================================
+             Block 3 — Enterprise auth + security in OSS
+             (Most of these are paywalled features in competitors.)
+             ======================================================== -->
         <article class="card">
           <div class="card-icon">🔐</div>
           <h3 data-i18n="feat.auth_in_oss">Auth, RBAC, SSO, audit — in OSS</h3>
           <p data-i18n="feat.auth_in_oss.body">API key + JWT + OIDC (Google/MS/Okta/GitHub/Keycloak) + 4 default roles + append-only audit log. Most competitors paywall this.</p>
         </article>
         <article class="card">
-          <div class="card-icon">🧬</div>
-          <h3 data-i18n="feat.skills_promoted">Skills also promoted</h3>
-          <p data-i18n="feat.skills_promoted.body">Not just memory — your personal skills get tracked, scored, and promoted to the org skill catalog when they prove themselves.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🔬</div>
-          <h3 data-i18n="feat.mcp_compat">MCP / Claude Skills compatible</h3>
-          <p data-i18n="feat.mcp_compat.body">Skills serialize to standard <code>SKILL.md</code>. Drop into Claude Skills, Cursor Skills, or any MCP-compatible registry without code changes.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">📊</div>
-          <h3 data-i18n="feat.outcome_tracking">Outcome tracking built-in</h3>
-          <p data-i18n="feat.outcome_tracking.body"><code>record_outcome()</code> attaches success/failure to episodes. The consolidator uses these signals statistically — no separate analytics pipeline needed.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">📜</div>
-          <h3 data-i18n="feat.apache_open">Apache 2.0 + Open Core ready</h3>
-          <p data-i18n="feat.apache_open.body">Permissive license, commercial-friendly. NOTICE.md inventories every dependency's license. Open Core path for enterprise extras planned.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🛡</div>
-          <h3 data-i18n="feat.acl">Resource access policies (ACL)</h3>
-          <p data-i18n="feat.acl.body">Glob-pattern allow / deny rules per resource type (connector, memory, prompt, skill). Built for enterprise IS departments. Every decision audit-logged.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">💾</div>
-          <h3 data-i18n="feat.admin_exports">Admin data exports</h3>
-          <p data-i18n="feat.admin_exports.body">CSV / JSON / JSONL exports of audit log, users, usage, memory, policies — for compliance, SIEM, backups. Each export action self-audited.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">📂</div>
-          <h3 data-i18n="feat.connectors">6 storage / SaaS connectors</h3>
-          <p data-i18n="feat.connectors.body">Box, SharePoint, Dropbox, Google Drive, kintone, Salesforce — bidirectional Pull + Push. ACL-enforced before any external call.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">📊</div>
-          <h3 data-i18n="feat.dashboards">Personal & org dashboards</h3>
-          <p data-i18n="feat.dashboards.body">Flow / skill counts, success rate, top users, promoted blocks, frozen files, distributed skills — out of the box, with no separate analytics pipeline.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">📝</div>
-          <h3 data-i18n="feat.prompts_distribution">Custom prompt distribution</h3>
-          <p data-i18n="feat.prompts_distribution.body">Users save personal prompts. Admins promote them to org or push to specific roles / users. Three scopes with merge precedence.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">👥</div>
-          <h3 data-i18n="feat.user_crud">Full admin user CRUD</h3>
-          <p data-i18n="feat.user_crud.body">Create / update / delete / deactivate / rotate keys / change roles — all via CLI, UI, or SDK. All operations audited.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">📄</div>
-          <h3 data-i18n="feat.parsers">File parsers (PDF · Word · Excel · PowerPoint · CSV · HTML)</h3>
-          <p data-i18n="feat.parsers.body">Drop a file in — auto-dispatch by extension. PDF page-by-page, Word with heading detection, Excel as Markdown tables, PowerPoint with speaker notes. Custom formats register via entry points.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🎙</div>
-          <h3 data-i18n="feat.voice">Voice input + voice output</h3>
-          <p data-i18n="feat.voice.body">Speech-to-text (Whisper) and text-to-speech (OpenAI TTS / ElevenLabs / Piper). Embedded in Streamlit UI as record-and-go input and read-aloud output.</p>
-        </article>
-        <article class="card">
           <div class="card-icon">🔐</div>
           <h3 data-i18n="feat.user_oauth">User-delegated OAuth</h3>
           <p data-i18n="feat.user_oauth.body">Each Praxia user authorizes Box / SharePoint / Dropbox / Drive / Salesforce with their <em>own</em> credentials. The external system's native ACL is enforced per Praxia user — alice can only see what alice has access to.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">⚖️</div>
-          <h3 data-i18n="feat.legal_templates">Legal templates</h3>
-          <p data-i18n="feat.legal_templates.body">Terms of Service, Privacy Policy, Acceptable Use, Cookie Policy — starter templates wired into the portal sign-up. Marked clearly as templates requiring legal review before commercial use.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🧬</div>
-          <h3 data-i18n="feat.multi_ltm">Multi-LTM fusion + routing</h3>
-          <p data-i18n="feat.multi_ltm.body">Run several LTMs in parallel and fuse with Reciprocal Rank Fusion — or route per query (temporal → Zep, audit → JSON, entity → Mem0). English + Japanese keyword detection. Higher recall without picking a winner.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🪪</div>
-          <h3 data-i18n="feat.memory_mode">Memory mode toggle</h3>
-          <p data-i18n="feat.memory_mode.body">Per-user switch: <code>accumulate</code> (default) or <code>read_only</code>. Read-only sessions silently drop writes — useful for sensitive content. Admins can lock the mode tenant-wide or by role.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🛡</div>
-          <h3 data-i18n="feat.admin_ltm">Admin-controlled LTM policy</h3>
-          <p data-i18n="feat.admin_ltm.body">Pin which backend(s) users may pick and what the default mode is, at the tenant level. Resolution: admin enforced &gt; call-site &gt; user pref &gt; admin default.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🖨</div>
-          <h3 data-i18n="feat.exporters">Output exporters (HTML · PPTX · DOCX · MD · JSON)</h3>
-          <p data-i18n="feat.exporters.body">Skills produce Markdown by default. <code>OutputFormatSkill</code> infers requested format from natural-language hints ("パワポで" → PPTX, "as a Word doc" → DOCX). Custom formats register via entry-point.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🦙</div>
-          <h3 data-i18n="feat.gemma">Gemma support</h3>
-          <p data-i18n="feat.gemma.body">Google's open-weight family added. <code>gemma</code> / <code>gemma-2b</code> / <code>gemma-9b</code> / <code>gemma-27b</code> via local Ollama; <code>gemma-cloud</code> via Google Vertex AI.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🌐</div>
-          <h3 data-i18n="feat.deploy_modes">Backend-only or full-stack</h3>
-          <p data-i18n="feat.deploy_modes.body">Use Praxia as a brain behind your own frontend (SDK embed or <code>praxia serve</code> FastAPI HTTP API), or run the bundled Streamlit UI for the fastest path. Same auth, memory, skills.</p>
         </article>
         <article class="card">
           <div class="card-icon">🔑</div>
@@ -290,9 +203,47 @@
           <p data-i18n="feat.oauth_web.body"><code>praxia serve</code> exposes <code>/api/v1/oauth/{provider}/{start,callback,status}</code>. Multi-worker safe state cache (TTL-pruned JSON), pinned redirect URI via <code>PRAXIA_PUBLIC_URL</code>, optional success-redirect to your frontend.</p>
         </article>
         <article class="card">
-          <div class="card-icon">⚖️</div>
-          <h3 data-i18n="feat.ab">A/B experiments built in</h3>
-          <p data-i18n="feat.ab.body">Test prompt variants on real users with deterministic per-user assignment (SHA-256 bucket). Audience filter (roles / users / window). Outcome rollup + tentative winner detection. CLI + SDK.</p>
+          <div class="card-icon">🛡</div>
+          <h3 data-i18n="feat.acl">Resource access policies (ACL)</h3>
+          <p data-i18n="feat.acl.body">Glob-pattern allow / deny rules per resource type (connector, memory, prompt, skill). Built for enterprise IS departments. Every decision audit-logged.</p>
+        </article>
+
+        <!-- ========================================================
+             Block 4 — Agent + Skills (what you can do with it)
+             ======================================================== -->
+        <article class="card">
+          <div class="card-icon">🤖</div>
+          <h3 data-i18n="feat.autonomous_agent">Autonomous agent — LLM-driven tool-use loop</h3>
+          <p data-i18n="feat.autonomous_agent.body">An LLM-driven tool-use loop over your full Praxia stack — personal memory, org memory, frozen layer, skills, connectors. The agent picks tools on its own (search → run skill → pull connector → answer) with ACL gates and audit logging. Ships as <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code>, and an MCP meta-tool for remote clients.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">✨</div>
+          <h3 data-i18n="feat.prompt_designer">Prompt Designer — turn intent into a polished template</h3>
+          <p data-i18n="feat.prompt_designer.body">Describe the task in one line ("score contract risk 1-5 in JSON") → get a production-grade prompt design back: tuned system message, <code>${variable}</code> user template, 2-3 few-shot examples, 5-criterion rubric. Per-LLM idioms applied automatically (Claude XML / OpenAI JSON-mode / DeepSeek-R1 reasoning / Mistral concise / Llama numbered steps).</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">⚙️</div>
+          <h3 data-i18n="feat.workflow_flows">Workflow-specialized flows</h3>
+          <p data-i18n="feat.workflow_flows.body">Sales prep, logic checking, RAG self-correction — three production-ready multi-agent pipelines that run in 5 minutes. No bespoke orchestration code required.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🎯</div>
+          <h3 data-i18n="feat.business_skills">6 default business skills</h3>
+          <p data-i18n="feat.business_skills.body">Investment, sales, design, purchasing, patent, legal — domain-tuned agents with built-in guardrails (tax law, jurisdictional caveats, hallucination guards).</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔬</div>
+          <h3 data-i18n="feat.mcp_compat">MCP / Claude Skills compatible</h3>
+          <p data-i18n="feat.mcp_compat.body">Skills serialize to standard <code>SKILL.md</code>. Drop into Claude Skills, Cursor Skills, or any MCP-compatible registry without code changes.</p>
+        </article>
+
+        <!-- ========================================================
+             Block 5 — Evidence & quality (CI-gated)
+             ======================================================== -->
+        <article class="card">
+          <div class="card-icon">🛡️</div>
+          <h3 data-i18n="feat.evidence">Evidence by default</h3>
+          <p data-i18n="feat.evidence.body">Sentence-level hallucination detection and retrieval metrics ship as first-class modules. "It works" comes with proof attached.</p>
         </article>
         <article class="card">
           <div class="card-icon">🎯</div>
@@ -300,19 +251,91 @@
           <p data-i18n="feat.llm_eval.body">Catch quality regressions before merge. <code>tests/llm_eval/</code> grades real LLM output against rubrics + a committed baseline. Score drop &gt; 5pt fails the build. Per-skill cases ship for all 6 skills.</p>
         </article>
         <article class="card">
+          <div class="card-icon">⚖️</div>
+          <h3 data-i18n="feat.ab">A/B experiments built in</h3>
+          <p data-i18n="feat.ab.body">Test prompt variants on real users with deterministic per-user assignment (SHA-256 bucket). Audience filter (roles / users / window). Outcome rollup + tentative winner detection. CLI + SDK.</p>
+        </article>
+        <article class="card">
           <div class="card-icon">🧮</div>
           <h3 data-i18n="feat.tests">Hermetic test harness — stubs &amp; drivers for every surface</h3>
           <p data-i18n="feat.tests.body">Every public surface (auth / memory / fusion / exporters / OAuth / parsers / CLI / extensions / experiments / connectors / agent) ships with backend stubs, fixture factories, and protocol-conforming drivers — so contributors can write hermetic tests without standing up real services. CI runs them on every PR.</p>
         </article>
+
+        <!-- ========================================================
+             Block 6 — Connectors & I/O (what plugs in / out)
+             ======================================================== -->
         <article class="card">
           <div class="card-icon">🔗</div>
           <h3 data-i18n="feat.connectors">20 storage / SaaS connectors</h3>
           <p data-i18n="feat.connectors.body">Box / SharePoint / Dropbox / Drive / kintone / Salesforce + Notion / Confluence / Jira / Slack / Teams / GitHub / HubSpot / Zendesk / Linear / S3 / Azure Blob / GCS / WebDAV / Email. Per-user OAuth means alice only sees what alice can in each system.</p>
         </article>
         <article class="card">
+          <div class="card-icon">📄</div>
+          <h3 data-i18n="feat.parsers">File parsers (PDF · Word · Excel · PowerPoint · CSV · HTML)</h3>
+          <p data-i18n="feat.parsers.body">Drop a file in — auto-dispatch by extension. PDF page-by-page, Word with heading detection, Excel as Markdown tables, PowerPoint with speaker notes. Custom formats register via entry points.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🖨</div>
+          <h3 data-i18n="feat.exporters">Output exporters (HTML · PPTX · DOCX · MD · JSON)</h3>
+          <p data-i18n="feat.exporters.body">Skills produce Markdown by default. <code>OutputFormatSkill</code> infers requested format from natural-language hints ("パワポで" → PPTX, "as a Word doc" → DOCX). Custom formats register via entry-point.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🎙</div>
+          <h3 data-i18n="feat.voice">Voice input + voice output</h3>
+          <p data-i18n="feat.voice.body">Speech-to-text (Whisper) and text-to-speech (OpenAI TTS / ElevenLabs / Piper). Embedded in Streamlit UI as record-and-go input and read-aloud output.</p>
+        </article>
+
+        <!-- ========================================================
+             Block 7 — Admin & day-2 ops
+             ======================================================== -->
+        <article class="card">
+          <div class="card-icon">👥</div>
+          <h3 data-i18n="feat.user_crud">Full admin user CRUD</h3>
+          <p data-i18n="feat.user_crud.body">Create / update / delete / deactivate / rotate keys / change roles — all via CLI, UI, or SDK. All operations audited.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🛡</div>
+          <h3 data-i18n="feat.admin_ltm">Admin-controlled LTM policy</h3>
+          <p data-i18n="feat.admin_ltm.body">Pin which backend(s) users may pick and what the default mode is, at the tenant level. Resolution: admin enforced &gt; call-site &gt; user pref &gt; admin default.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">💾</div>
+          <h3 data-i18n="feat.admin_exports">Admin data exports</h3>
+          <p data-i18n="feat.admin_exports.body">CSV / JSON / JSONL exports of audit log, users, usage, memory, policies — for compliance, SIEM, backups. Each export action self-audited.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📊</div>
+          <h3 data-i18n="feat.dashboards">Personal & org dashboards</h3>
+          <p data-i18n="feat.dashboards.body">Flow / skill counts, success rate, top users, promoted blocks, frozen files, distributed skills — out of the box, with no separate analytics pipeline.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📝</div>
+          <h3 data-i18n="feat.prompts_distribution">Custom prompt distribution</h3>
+          <p data-i18n="feat.prompts_distribution.body">Users save personal prompts. Admins promote them to org or push to specific roles / users. Three scopes with merge precedence.</p>
+        </article>
+
+        <!-- ========================================================
+             Block 8 — Distribution, deployment & licensing
+             ======================================================== -->
+        <article class="card">
           <div class="card-icon">🪐</div>
           <h3 data-i18n="feat.mcp_server">MCP server (stdio + remote HTTP/SSE)</h3>
           <p data-i18n="feat.mcp_server.body">Use Praxia from Claude Desktop / Cursor / Continue.dev. Local: <code>praxia mcp serve</code>. Remote (multi-host): <code>praxia serve</code> exposes <code>/api/v1/mcp</code> with auth + audit log. Every skill + flow becomes an MCP tool automatically.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🌐</div>
+          <h3 data-i18n="feat.deploy_modes">Backend-only or full-stack</h3>
+          <p data-i18n="feat.deploy_modes.body">Use Praxia as a brain behind your own frontend (SDK embed or <code>praxia serve</code> FastAPI HTTP API), or run the bundled Streamlit UI for the fastest path. Same auth, memory, skills.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📜</div>
+          <h3 data-i18n="feat.apache_open">Apache 2.0 + Open Core ready</h3>
+          <p data-i18n="feat.apache_open.body">Permissive license, commercial-friendly. NOTICE.md inventories every dependency's license. Open Core path for enterprise extras planned.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">⚖️</div>
+          <h3 data-i18n="feat.legal_templates">Legal templates</h3>
+          <p data-i18n="feat.legal_templates.body">Terms of Service, Privacy Policy, Acceptable Use, Cookie Policy — starter templates wired into the portal sign-up. Marked clearly as templates requiring legal review before commercial use.</p>
         </article>
         <article class="card">
           <div class="card-icon">📱</div>
