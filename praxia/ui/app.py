@@ -1,15 +1,27 @@
 """Default Streamlit UI for Praxia.
 
-Tabs:
-    1. Run Flow      — pick a flow + LLM, fill inputs, see step-by-step output
-    2. Business Skill — invoke one of the 6 default business skills
-    3. Memory        — browse/search personal memory & shared blocks
-    4. Consolidate   — trigger sleep-time consolidation (dry-run by default)
-    5. Settings      — pick LLM provider, memory backend
+Sidebar (frequently-changed):
+    - Language + compact toggle
+    - User identity (user_id / org_id)
+    - Mode picker — what you're doing right now
+        · Flow         : run a multi-agent flow
+        · Skill        : run a single business skill
+        · Memory       : browse personal + shared memory
+        · Consolidate  : trigger sleep-time consolidation
+        · Dashboard    : personal + org statistics
+        · Prompts      : create / browse / distribute custom prompts
+        · Admin        : sub-tabs for setup + governance
+
+Main area dispatches on the chosen Mode. Admin contains 6 sub-tabs:
+    Settings · Users · Connectors · Policies · Exports · About
+
+LLM model and memory backend are now under Admin → Settings (rarely
+changed at runtime, so they don't deserve sidebar real-estate).
 """
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -25,44 +37,57 @@ from praxia.ui.responsive import (
 )
 
 st.set_page_config(page_title="Praxia", page_icon="🪡", layout="wide")
-inject_mobile_css()  # responsive overrides for mobile / tablet
+inject_mobile_css()
 
-# --- Sidebar: settings -----------------------------------------------------
+# === Sidebar ===============================================================
 
-# Language selector first so all subsequent labels use the chosen language
+# Locale + UX (top)
 language_selector_in_sidebar()
 compact_mode_toggle_in_sidebar(t("sidebar.compact"))
 
 st.sidebar.title(t("app.title"))
 st.sidebar.caption(t("app.tagline"))
 
+# Identity
 user_id = st.sidebar.text_input(
     t("sidebar.user"),
     value=os.getenv("PRAXIA_USER_ID", "default-user"),
 )
 org_id = st.sidebar.text_input(t("sidebar.org"), value="default-org")
 
-model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
-model_choice = st.sidebar.selectbox(
-    t("sidebar.model"),
-    options=model_options,
-    index=0,
-)
-if model_choice == "custom":
-    model_choice = st.sidebar.text_input("Custom model string", value="anthropic/claude-opus-4-7")
+st.sidebar.divider()
 
-backend_choice = st.sidebar.selectbox(
-    t("sidebar.backend"),
-    options=["json", "mem0", "langmem", "letta", "zep"],
-    index=0,
+# Mode picker — operational view (replaces the previous 11-tab strip)
+MODE_OPTIONS = [
+    "flow",
+    "skill",
+    "memory",
+    "consolidate",
+    "dashboard",
+    "prompts",
+    "admin",
+]
+
+mode = st.sidebar.radio(
+    t("sidebar.mode"),
+    options=MODE_OPTIONS,
+    format_func=lambda m: t(f"mode.{m}"),
+    key="praxia_mode",
 )
-os.environ["PRAXIA_MEMORY_BACKEND"] = backend_choice
 
 st.sidebar.divider()
 st.sidebar.markdown(
-    "📚 [README](https://github.com/your-org/praxia)  \n"
-    "🐛 [Issues](https://github.com/your-org/praxia/issues)"
+    f"📚 [{t('sidebar.readme')}](https://github.com/praxia-dev/praxia)  \n"
+    f"🐛 [{t('sidebar.issues')}](https://github.com/praxia-dev/praxia/issues)"
 )
+
+
+# === Resolve runtime LLM + backend (set via Admin → Settings) ==============
+
+_default_model = list(DEFAULT_ALIASES.keys())[0]
+model_choice = st.session_state.get("praxia_model", _default_model)
+backend_choice = st.session_state.get("praxia_backend", "json")
+os.environ["PRAXIA_MEMORY_BACKEND"] = backend_choice
 
 
 @st.cache_resource(show_spinner=False)
@@ -72,30 +97,10 @@ def get_loom(_user_id: str, _org_id: str, _model: str) -> Praxia:
 
 loom = get_loom(user_id, org_id, model_choice)
 
-# --- Main: tabs -------------------------------------------------------------
 
-(
-    tab_run, tab_skill, tab_memory, tab_consolidate, tab_dashboard,
-    tab_prompts, tab_users, tab_connectors, tab_policies, tab_admin, tab_about,
-) = st.tabs(
-    [
-        t("tab.run_flow"),
-        t("tab.skill"),
-        t("tab.memory"),
-        t("tab.consolidate"),
-        t("tab.dashboard"),
-        t("tab.prompts"),
-        t("tab.users"),
-        t("tab.connectors"),
-        t("tab.policies"),
-        t("tab.admin"),
-        t("tab.about"),
-    ]
-)
+# === Mode: Flow ============================================================
 
-
-# Tab 1: Run Flow ----------------------------------------------------------
-with tab_run:
+if mode == "flow":
     st.header("🎬 Multi-Agent Flow を実行")
 
     flow_name = st.selectbox(
@@ -105,7 +110,7 @@ with tab_run:
 
     # All registered parsers — drives the file_uploader type list
     from praxia.io.parsers import parse_file as _parse, supported_extensions as _exts
-    SUPPORTED_EXT = _exts()  # [csv, docx, html, json, md, pdf, pptx, ...]
+    SUPPORTED_EXT = _exts()
 
     def _parse_uploaded(file) -> tuple[str, dict]:
         """Run an uploaded Streamlit file through the unified parser."""
@@ -174,10 +179,6 @@ with tab_run:
         flow_cls = LogicCheckerFlow
     else:  # rag-optimizer
         flow_inputs["question"] = st.text_input("質問")
-        # Use the user's PersonalMemory as the retriever — no stub.
-        # This grounds answers in whatever the user has previously recorded
-        # (auto-extracted from past flows + explicit record_fact calls).
-        # For a richer corpus, swap with a custom retriever via the SDK.
         st.info(
             "リトリーバは個人メモリ (`PersonalMemory.search`) を使用します。"
             "他のリトリーバを使う場合は SDK から flow.run(retriever=...) で差し替えてください。"
@@ -211,8 +212,9 @@ with tab_run:
         )
 
 
-# Tab 2: Business Skills ---------------------------------------------------
-with tab_skill:
+# === Mode: Skill ===========================================================
+
+elif mode == "skill":
     st.header("🛠 Business Skill を実行")
 
     skill_options = {f"{s.manifest.domain} — {s.manifest.name}": s for s in BUSINESS_SKILLS}
@@ -288,8 +290,9 @@ with tab_skill:
                 st.warning(f"TTS unavailable: {e}")
 
 
-# Tab 3: Memory ------------------------------------------------------------
-with tab_memory:
+# === Mode: Memory ==========================================================
+
+elif mode == "memory":
     st.header("🧠 Memory ブラウザ")
 
     col1, col2 = st.columns(2)
@@ -318,8 +321,9 @@ with tab_memory:
                     st.caption(f"contributors: {', '.join(block.promoted_from)}")
 
 
-# Tab 4: Consolidate -------------------------------------------------------
-with tab_consolidate:
+# === Mode: Consolidate =====================================================
+
+elif mode == "consolidate":
     st.header("🌙 Sleep-time Consolidation")
     st.markdown(
         "個人メモリ → 共有メモリへの自動昇格を実行します。"
@@ -335,8 +339,9 @@ with tab_consolidate:
         st.json(report)
 
 
-# Tab 5: Dashboard -------------------------------------------------------
-with tab_dashboard:
+# === Mode: Dashboard =======================================================
+
+elif mode == "dashboard":
     st.header("📊 Dashboard")
     from praxia.analytics import Dashboard
 
@@ -381,8 +386,10 @@ with tab_dashboard:
             st.subheader("Top skills")
             st.table([{"skill": n, "count": c} for n, c in s.top_skills])
 
-# Tab 6: Prompts ---------------------------------------------------------
-with tab_prompts:
+
+# === Mode: Prompts =========================================================
+
+elif mode == "prompts":
     st.header("📝 Custom Prompts")
     from praxia.skills.prompts import PromptStore
 
@@ -404,7 +411,7 @@ with tab_prompts:
                     name=name,
                     body=body,
                     description=description,
-                    tags=[t.strip() for t in tags.split(",") if t.strip()],
+                    tags=[s.strip() for s in tags.split(",") if s.strip()],
                 )
                 st.success(f"Saved {name}")
 
@@ -435,235 +442,13 @@ with tab_prompts:
                 )
                 st.success(f"Distributed to {len(saved)} target(s)")
 
-# Tab 7: User management -------------------------------------------------
-with tab_users:
-    st.header("👥 User management (admin)")
-    try:
-        from praxia.auth import AuthManager, Role
-        auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
-        users_list = auth.users.list_all()
-    except Exception as e:
-        st.error(f"Auth not available: {e}")
-        users_list = []
 
-    sub_list, sub_create, sub_edit = st.tabs(["List", "Create", "Edit / Delete"])
+# === Mode: Admin (sub-tabs) ================================================
 
-    with sub_list:
-        if users_list:
-            st.table(
-                [
-                    {
-                        "username": u.username,
-                        "role": u.role,
-                        "email": u.email or "—",
-                        "active": u.is_active,
-                    }
-                    for u in users_list
-                ]
-            )
-        else:
-            st.info("No users yet.")
-
-    with sub_create:
-        with st.form("user_create_form"):
-            new_username = st.text_input("Username")
-            new_role = st.selectbox("Role", ["admin", "operator", "member", "viewer"])
-            new_email = st.text_input("Email")
-            submit = st.form_submit_button("Create")
-            if submit and new_username:
-                user, raw = auth.create_user(new_username, role=new_role, email=new_email or None)
-                st.success(f"Created {user.username} (role={user.role})")
-                st.code(raw, language="text")
-                st.warning("Save this API key now — it will not be shown again.")
-
-    with sub_edit:
-        if users_list:
-            target = st.selectbox("Select user", [u.username for u in users_list])
-            user_target = next((u for u in users_list if u.username == target), None)
-            if user_target:
-                colA, colB = st.columns(2)
-                with colA:
-                    new_role = st.selectbox(
-                        "New role",
-                        ["admin", "operator", "member", "viewer"],
-                        index=["admin", "operator", "member", "viewer"].index(user_target.role),
-                    )
-                    new_email = st.text_input("New email", value=user_target.email or "")
-                    if st.button("Update"):
-                        auth.update_user(target, role=new_role, email=new_email or None)
-                        st.success("Updated")
-                        st.rerun()
-                with colB:
-                    if st.button("Rotate API key"):
-                        new_key = auth.users.rotate_api_key(user_target.id)
-                        st.code(new_key, language="text")
-                    if st.button("Deactivate" if user_target.is_active else "Activate"):
-                        auth.update_user(target, is_active=not user_target.is_active)
-                        st.success("Toggled")
-                        st.rerun()
-                    if st.button("🗑 Delete (cannot undo)", type="primary"):
-                        auth.delete_user(target)
-                        st.success("Deleted")
-                        st.rerun()
-
-# Tab 8: Connectors ------------------------------------------------------
-with tab_connectors:
-    st.header("🔌 External connectors")
-    st.markdown(
-        "Pull data from external systems for use as context, or push Praxia "
-        "outputs back to your team's systems of record."
-    )
-    from praxia.connectors.registry import list_builtin
-
-    connector_names = list_builtin()
-    sel = st.selectbox("Connector", connector_names)
-    op = st.radio("Operation", ["Pull", "Push"], horizontal=True)
-    path = st.text_input("Path / folder ID / SOQL / app ID")
-
-    st.caption(
-        "Credentials are read from environment variables prefixed with "
-        f"`PRAXIA_CONN_{sel.upper()}_*`."
-    )
-
-    if op == "Pull":
-        limit = st.slider("Limit", 5, 200, 20)
-        if st.button("Pull"):
-            try:
-                from praxia.connectors import get_connector
-                import os
-                cfg = {
-                    k.replace(f"PRAXIA_CONN_{sel.upper()}_", "").lower(): v
-                    for k, v in os.environ.items()
-                    if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
-                }
-                items = get_connector(sel, **cfg).pull(path, limit=limit)
-                st.success(f"Pulled {len(items)} items")
-                for it in items[:5]:
-                    with st.expander(f"📥 {it.name}"):
-                        if isinstance(it.content, str):
-                            st.text(it.content[:1000])
-                        else:
-                            st.text(f"<binary, {len(it.content)} bytes>")
-            except Exception as e:
-                st.error(str(e))
-    else:
-        body = st.text_area("Body / payload (text or JSON)", height=200)
-        if st.button("Push"):
-            try:
-                from praxia.connectors import get_connector
-                from praxia.connectors.base import ConnectorItem
-                import os
-                cfg = {
-                    k.replace(f"PRAXIA_CONN_{sel.upper()}_", "").lower(): v
-                    for k, v in os.environ.items()
-                    if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
-                }
-                receipt = get_connector(sel, **cfg).push(
-                    path, ConnectorItem(id="", name="praxia_output", content=body)
-                )
-                st.success(f"Pushed: {receipt}")
-            except Exception as e:
-                st.error(str(e))
-
-# Tab 9: Policies (admin / IS dept) -------------------------------------
-with tab_policies:
-    st.header("🛡 Resource Access Policies")
-    st.markdown(
-        "Control which users / roles can access connector paths, memory "
-        "namespaces, prompts, and skills. Designed for enterprise IS departments."
-    )
-    try:
-        from praxia.auth import AuthManager
-        auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
-    except Exception as e:
-        st.error(f"Auth not available: {e}")
-        auth = None
-
-    sub_list, sub_add, sub_test = st.tabs(["List", "Add", "Test"])
-
-    if auth:
-        with sub_list:
-            policies = auth.policies.list()
-            if policies:
-                st.table(
-                    [
-                        {
-                            "id": p.id[:8],
-                            "effect": p.effect,
-                            "type": p.resource_type,
-                            "pattern": p.resource_pattern,
-                            "actions": ",".join(p.actions),
-                            "principals": ",".join(p.principals),
-                            "description": p.description,
-                        }
-                        for p in policies
-                    ]
-                )
-                target_id = st.selectbox(
-                    "Remove policy by ID",
-                    options=[""] + [p.id for p in policies],
-                    format_func=lambda x: f"{x[:8]}…" if x else "(select)",
-                )
-                if target_id and st.button("🗑 Remove selected"):
-                    if auth.policies.remove(target_id):
-                        st.success(f"Removed {target_id[:8]}")
-                        st.rerun()
-            else:
-                st.info("No policies yet. Defaults to 'allow' when no policy matches.")
-
-        with sub_add:
-            with st.form("policy_add_form"):
-                pa_effect = st.selectbox("Effect", ["allow", "deny"])
-                pa_type = st.selectbox(
-                    "Resource type", ["connector", "memory", "prompt", "skill", "block", "*"]
-                )
-                pa_pattern = st.text_input(
-                    "Resource pattern (glob)",
-                    placeholder="box:/Confidential/*  or  kintone:42  or  salesforce:*",
-                )
-                pa_actions = st.multiselect("Actions", ["read", "write", "list", "*"], default=["*"])
-                pa_principals = st.text_input(
-                    "Principals (comma-separated user_ids and role:<name>)",
-                    value="*",
-                )
-                pa_description = st.text_input("Description")
-                if st.form_submit_button("Add policy") and pa_pattern:
-                    p = auth.policies.add(
-                        effect=pa_effect,
-                        resource_type=pa_type,
-                        resource_pattern=pa_pattern,
-                        actions=pa_actions or ["*"],
-                        principals=[s.strip() for s in pa_principals.split(",") if s.strip()],
-                        description=pa_description,
-                    )
-                    st.success(f"Added policy {p.id[:8]}")
-                    st.rerun()
-
-        with sub_test:
-            with st.form("policy_test_form"):
-                pt_user = st.text_input("user_id", value="alice")
-                pt_role = st.selectbox("role", ["admin", "operator", "member", "viewer"])
-                pt_type = st.selectbox(
-                    "resource_type", ["connector", "memory", "prompt", "skill", "block"]
-                )
-                pt_id = st.text_input(
-                    "resource_id", placeholder="box:/Praxia/specs"
-                )
-                pt_action = st.selectbox("action", ["read", "write", "list"])
-                if st.form_submit_button("Evaluate") and pt_id:
-                    decision = auth.policies.evaluate(
-                        user_id=pt_user, role=pt_role,
-                        resource_type=pt_type, resource_id=pt_id, action=pt_action,
-                    )
-                    if decision.allowed:
-                        st.success(f"✅ Allowed — {decision.reason}")
-                    else:
-                        st.error(f"🚫 Denied — {decision.reason}")
-
-# Tab 10: Admin (Settings + Downloads) ----------------------------------
-with tab_admin:
+elif mode == "admin":
     st.header(t("admin.header"))
 
+    # Auth manager — needed by most admin sub-tabs.
     try:
         from praxia.auth import AuthManager
         auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
@@ -682,13 +467,17 @@ with tab_admin:
         except Exception:
             pass
 
-    settings_st, downloads_st = st.tabs([
+    tab_settings, tab_users, tab_connectors, tab_policies, tab_exports, tab_about = st.tabs([
         t("admin.settings.subtab"),
+        t("admin.users.subtab"),
+        t("admin.connectors.subtab"),
+        t("admin.policies.subtab"),
         t("admin.downloads.subtab"),
+        t("admin.about.subtab"),
     ])
 
-    # --- Sub-tab: Settings (configure API keys + runtime knobs) ----------
-    with settings_st:
+    # --- Settings: runtime knobs (LLM/backend) + KNOWN_KEYS config -----
+    with tab_settings:
         from praxia.config import KNOWN_KEYS, PraxiaConfig
 
         st.markdown(t("admin.settings.intro"))
@@ -700,6 +489,56 @@ with tab_admin:
         else:
             st.error(t("admin.settings.role_blocked").format(user=user_id, role=actor_role))
 
+        # ---- Runtime: LLM model + memory backend (moved from sidebar) ----
+        st.subheader(t("admin.settings.runtime_h"))
+        st.caption(t("admin.settings.runtime_intro"))
+
+        col_m, col_b = st.columns(2)
+        with col_m:
+            model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
+            current_model = st.session_state.get("praxia_model", _default_model)
+            preset_index = (
+                model_options.index(current_model)
+                if current_model in DEFAULT_ALIASES
+                else len(model_options) - 1  # "custom"
+            )
+            picked_model = st.selectbox(
+                t("admin.settings.model_label"),
+                options=model_options,
+                index=preset_index,
+                key="settings_model_pick",
+            )
+            if picked_model == "custom":
+                picked_model = st.text_input(
+                    t("admin.settings.model_custom"),
+                    value=current_model if current_model not in DEFAULT_ALIASES else "anthropic/claude-opus-4-7",
+                    key="settings_model_custom_input",
+                )
+        with col_b:
+            backend_options = ["json", "mem0", "langmem", "letta", "zep"]
+            current_backend = st.session_state.get("praxia_backend", "json")
+            picked_backend = st.selectbox(
+                t("admin.settings.backend_label"),
+                options=backend_options,
+                index=backend_options.index(current_backend) if current_backend in backend_options else 0,
+                key="settings_backend_pick",
+            )
+
+        if st.button(t("admin.settings.runtime_apply"), type="primary", key="settings_runtime_apply"):
+            st.session_state["praxia_model"] = picked_model
+            st.session_state["praxia_backend"] = picked_backend
+            # Force loom to re-init with new model/backend on next rerun.
+            try:
+                st.cache_resource.clear()
+            except Exception:
+                pass
+            st.success(t("admin.settings.runtime_saved"))
+            st.rerun()
+
+        st.divider()
+
+        # ---- Persistent: KNOWN_KEYS by category ----
+        st.subheader(t("admin.settings.persistent_h"))
         st.caption(t("admin.settings.precedence_hint"))
 
         def _mask_for_display(value: str) -> str:
@@ -712,8 +551,6 @@ with tab_admin:
         for _key, (_cat, _is_secret) in KNOWN_KEYS.items():
             grouped.setdefault(_cat, []).append((_key, _is_secret))
 
-        # Render one form per category — categories with at least one secret
-        # default-collapsed; LLM defaults open since most setups need a key here.
         for category, keys in grouped.items():
             with st.expander(
                 f"**{category}**  ·  {len(keys)} {t('admin.settings.keys_label')}",
@@ -762,8 +599,224 @@ with tab_admin:
                             st.success(t("admin.settings.saved").format(count=len(pending)))
                             st.info(t("admin.settings.restart_hint"))
 
-    # --- Sub-tab: Downloads (existing export functionality) --------------
-    with downloads_st:
+    # --- Users (formerly Tab 7) ----------------------------------------
+    with tab_users:
+        st.header("👥 User management (admin)")
+        try:
+            from praxia.auth import Role  # noqa: F401  (re-export check)
+            users_list = auth.users.list_all() if auth is not None else []
+        except Exception as e:
+            st.error(f"Auth not available: {e}")
+            users_list = []
+
+        sub_list, sub_create, sub_edit = st.tabs(["List", "Create", "Edit / Delete"])
+
+        with sub_list:
+            if users_list:
+                st.table(
+                    [
+                        {
+                            "username": u.username,
+                            "role": u.role,
+                            "email": u.email or "—",
+                            "active": u.is_active,
+                        }
+                        for u in users_list
+                    ]
+                )
+            else:
+                st.info("No users yet.")
+
+        with sub_create:
+            with st.form("user_create_form"):
+                new_username = st.text_input("Username")
+                new_role = st.selectbox("Role", ["admin", "operator", "member", "viewer"])
+                new_email = st.text_input("Email")
+                submit = st.form_submit_button("Create")
+                if submit and new_username and auth is not None:
+                    user, raw = auth.create_user(new_username, role=new_role, email=new_email or None)
+                    st.success(f"Created {user.username} (role={user.role})")
+                    st.code(raw, language="text")
+                    st.warning("Save this API key now — it will not be shown again.")
+
+        with sub_edit:
+            if users_list:
+                target = st.selectbox("Select user", [u.username for u in users_list])
+                user_target = next((u for u in users_list if u.username == target), None)
+                if user_target:
+                    colA, colB = st.columns(2)
+                    with colA:
+                        new_role = st.selectbox(
+                            "New role",
+                            ["admin", "operator", "member", "viewer"],
+                            index=["admin", "operator", "member", "viewer"].index(user_target.role),
+                        )
+                        new_email = st.text_input("New email", value=user_target.email or "")
+                        if st.button("Update") and auth is not None:
+                            auth.update_user(target, role=new_role, email=new_email or None)
+                            st.success("Updated")
+                            st.rerun()
+                    with colB:
+                        if st.button("Rotate API key") and auth is not None:
+                            new_key = auth.users.rotate_api_key(user_target.id)
+                            st.code(new_key, language="text")
+                        if st.button("Deactivate" if user_target.is_active else "Activate") and auth is not None:
+                            auth.update_user(target, is_active=not user_target.is_active)
+                            st.success("Toggled")
+                            st.rerun()
+                        if st.button("🗑 Delete (cannot undo)", type="primary") and auth is not None:
+                            auth.delete_user(target)
+                            st.success("Deleted")
+                            st.rerun()
+
+    # --- Connectors (formerly Tab 8) -----------------------------------
+    with tab_connectors:
+        st.header("🔌 External connectors")
+        st.markdown(
+            "Pull data from external systems for use as context, or push Praxia "
+            "outputs back to your team's systems of record."
+        )
+        from praxia.connectors.registry import list_builtin
+
+        connector_names = list_builtin()
+        sel = st.selectbox("Connector", connector_names)
+        op = st.radio("Operation", ["Pull", "Push"], horizontal=True)
+        path = st.text_input("Path / folder ID / SOQL / app ID")
+
+        st.caption(
+            "Credentials are read from environment variables prefixed with "
+            f"`PRAXIA_CONN_{sel.upper()}_*`."
+        )
+
+        if op == "Pull":
+            limit = st.slider("Limit", 5, 200, 20)
+            if st.button("Pull"):
+                try:
+                    from praxia.connectors import get_connector
+                    cfg = {
+                        k.replace(f"PRAXIA_CONN_{sel.upper()}_", "").lower(): v
+                        for k, v in os.environ.items()
+                        if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
+                    }
+                    items = get_connector(sel, **cfg).pull(path, limit=limit)
+                    st.success(f"Pulled {len(items)} items")
+                    for it in items[:5]:
+                        with st.expander(f"📥 {it.name}"):
+                            if isinstance(it.content, str):
+                                st.text(it.content[:1000])
+                            else:
+                                st.text(f"<binary, {len(it.content)} bytes>")
+                except Exception as e:
+                    st.error(str(e))
+        else:
+            body = st.text_area("Body / payload (text or JSON)", height=200)
+            if st.button("Push"):
+                try:
+                    from praxia.connectors import get_connector
+                    from praxia.connectors.base import ConnectorItem
+                    cfg = {
+                        k.replace(f"PRAXIA_CONN_{sel.upper()}_", "").lower(): v
+                        for k, v in os.environ.items()
+                        if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
+                    }
+                    receipt = get_connector(sel, **cfg).push(
+                        path, ConnectorItem(id="", name="praxia_output", content=body)
+                    )
+                    st.success(f"Pushed: {receipt}")
+                except Exception as e:
+                    st.error(str(e))
+
+    # --- Policies (formerly Tab 9) -------------------------------------
+    with tab_policies:
+        st.header("🛡 Resource Access Policies")
+        st.markdown(
+            "Control which users / roles can access connector paths, memory "
+            "namespaces, prompts, and skills. Designed for enterprise IS departments."
+        )
+
+        sub_list, sub_add, sub_test = st.tabs(["List", "Add", "Test"])
+
+        if auth:
+            with sub_list:
+                policies = auth.policies.list()
+                if policies:
+                    st.table(
+                        [
+                            {
+                                "id": p.id[:8],
+                                "effect": p.effect,
+                                "type": p.resource_type,
+                                "pattern": p.resource_pattern,
+                                "actions": ",".join(p.actions),
+                                "principals": ",".join(p.principals),
+                                "description": p.description,
+                            }
+                            for p in policies
+                        ]
+                    )
+                    target_id = st.selectbox(
+                        "Remove policy by ID",
+                        options=[""] + [p.id for p in policies],
+                        format_func=lambda x: f"{x[:8]}…" if x else "(select)",
+                    )
+                    if target_id and st.button("🗑 Remove selected"):
+                        if auth.policies.remove(target_id):
+                            st.success(f"Removed {target_id[:8]}")
+                            st.rerun()
+                else:
+                    st.info("No policies yet. Defaults to 'allow' when no policy matches.")
+
+            with sub_add:
+                with st.form("policy_add_form"):
+                    pa_effect = st.selectbox("Effect", ["allow", "deny"])
+                    pa_type = st.selectbox(
+                        "Resource type", ["connector", "memory", "prompt", "skill", "block", "*"]
+                    )
+                    pa_pattern = st.text_input(
+                        "Resource pattern (glob)",
+                        placeholder="box:/Confidential/*  or  kintone:42  or  salesforce:*",
+                    )
+                    pa_actions = st.multiselect("Actions", ["read", "write", "list", "*"], default=["*"])
+                    pa_principals = st.text_input(
+                        "Principals (comma-separated user_ids and role:<name>)",
+                        value="*",
+                    )
+                    pa_description = st.text_input("Description")
+                    if st.form_submit_button("Add policy") and pa_pattern:
+                        p = auth.policies.add(
+                            effect=pa_effect,
+                            resource_type=pa_type,
+                            resource_pattern=pa_pattern,
+                            actions=pa_actions or ["*"],
+                            principals=[s.strip() for s in pa_principals.split(",") if s.strip()],
+                            description=pa_description,
+                        )
+                        st.success(f"Added policy {p.id[:8]}")
+                        st.rerun()
+
+            with sub_test:
+                with st.form("policy_test_form"):
+                    pt_user = st.text_input("user_id", value="alice")
+                    pt_role = st.selectbox("role", ["admin", "operator", "member", "viewer"])
+                    pt_type = st.selectbox(
+                        "resource_type", ["connector", "memory", "prompt", "skill", "block"]
+                    )
+                    pt_id = st.text_input(
+                        "resource_id", placeholder="box:/Praxia/specs"
+                    )
+                    pt_action = st.selectbox("action", ["read", "write", "list"])
+                    if st.form_submit_button("Evaluate") and pt_id:
+                        decision = auth.policies.evaluate(
+                            user_id=pt_user, role=pt_role,
+                            resource_type=pt_type, resource_id=pt_id, action=pt_action,
+                        )
+                        if decision.allowed:
+                            st.success(f"✅ Allowed — {decision.reason}")
+                        else:
+                            st.error(f"🚫 Denied — {decision.reason}")
+
+    # --- Exports (formerly the Admin Downloads sub-tab) ----------------
+    with tab_exports:
         st.markdown(
             "Export audit logs, users, skill usage, memories, and policies for "
             "compliance, SIEM ingestion, or backups. Every export action is logged."
@@ -831,11 +884,11 @@ with tab_admin:
                         mime="application/octet-stream",
                     )
 
-# Tab 11: About ---------------------------------------------------------
-with tab_about:
-    st.header("ℹ Praxia について")
-    st.markdown(
-        """
+    # --- About (formerly Tab 11) ---------------------------------------
+    with tab_about:
+        st.header("ℹ Praxia について")
+        st.markdown(
+            """
 **Praxia** は、業務特化型のマルチエージェント・オーケストレーターです。
 個人で利用するだけで暗黙知が自動蓄積され、有効なものだけが組織知へ昇格する
 **5層メモリ循環機構**を備えています。
@@ -853,6 +906,6 @@ with tab_about:
 #### LTM バックエンド
 - Mem0 (推奨) / LangMem / Letta / Zep / JSON
 
-[GitHub](https://github.com/your-org/praxia) | License: Apache 2.0
-        """
-    )
+[GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0
+            """
+        )
