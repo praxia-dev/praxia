@@ -170,18 +170,18 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "🛠 Habilidade",
     },
     "mode.memory": {
-        "en": "🧠 Memory",
-        "ja": "🧠 メモリ",
-        "zh-CN": "🧠 记忆",
-        "ko": "🧠 메모리",
-        "es": "🧠 Memoria",
-        "fr": "🧠 Mémoire",
-        "de": "🧠 Speicher",
-        "pt-BR": "🧠 Memória",
+        "en": "🧠 Knowledge",
+        "ja": "🧠 ナレッジ",
+        "zh-CN": "🧠 知识",
+        "ko": "🧠 지식",
+        "es": "🧠 Conocimiento",
+        "fr": "🧠 Connaissances",
+        "de": "🧠 Wissen",
+        "pt-BR": "🧠 Conhecimento",
     },
     "mode.consolidate": {
         "en": "🌙 Consolidate",
-        "ja": "🌙 統合 (Consolidate)",
+        "ja": "🌙 統合",
         "zh-CN": "🌙 整合",
         "ko": "🌙 통합",
         "es": "🌙 Consolidar",
@@ -715,6 +715,56 @@ _T: dict[str, dict[str, str]] = {
         "de": "Ziel rein, Agent wählt Tools und iteriert.",
         "pt-BR": "Dê um objetivo, o agente escolhe ferramentas e itera.",
     },
+    "run.agent.placeholder": {
+        "en": "Ask the agent anything — pick scopes in the sidebar to give it context.",
+        "ja": "エージェントに何でも聞いてください — サイドバーで参照データ範囲を選んでコンテキストを渡せます。",
+        "zh-CN": "向代理提问 — 在侧边栏选择数据范围以提供上下文。",
+        "ko": "에이전트에게 자유롭게 질문하세요 — 사이드바에서 데이터 범위를 선택해 컨텍스트를 줄 수 있습니다.",
+        "es": "Pregunta lo que quieras — elige scopes en la sidebar para darle contexto.",
+        "fr": "Posez n'importe quelle question — choisissez des scopes dans la sidebar pour le contexte.",
+        "de": "Frag den Agenten alles — Scopes in der Sidebar geben Kontext.",
+        "pt-BR": "Pergunte qualquer coisa — escolha escopos na sidebar para dar contexto.",
+    },
+    "run.agent.thinking": {
+        "en": "Agent thinking…",
+        "ja": "エージェント思考中…",
+        "zh-CN": "代理正在思考…",
+        "ko": "에이전트 사고 중…",
+        "es": "El agente está pensando…",
+        "fr": "L'agent réfléchit…",
+        "de": "Agent denkt nach…",
+        "pt-BR": "Agente pensando…",
+    },
+    "run.agent.trace": {
+        "en": "🔧 Tool-use trace",
+        "ja": "🔧 ツール使用トレース",
+        "zh-CN": "🔧 工具使用追踪",
+        "ko": "🔧 도구 사용 트레이스",
+        "es": "🔧 Traza de uso de herramientas",
+        "fr": "🔧 Trace d'utilisation d'outils",
+        "de": "🔧 Tool-Use-Trace",
+        "pt-BR": "🔧 Traço de uso de ferramentas",
+    },
+    "run.agent.clear": {
+        "en": "🗑 Clear conversation",
+        "ja": "🗑 会話をクリア",
+        "zh-CN": "🗑 清空对话",
+        "ko": "🗑 대화 지우기",
+        "es": "🗑 Limpiar conversación",
+        "fr": "🗑 Effacer la conversation",
+        "de": "🗑 Konversation löschen",
+        "pt-BR": "🗑 Limpar conversa",
+    },
+    "admin.consolidate.subtab": {
+        "en": "🌙 Consolidate",
+        "ja": "🌙 統合",
+        "zh-CN": "🌙 整合",
+        "ko": "🌙 통합",
+        "es": "🌙 Consolidar",
+        "fr": "🌙 Consolider",
+        "de": "🌙 Konsolidieren",
+        "pt-BR": "🌙 Consolidar",
+    },
     "run.agent.coming_soon": {
         "en": "🚧 Autonomous-agent UI is coming. For now, run from the CLI:",
         "ja": "🚧 自律エージェントの UI は準備中。現状は CLI から実行してください:",
@@ -727,14 +777,14 @@ _T: dict[str, dict[str, str]] = {
     },
     # ===== Data scope picker (in-workspace) =================================
     "scope.section_h": {
-        "en": "Reference data scopes (optional)",
-        "ja": "参照データ範囲 (任意)",
-        "zh-CN": "参考数据范围(可选)",
-        "ko": "참조 데이터 범위 (선택)",
-        "es": "Alcances de datos de referencia (opcional)",
-        "fr": "Portées de données de référence (optionnel)",
-        "de": "Referenzdaten-Bereiche (optional)",
-        "pt-BR": "Escopos de dados de referência (opcional)",
+        "en": "Reference data scopes",
+        "ja": "参照データ範囲",
+        "zh-CN": "参考数据范围",
+        "ko": "참조 데이터 범위",
+        "es": "Alcances de datos de referencia",
+        "fr": "Portées de données de référence",
+        "de": "Referenzdaten-Bereiche",
+        "pt-BR": "Escopos de dados de referência",
     },
     "scope.section_intro": {
         "en": "Pick which folders / memory layers to feed into this run as additional context. Manage folders under 📁 Data.",
@@ -1594,24 +1644,24 @@ _T: dict[str, dict[str, str]] = {
     },
     # ===== Memory mode ======================================================
     "memory.h": {
-        "en": "🧠 Memory browser",
-        "ja": "🧠 メモリブラウザ",
-        "zh-CN": "🧠 记忆浏览器",
-        "ko": "🧠 메모리 브라우저",
-        "es": "🧠 Explorador de memoria",
-        "fr": "🧠 Navigateur de mémoire",
-        "de": "🧠 Memory-Browser",
-        "pt-BR": "🧠 Navegador de memória",
+        "en": "🧠 Knowledge",
+        "ja": "🧠 ナレッジ",
+        "zh-CN": "🧠 知识",
+        "ko": "🧠 지식",
+        "es": "🧠 Conocimiento",
+        "fr": "🧠 Connaissances",
+        "de": "🧠 Wissen",
+        "pt-BR": "🧠 Conhecimento",
     },
     "memory.personal_h": {
-        "en": "Personal memory (Layer 1)",
-        "ja": "個人メモリ (Layer 1)",
-        "zh-CN": "个人记忆 (Layer 1)",
-        "ko": "개인 메모리 (Layer 1)",
-        "es": "Memoria personal (Layer 1)",
-        "fr": "Mémoire personnelle (Layer 1)",
-        "de": "Persönlicher Speicher (Layer 1)",
-        "pt-BR": "Memória pessoal (Layer 1)",
+        "en": "Personal memory",
+        "ja": "個人メモリ",
+        "zh-CN": "个人记忆",
+        "ko": "개인 메모리",
+        "es": "Memoria personal",
+        "fr": "Mémoire personnelle",
+        "de": "Persönlicher Speicher",
+        "pt-BR": "Memória pessoal",
     },
     "memory.entries_total": {
         "en": "Total entries",
@@ -1634,14 +1684,14 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "Buscar",
     },
     "memory.shared_h": {
-        "en": "Shared memory (Layer 3)",
-        "ja": "共有メモリ (Layer 3)",
-        "zh-CN": "共享记忆 (Layer 3)",
-        "ko": "공유 메모리 (Layer 3)",
-        "es": "Memoria compartida (Layer 3)",
-        "fr": "Mémoire partagée (Layer 3)",
-        "de": "Geteilter Speicher (Layer 3)",
-        "pt-BR": "Memória compartilhada (Layer 3)",
+        "en": "Shared memory",
+        "ja": "共有メモリ",
+        "zh-CN": "共享记忆",
+        "ko": "공유 메모리",
+        "es": "Memoria compartida",
+        "fr": "Mémoire partagée",
+        "de": "Geteilter Speicher",
+        "pt-BR": "Memória compartilhada",
     },
     "memory.blocks_total": {
         "en": "Block count",
@@ -2273,7 +2323,13 @@ _T: dict[str, dict[str, str]] = {
             "#### LTM backends\n"
             "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
             "- Parallel fusion (RRF) or per-query routing for ensembles\n\n"
-            "[GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0"
+            "#### License\n"
+            "Praxia ships under **Apache License 2.0** "
+            "([LICENSE](https://github.com/praxia-dev/praxia/blob/main/LICENSE)). "
+            "Third-party dependency licenses are inventoried in "
+            "[NOTICE.md](https://github.com/praxia-dev/praxia/blob/main/NOTICE.md) — "
+            "every direct + transitive dep, with its license and source URL.\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia)"
         ),
         "ja": (
             "**Praxia** は、業務特化型のマルチエージェント・オーケストレーターです。"
@@ -2295,7 +2351,13 @@ _T: dict[str, dict[str, str]] = {
             "#### LTM バックエンド\n"
             "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
             "- 並列融合 (RRF) または query-routing で複数併用可\n\n"
-            "[GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0"
+            "#### ライセンス\n"
+            "Praxia は **Apache License 2.0** "
+            "([LICENSE](https://github.com/praxia-dev/praxia/blob/main/LICENSE)) で配布。"
+            "依存パッケージのライセンス一覧は "
+            "[NOTICE.md](https://github.com/praxia-dev/praxia/blob/main/NOTICE.md) "
+            "にすべて記載 (直接/間接依存、ライセンス、ソース URL)。\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia)"
         ),
         "zh-CN": (
             "**Praxia** 是面向特定工作流的多智能体编排器,通过 **5 层循环记忆栈** "

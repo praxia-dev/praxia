@@ -8,6 +8,11 @@
 [client]
 toolbarMode = "viewer"
 showErrorDetails = true
+showSidebarNavigation = false
+
+[server]
+runOnSave = false
+fileWatcherType = "none"
 
 [browser]
 gatherUsageStats = false

@@ -288,7 +288,9 @@ if theme_choice == "dark":
   [data-testid="stAlert"] { background-color: rgba(255,255,255,0.04) !important; }
 
   /* Sticky top nav — solid dark bg with subtle gold underline */
-  #praxia-topnav-wrapper + div[data-testid="stHorizontalBlock"] {
+  .main .block-container [data-testid="stVerticalBlock"]
+    > [data-testid="element-container"]:first-child
+    [data-testid="stHorizontalBlock"] {
     background-color: #15171f !important;
     border-bottom: 1px solid rgba(201,164,86,0.25) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
@@ -402,7 +404,6 @@ with st.sidebar:
 
     st.divider()
     st.markdown(f"**📁 {t('scope.section_h')}**")
-    st.caption(t("scope.section_intro"))
 
     # Built-in scopes
     st.markdown(f"_{t('scope.builtin_h')}_")
@@ -433,8 +434,7 @@ with st.sidebar:
             ):
                 selected_custom_ids.append(s.id)
 
-    if not user_scopes:
-        st.caption(t("sidebar.scope.empty_hint"))
+    # If no custom scopes, just show the built-ins; no extra hint needed.
 
 
 # =====================================================================
@@ -442,7 +442,7 @@ with st.sidebar:
 # =====================================================================
 
 BASE_NAV = ["run", "memory", "prompts", "data", "dashboard", "preferences"]
-ADMIN_NAV = ["consolidate", "admin"]
+ADMIN_NAV = ["admin"]  # Consolidate moved into Admin's sub-tabs.
 NAV_KEYS = (
     BASE_NAV + ADMIN_NAV
     if actor_role in ("admin", "unknown")
@@ -453,12 +453,9 @@ if st.session_state.get("praxia_mode") not in NAV_KEYS:
 
 nav_labels = [t(f"mode.{k}") for k in NAV_KEYS]
 
-# Render the top nav as native st.columns + st.button so we can style
-# it as a sticky solid bar via CSS. (streamlit-option-menu renders into
-# an iframe, which can't be styled from outside, so it can't be made
-# sticky reliably — we fall back to native widgets and tag them with a
-# wrapper class.)
-st.markdown('<div id="praxia-topnav-wrapper">', unsafe_allow_html=True)
+# Top nav: the FIRST widget rendered in the main area. The CSS in
+# responsive.py targets the first stHorizontalBlock under the main
+# vertical block and makes it sticky.
 cols = st.columns(len(NAV_KEYS))
 for col, key in zip(cols, NAV_KEYS):
     is_active = st.session_state["praxia_mode"] == key
@@ -470,7 +467,6 @@ for col, key in zip(cols, NAV_KEYS):
     ):
         st.session_state["praxia_mode"] = key
         st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
 
 mode = st.session_state["praxia_mode"]
 
@@ -483,10 +479,88 @@ if mode == "run":
     st.header(t("run.h"))
     st.caption(t("run.intro"))
 
-    tab_skill, tab_agent = st.tabs([
-        t("run.tab.skill"),
+    # Agent first (default tab) — the user's primary entry point.
+    tab_agent, tab_skill = st.tabs([
         t("run.tab.agent"),
+        t("run.tab.skill"),
     ])
+
+    # ---- Agent (LLM-driven chat with tool use) ----------------------
+    with tab_agent:
+        st.markdown(t("run.agent.what"))
+
+        # Maintain chat history per user in session_state.
+        if "praxia_chat" not in st.session_state:
+            st.session_state["praxia_chat"] = []
+
+        # Render history
+        for msg in st.session_state["praxia_chat"]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+                if msg.get("trace"):
+                    with st.expander(t("run.agent.trace"), expanded=False):
+                        for step in msg["trace"]:
+                            tc = step if isinstance(step, dict) else {}
+                            tn = tc.get("tool_name", str(step))
+                            ta = tc.get("tool_args", {})
+                            tr = tc.get("tool_result", "")
+                            st.markdown(f"**🔧 {tn}** `{ta}`")
+                            st.text(str(tr)[:600])
+                            st.divider()
+
+        # Optional clear-history button (only when there's something to clear)
+        if st.session_state["praxia_chat"]:
+            if st.button(t("run.agent.clear"), key="agent_clear"):
+                st.session_state["praxia_chat"] = []
+                st.rerun()
+
+        # Chat input — submitting triggers an agent run.
+        prompt = st.chat_input(t("run.agent.placeholder"))
+        if prompt:
+            # Show the user's message immediately.
+            st.session_state["praxia_chat"].append({
+                "role": "user",
+                "content": prompt,
+            })
+
+            # Inject selected scopes as additional reference data.
+            scope_ctx = (
+                gather_scope_context(selected_custom_ids)
+                if selected_custom_ids else ""
+            )
+            full_task = prompt + (
+                f"\n\n--- Reference data ---\n{scope_ctx}" if scope_ctx else ""
+            )
+
+            # Build a short conversation history for context.
+            recent = st.session_state["praxia_chat"][-7:-1]  # last 3 turns
+            history = [
+                {"role": m["role"], "content": m["content"]}
+                for m in recent
+            ]
+
+            try:
+                from praxia.agent import AutonomousAgent
+                agent = AutonomousAgent(
+                    user_id=user_id,
+                    role=actor_role if actor_role != "unknown" else "member",
+                    org_id=org_id,
+                    llm=LLM(model_choice),
+                )
+                with st.spinner(t("run.agent.thinking")):
+                    result = agent.run(full_task, history=history or None)
+                response_text = result.final_text or "(no response)"
+                trace = getattr(result, "tool_calls", None) or []
+            except Exception as exc:
+                response_text = f"❌ {exc}"
+                trace = []
+
+            st.session_state["praxia_chat"].append({
+                "role": "assistant",
+                "content": response_text,
+                "trace": trace,
+            })
+            st.rerun()
 
     # ---- Skill (single domain skill) --------------------------------
     with tab_skill:
@@ -635,15 +709,6 @@ if mode == "run":
                     st.audio(audio_bytes, format="audio/mp3")
                 except Exception as e:
                     st.warning(f"TTS unavailable: {e}")
-
-    # ---- Agent ------------------------------------------------------
-    with tab_agent:
-        st.markdown(t("run.agent.what"))
-        st.info(t("run.agent.coming_soon"))
-        st.code(
-            'praxia agent run "your task here" --max-steps 10',
-            language="bash",
-        )
 
 
 # =====================================================================
@@ -922,23 +987,6 @@ elif mode == "preferences":
         st.rerun()
 
     st.caption(t("preferences.llm_moved_hint"))
-
-
-# =====================================================================
-# Mode: Consolidate (admin-only via nav filter)
-# =====================================================================
-
-elif mode == "consolidate":
-    st.header(t("consolidate.h"))
-    st.markdown(t("consolidate.intro"))
-    threshold = st.slider(t("consolidate.threshold"), 0.0, 1.0, 0.75, 0.05)
-    dry_run = st.checkbox(t("consolidate.dry_run"), value=True)
-
-    if st.button(t("consolidate.run")):
-        loom.config.consolidation_threshold = threshold
-        with st.spinner("Consolidating…"):
-            report = loom.consolidate(dry_run=dry_run)
-        st.json(report)
 
 
 # =====================================================================
@@ -1235,11 +1283,15 @@ elif mode == "admin":
     if not users_exist:
         st.warning(t("admin.gate.dev_mode"))
 
-    tab_settings, tab_users, tab_connectors, tab_policies, tab_exports, tab_about = st.tabs([
+    (
+        tab_settings, tab_users, tab_connectors, tab_policies,
+        tab_consolidate, tab_exports, tab_about,
+    ) = st.tabs([
         t("admin.settings.subtab"),
         t("admin.users.subtab"),
         t("admin.connectors.subtab"),
         t("admin.policies.subtab"),
+        t("admin.consolidate.subtab"),
         t("admin.downloads.subtab"),
         t("admin.about.subtab"),
     ])
@@ -1601,6 +1653,16 @@ elif mode == "admin":
                             st.success(f"✅ Allowed — {decision.reason}")
                         else:
                             st.error(f"🚫 Denied — {decision.reason}")
+
+    with tab_consolidate:
+        st.markdown(t("consolidate.intro"))
+        threshold = st.slider(t("consolidate.threshold"), 0.0, 1.0, 0.75, 0.05)
+        dry_run = st.checkbox(t("consolidate.dry_run"), value=True)
+        if st.button(t("consolidate.run"), type="primary"):
+            loom.config.consolidation_threshold = threshold
+            with st.spinner("Consolidating…"):
+                report = loom.consolidate(dry_run=dry_run)
+            st.json(report)
 
     with tab_exports:
         st.markdown(
