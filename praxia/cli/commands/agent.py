@@ -1,7 +1,7 @@
 """CLI commands for the autonomous agent (`praxia agent ...`).
 
 Examples:
-    praxia agent run "Acme との今四半期の営業状況を整理して"
+    praxia agent run "Summarize where we stand with Acme this quarter"
     praxia agent tools          # list built-in tools the agent can call
 """
 from __future__ import annotations

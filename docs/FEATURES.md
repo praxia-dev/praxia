@@ -1442,7 +1442,7 @@ information it needs and emits a final answer.
 
 ```bash
 # Run an autonomous task
-praxia agent run "Acme との今四半期の営業状況を整理して提案書ドラフトを作成して" \
+praxia agent run "Summarize where we stand with Acme this quarter and draft a proposal" \
     --user-id alice --role member --org-id acme --max-steps 10
 
 # List the built-in tools

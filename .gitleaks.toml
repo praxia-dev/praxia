@@ -47,8 +47,7 @@ regexes = [
   '''ghp_(\.\.\.|xxx)''',               # GitHub PAT-style truncation
 ]
 
-# 3. If you ever need to allow a scan finding for one specific commit,
-#    add its short hash here (use sparingly — prefer fixing the real cause).
-[[allowlists]]
-description = "Commit allowlist (empty)."
-commits = []
+# If you ever need to allow a scan finding for one specific commit,
+# add a third [[allowlists]] block with `commits = ["<short hash>"]`.
+# Don't leave it empty — gitleaks rejects an [[allowlists]] block with
+# no commits / paths / regexes / stopwords entries.

@@ -160,7 +160,7 @@ print(result.final_text)
 ```
 
 ```bash
-praxia agent run "Acme との今四半期の営業状況を整理して提案書ドラフトを作成して"
+praxia agent run "Summarize where we stand with Acme this quarter and draft a proposal"
 praxia agent tools     # list the 11 built-in tools
 ```
 
