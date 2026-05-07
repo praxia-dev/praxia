@@ -563,13 +563,18 @@ rm .praxia/auth/BOOTSTRAP_API_KEY.txt   # 安全のため即削除
 
 ### 4.4 UI 経由のユーザ管理
 
-Streamlit UI **👥 Users** タブ — admin / operator のみ表示:
+Streamlit UI **⚙ Admin → 👥 Users サブタブ** (admin ロールのみアクセス可):
 
 - ユーザリスト (検索・並び替え)
 - 新規作成ダイアログ (role / email 指定)
 - 編集・削除・無効化ボタン
 - API キーローテートボタン (新キーをワンタイム表示)
 - 各ユーザの最終ログイン時刻
+
+> Admin ビューは role-aware ナビゲーションで admin / unknown (= 単一ユーザ
+> 開発モード) ロールでのみ top-bar に表示される。ユーザ未登録の状態では
+> "single-user dev mode" の警告バナーを表示し、認証なしの操作を許容
+> しつつ運用者にアラートを出す。
 
 ---
 
@@ -1173,7 +1178,11 @@ for p in prompts:
     print(p.name, p.scope, p.body[:50])
 ```
 
-UI **📝 Prompts** タブで GUI 操作可能。
+UI **📝 Prompts** ビューで GUI 操作可能。3 サブタブ構成:
+
+- **✨ Generate** — `PromptDesignerSkill` をラップ。1 行のタスク記述から system プロンプト + `${variable}` 入り user テンプレ + Few-Shot 例 + 5 観点ルーブリックを生成、保存可能
+- **📚 Browse & edit** — 自分の personal scope のプロンプトを CRUD、org / distributed scope は read-only 表示
+- **📤 Distribute** — admin role 限定。特定ユーザ / ロールへ配信
 
 ---
 
@@ -1934,23 +1943,78 @@ os = d.org_summary()
 
 ## 17. UI (Streamlit) リファレンス
 
-11 タブ:
+### 17.1 ログイン
 
-| タブ | アイコン | 主要機能 | 必要権限 |
-|---|---|---|---|
-| Run Flow | 🎬 | フロー実行 + ファイル添付 + 🎙音声入力 | `run_flows` |
-| Skill | 🛠 | 6 ビジネススキル + 🎙音声入力 | `run_skills` |
-| Memory | 🧠 | 個人メモリブラウズ + 共有ブロック表示 | `read_personal_memory` |
-| Consolidate | 🌙 | sleep-time 統合の手動キック / 結果確認 | `consolidate` |
-| Dashboard | 📊 | 個人 + 組織メトリクス + ランキング | (制限なし) |
-| Prompts | 📝 | カスタムプロンプト管理 (3 スコープ) | (制限なし) |
-| Users | 👥 | ユーザ CRUD + キー管理 | `manage_users` |
-| Connectors | 🔌 | 6 コネクタ Pull/Push GUI | `connector_pull` |
-| Policies | 🛡 | ACL ポリシー管理 | `manage_policies` |
-| Admin | 💾 | 監査ログ・ユーザ・メモリ・ポリシーエクスポート | `export_data` |
-| About | ℹ | バージョン情報・リンク | (制限なし) |
+```
+ユーザ未登録 (auth.users.list_all() が空) ──→ 単一ユーザ開発モード
+                                              User ID 入力のみ → "unknown" role 付与
+ユーザ登録済                              ──→ User ID + Password (= API キー)
+                                              auth.authenticate(api_key=...) で識別
+                                              失敗 → サインイン拒否
+```
 
-各タブは権限のないユーザには非表示またはグレーアウト。
+> Streamlit UI は **信頼環境向け設計**。インターネット公開のマルチユーザ
+> 運用では `praxia serve` (FastAPI + OIDC SSO) を併用。
+
+ユーザ毎の永続設定 (言語・カラーテーマ・LLM 嗜好) は
+`.praxia/preferences/<user_id>.json` に保存。サインイン時に
+`session_state` へ復元。
+
+### 17.2 レイアウト
+
+3 ゾーン構成:
+
+```
+┌─ 固定 top-bar (sticky) ─────────────────────────────────────┐
+│ [🎬 Run] [🧠 Knowledge] [📝 Prompts] [📁 Data] [📊 Stats]    │
+│                  [👤 Preferences] [⚙ Admin]*                 │   * admin/unknown のみ
+├─ Sidebar ──────┬─ Main workspace ─────────────────────────┤
+│ 🪡 Praxia       │                                          │
+│ 👤 alice        │                                          │
+│ [Sign out]      │   選択された view のワークスペース        │
+│ ─────           │                                          │
+│ 📁 Context      │                                          │
+│  built-in 3 種  │                                          │
+│  + tree of      │                                          │
+│  local folders  │                                          │
+│  + connector    │                                          │
+│   folders       │                                          │
+└─────────────────┴──────────────────────────────────────────┘
+```
+
+サイドバーは **Context picker 専用** — 個人/組織/凍結の built-in
+スコープ + 多層ローカルフォルダ (parent_id で tree 構造) +
+コネクタフォルダ (Box / SharePoint / Notion 等の登録パス) を
+チェックボックス選択。Run 実行時に「読める範囲で grep フィルタ」
+して LLM コンテキストへ注入。
+
+### 17.3 ビュー仕様
+
+| View | サブタブ | 主要機能 | 必要権限 (auth role) |
+|------|---------|---------|---------|
+| 🎬 Run | 🤖 Agent · 🛠 Skill | **Agent**: `st.chat_message` ベースの会話 UI、`AutonomousAgent.run(prompt, history=...)` を毎ターン呼出 (直近 3 ターン渡す)、tool-use trace 表示。**Skill**: 6 業務スキル選択 + テキスト/ファイル/音声入力 | `run_skills` |
+| 🧠 Knowledge | — | 個人メモリブラウズ + 共有ブロック + Skill registry (個人 + 組織昇格分) | `read_personal_memory` |
+| 📁 Data | 📁 Local · 🔌 Connector · 🔍 Browse | データフォルダ CRUD。ローカルは parent_id で多層化、cascade 削除。コネクタは外部パス登録 (admin が env で連携先有効化) | (制限なし) |
+| 📝 Prompts | ✨ Generate · 📚 Browse & edit · 📤 Distribute | PromptDesigner で生成 / 編集削除 / admin 配信 | `distribute` のみ admin |
+| 📊 Stats | — | 3 KPI + plotly 横棒グラフ (Top skills 個人 / Top users + Top skills 組織) | (制限なし) |
+| 👤 Preferences | — | 言語 / カラーテーマ (Auto / Light / Dark)、永続化 | (制限なし) |
+| ⚙ Admin | 🔑 Settings · 👥 Users · 🔌 Connectors · 🛡 Policies · 🌙 Consolidate · 💾 Exports · ℹ About | テナント設定 (LLM/backend) + 永続 KNOWN_KEYS + ユーザ管理 + コネクタ + ACL + 統合 (sleep-time) + エクスポート | `admin` のみ |
+
+**ナビゲーションの role-aware 制御**: `actor_role in ("admin", "unknown")`
+だけが Admin top-bar item を見られる。`unknown` (= ユーザ未登録の
+開発モード) はメンテナがアクセス可能になる安全弁。それ以外
+(`member` / `operator` / `viewer`) には Admin が非表示。
+
+### 17.4 Context 注入仕様
+
+選択された custom scope のファイル群は `gather_scope_context(scope_ids, query, max_chars)` で:
+
+1. 全合計が `max_chars` (デフォルト 20,000 文字) 以内 → そのまま全部 concat
+2. 超過 + `query` 与えられている → 各ファイルを行単位で grep (キーワード長 ≥ 3)、マッチ周辺 ±2 行を抽出 + 重複範囲をマージ
+3. 超過 + query 無し → 各ファイル先頭 5,000 文字を best-effort sample
+
+Path 2 が「読める範囲で多段抽出」の基本動作。Skill mode は `user_input`、Agent mode は最新メッセージを query として渡す。
+連続的な絞り込みが必要な場合は Agent mode を使用 (会話の都度 grep が走る)。
 
 ---
 
