@@ -209,11 +209,41 @@
 }
 .cta-row .btn { flex: 1 1 auto; min-width: 0; justify-content: center; }
 
+/* Primary CTA above the embed — works even when iframe is blocked
+   (Edge Strict tracking prevention etc.) */
+.form-cta-primary {
+  margin: 1.25rem 0 0.5rem;
+  text-align: center;
+}
+.form-cta-primary .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* "or fill it in below" divider between the new-tab CTA and the embed */
+.form-foot-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 0.25rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.form-foot-divider::before,
+.form-foot-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Tally iframe — present as a clean white card framed in brand gold,
    floating above the dark portal page. */
 .form-signup iframe {
   background: #ffffff;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   border-radius: 12px;
   box-shadow:
     0 0 0 1px rgba(201, 164, 86, 0.32),       /* thin gold hairline ring */

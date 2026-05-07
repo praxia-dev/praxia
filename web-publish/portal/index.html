@@ -62,10 +62,26 @@ praxia ui    <span class="comment"># http://localhost:8501</span></code></pre>
         <h2>Join the hosted waitlist</h2>
         <p>If you want us to run Praxia for your team — onboarding, upgrades, monitoring — leave your details below. We're processing waitlist in batches of ~10 organizations as the hosted plane stabilizes.</p>
 
+        <!-- Primary CTA: open the form in a new tab. Browsers with strict
+             tracking prevention (Edge Strict, Brave Shields, Firefox Strict)
+             often block embedded Tally iframes — opening tally.so directly
+             always works. -->
+        <p class="form-cta-primary">
+          <a class="btn btn-primary"
+             href="https://tally.so/r/9q2VgQ"
+             target="_blank" rel="noopener noreferrer">
+            Open the waitlist form ↗
+          </a>
+        </p>
+        <p class="form-foot form-foot-divider">
+          <span>or fill it in below</span>
+        </p>
+
         <!-- Tally embed (official snippet). Form: https://tally.so/r/9q2VgQ
-             The inline loader auto-falls-back to direct iframe.src= assignment
-             if widgets/embed.js is blocked (ad blockers, strict tracking
-             protection), so the form still renders. -->
+             Inline loader falls back to direct iframe.src= assignment if
+             widgets/embed.js is blocked. The "open in new tab" link above
+             is the safety net for visitors whose browsers block the iframe
+             entirely (Edge tracking-prevention shows "Content was blocked"). -->
         <iframe
           data-tally-src="https://tally.so/embed/9q2VgQ?alignLeft=1&hideTitle=1&dynamicHeight=1"
           loading="lazy"
@@ -79,8 +95,8 @@ praxia ui    <span class="comment"># http://localhost:8501</span></code></pre>
         <script>var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}</script>
 
         <p class="form-foot">
-          Trouble seeing the form? Email us directly:
-          <a href="mailto:hello@praxia.tools">hello@praxia.tools</a>.
+          If both the link and the embed fail (very strict browser
+          settings), email us directly: <a href="mailto:hello@praxia.tools">hello@praxia.tools</a>.
           You can also <a href="https://github.com/praxia-dev/praxia/discussions" target="_blank" rel="noopener">post in GitHub Discussions</a>
           if your question is technical and could help others.
         </p>
