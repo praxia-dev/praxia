@@ -214,10 +214,10 @@ def _gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
 # === Mode: Flow ============================================================
 
 if mode == "flow":
-    st.header("🎬 Multi-Agent Flow を実行")
+    st.header(t("flow.h"))
 
     flow_name = st.selectbox(
-        "Flow を選択",
+        t("flow.pick"),
         options=["sales-agent", "logic-checker", "rag-optimizer"],
     )
 
@@ -235,11 +235,11 @@ if mode == "flow":
 
     flow_inputs: dict[str, Any] = {}
     if flow_name == "sales-agent":
-        flow_inputs["customer_name"] = st.text_input("顧客名", placeholder="株式会社サンプル")
-        flow_inputs["product"] = st.text_input("自社製品", placeholder="BizFlow")
-        flow_inputs["additional_context"] = st.text_area("追加コンテキスト (任意)", height=100)
+        flow_inputs["customer_name"] = st.text_input(t("flow.sales.customer_name"), placeholder="Acme Inc.")
+        flow_inputs["product"] = st.text_input(t("flow.sales.product"), placeholder="BizFlow")
+        flow_inputs["additional_context"] = st.text_area(t("flow.sales.context"), height=100)
         sales_files = st.file_uploader(
-            f"📎 補助資料 (任意): IR / プレス / 議事録 などをアップロード · 対応形式: {', '.join(SUPPORTED_EXT)}",
+            t("flow.sales.files").format(exts=", ".join(SUPPORTED_EXT)),
             type=SUPPORTED_EXT,
             accept_multiple_files=True,
             key="sales_files",
@@ -251,17 +251,18 @@ if mode == "flow":
                 extra_text.append(f"## File: {f.name}\n{content[:12000]}")
                 st.caption(f"📄 {f.name} · parsed {len(content):,} chars · {meta}")
             flow_inputs["additional_context"] += "\n\n" + "\n\n".join(extra_text)
-            st.success(f"📎 Attached and parsed {len(sales_files)} file(s)")
+            st.success(t("flow.sales.attached").format(n=len(sales_files)))
         flow_cls: Any = SalesAgentFlow
     elif flow_name == "logic-checker":
         upload_mode = st.radio(
-            "入力方法",
-            ["テキスト貼り付け", "ファイルアップロード", "🎙 音声入力"],
+            t("flow.input_method"),
+            options=["text", "file", "voice"],
+            format_func=lambda v: t(f"flow.input_method.{v}"),
             horizontal=True,
         )
-        if upload_mode == "ファイルアップロード":
+        if upload_mode == "file":
             uploaded = st.file_uploader(
-                f"📎 レビュー対象ファイル · 対応形式: {', '.join(SUPPORTED_EXT)}",
+                t("flow.logic.file").format(exts=", ".join(SUPPORTED_EXT)),
                 type=SUPPORTED_EXT,
                 key="logic_file",
             )
@@ -271,31 +272,28 @@ if mode == "flow":
                 st.caption(f"📄 {uploaded.name} · parsed {len(content):,} chars · {meta}")
             else:
                 flow_inputs["document"] = ""
-        elif upload_mode == "🎙 音声入力":
-            audio = st.audio_input("マイクから録音 (ブラウザ許可必須)")
+        elif upload_mode == "voice":
+            audio = st.audio_input(t("flow.logic.audio_record"))
             if audio:
                 from praxia.io.audio import STT
-                with st.spinner("音声を文字起こし中..."):
+                with st.spinner(t("common.transcribing")):
                     try:
                         flow_inputs["document"] = STT().transcribe(
                             audio.getvalue(), filename="recording.wav", language="ja"
                         )
-                        st.success(f"🎙 文字起こし完了: {len(flow_inputs['document']):,} chars")
+                        st.success(t("common.transcribed").format(n=len(flow_inputs["document"])))
                         st.text(flow_inputs["document"][:500])
                     except Exception as e:
                         st.error(f"STT failed: {e}")
                         flow_inputs["document"] = ""
             else:
                 flow_inputs["document"] = ""
-        else:
-            flow_inputs["document"] = st.text_area("レビュー対象の文書", height=300)
+        else:  # text
+            flow_inputs["document"] = st.text_area(t("flow.logic.text_input"), height=300)
         flow_cls = LogicCheckerFlow
     else:  # rag-optimizer
-        flow_inputs["question"] = st.text_input("質問")
-        st.info(
-            "リトリーバは個人メモリ (`PersonalMemory.search`) を使用します。"
-            "他のリトリーバを使う場合は SDK から flow.run(retriever=...) で差し替えてください。"
-        )
+        flow_inputs["question"] = st.text_input(t("flow.rag.question"))
+        st.info(t("flow.rag.retriever_note"))
         def _personal_memory_retriever(q: str) -> list[dict]:
             try:
                 hits = loom.personal_memory.search(q, limit=10)
@@ -315,15 +313,15 @@ if mode == "flow":
             )
             st.caption(t("data.injected").format(n=len(selected_custom_ids)))
 
-    if st.button("▶ 実行", type="primary", disabled=not any(flow_inputs.values())):
+    if st.button(t("flow.run_btn"), type="primary", disabled=not any(flow_inputs.values())):
         with st.spinner(f"Running {flow_cls.name}…"):
             result = loom.run(flow_cls, inputs=flow_inputs)
 
-        st.success("完了!")
+        st.success(t("common.done"))
         st.subheader("Final Output")
         st.markdown(result.final_output)
 
-        with st.expander("🔍 各ステップの出力", expanded=False):
+        with st.expander(t("flow.steps_h"), expanded=False):
             for name, step_result in result.step_outputs.items():
                 st.markdown(f"### `{name}`")
                 st.markdown(step_result.output)
@@ -338,10 +336,10 @@ if mode == "flow":
 # === Mode: Skill ===========================================================
 
 elif mode == "skill":
-    st.header("🛠 Business Skill を実行")
+    st.header(t("skill.h"))
 
     skill_options = {f"{s.manifest.domain} — {s.manifest.name}": s for s in BUSINESS_SKILLS}
-    label = st.selectbox("Skill を選択", options=list(skill_options.keys()))
+    label = st.selectbox(t("skill.pick"), options=list(skill_options.keys()))
     skill_cls = skill_options[label]
 
     st.caption(skill_cls.manifest.description)
@@ -351,19 +349,20 @@ elif mode == "skill":
     SKILL_EXTS = _exts2()
 
     skill_input_mode = st.radio(
-        "入力方法",
-        ["テキスト", "📎 ファイル添付 (組合せ可)", "🎙 音声入力"],
+        t("flow.input_method"),
+        options=["text", "file", "voice"],
+        format_func=lambda v: t(f"skill.input_method.{v}") if v != "voice" else t("flow.input_method.voice"),
         horizontal=True,
         key="skill_input_mode",
     )
 
     user_input = ""
-    if skill_input_mode in ("テキスト", "📎 ファイル添付 (組合せ可)"):
-        user_input = st.text_area("入力", height=200, placeholder="エージェントへの依頼内容を記入")
+    if skill_input_mode in ("text", "file"):
+        user_input = st.text_area(t("skill.input"), height=200, placeholder=t("skill.input_placeholder"))
 
-    if skill_input_mode == "📎 ファイル添付 (組合せ可)":
+    if skill_input_mode == "file":
         skill_files = st.file_uploader(
-            f"📎 ファイル添付: PDF / Word / PowerPoint / Excel / CSV / TXT / MD / HTML 等 · 対応: {', '.join(SKILL_EXTS)}",
+            t("skill.attach_label").format(exts=", ".join(SKILL_EXTS)),
             type=SKILL_EXTS,
             accept_multiple_files=True,
             key="skill_files",
@@ -379,21 +378,21 @@ elif mode == "skill":
                     st.error(f"Failed to parse {f.name}: {e}")
             user_input = (user_input or "") + "\n\n" + "\n\n".join(attached_text)
 
-    if skill_input_mode == "🎙 音声入力":
-        audio = st.audio_input("マイクから録音", key="skill_audio")
+    if skill_input_mode == "voice":
+        audio = st.audio_input(t("skill.audio_record"), key="skill_audio")
         if audio:
             from praxia.io.audio import STT
-            with st.spinner("音声を文字起こし中..."):
+            with st.spinner(t("common.transcribing")):
                 try:
                     user_input = STT().transcribe(
                         audio.getvalue(), filename="skill_input.wav", language="ja"
                     )
-                    st.success(f"🎙 文字起こし完了: {len(user_input):,} chars")
-                    st.text_area("文字起こし結果 (編集可)", value=user_input, height=120, key="stt_edit")
+                    st.success(t("common.transcribed").format(n=len(user_input)))
+                    st.text_area(t("skill.audio_edit"), value=user_input, height=120, key="stt_edit")
                 except Exception as e:
                     st.error(f"STT failed: {e}")
 
-    enable_tts = st.checkbox("🔊 出力を音声で読み上げ (任意)", value=False, key="skill_tts")
+    enable_tts = st.checkbox(t("skill.tts_toggle"), value=False, key="skill_tts")
 
     # Inject selected Data-scope content into the skill prompt as reference data.
     if selected_custom_ids and user_input:
@@ -406,7 +405,7 @@ elif mode == "skill":
             )
             st.caption(t("data.injected").format(n=len(selected_custom_ids)))
 
-    if st.button("▶ 実行", key="skill_run", type="primary", disabled=not user_input):
+    if st.button(t("flow.run_btn"), key="skill_run", type="primary", disabled=not user_input):
         llm = LLM(model_choice)
         skill_obj = skill_cls(llm=llm)
         with st.spinner(f"Running {skill_obj.manifest.name}…"):
@@ -417,7 +416,7 @@ elif mode == "skill":
         if enable_tts:
             from praxia.io.audio import TTS
             try:
-                with st.spinner("音声合成中..."):
+                with st.spinner(t("skill.tts_synthesizing")):
                     audio_bytes = TTS().synthesize(output[:4000], voice="alloy", format="mp3")
                 st.audio(audio_bytes, format="audio/mp3")
             except Exception as e:
@@ -427,15 +426,15 @@ elif mode == "skill":
 # === Mode: Memory ==========================================================
 
 elif mode == "memory":
-    st.header("🧠 Memory ブラウザ")
+    st.header(t("memory.h"))
 
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("個人メモリ (Layer 1)")
+        st.subheader(t("memory.personal_h"))
         if loom.personal_memory:
             entries = loom.personal_memory.all_entries()
-            st.metric("総エントリ数", len(entries))
-            search_q = st.text_input("検索", key="personal_search")
+            st.metric(t("memory.entries_total"), len(entries))
+            search_q = st.text_input(t("memory.search"), key="personal_search")
             shown = (
                 loom.personal_memory.search(search_q, limit=20) if search_q else [e.text for e in entries[-20:]]
             )
@@ -444,10 +443,10 @@ elif mode == "memory":
                 st.divider()
 
     with col2:
-        st.subheader("共有メモリ (Layer 3)")
+        st.subheader(t("memory.shared_h"))
         if loom.shared_memory:
             blocks = loom.shared_memory.list_all()
-            st.metric("ブロック数", len(blocks))
+            st.metric(t("memory.blocks_total"), len(blocks))
             for block in blocks:
                 with st.expander(f"📦 {block.label}", expanded=False):
                     st.caption(block.description)
@@ -633,15 +632,12 @@ elif mode == "data":
 # === Mode: Consolidate =====================================================
 
 elif mode == "consolidate":
-    st.header("🌙 Sleep-time Consolidation")
-    st.markdown(
-        "個人メモリ → 共有メモリへの自動昇格を実行します。"
-        "**dry-run** で何が昇格されるかを事前確認できます。"
-    )
-    threshold = st.slider("Auto-promote 閾値", 0.0, 1.0, 0.75, 0.05)
-    dry_run = st.checkbox("Dry run (実際の書き込みはしない)", value=True)
+    st.header(t("consolidate.h"))
+    st.markdown(t("consolidate.intro"))
+    threshold = st.slider(t("consolidate.threshold"), 0.0, 1.0, 0.75, 0.05)
+    dry_run = st.checkbox(t("consolidate.dry_run"), value=True)
 
-    if st.button("🌙 Consolidate"):
+    if st.button(t("consolidate.run")):
         loom.config.consolidation_threshold = threshold
         with st.spinner("Consolidating…"):
             report = loom.consolidate(dry_run=dry_run)
@@ -651,7 +647,7 @@ elif mode == "consolidate":
 # === Mode: Dashboard =======================================================
 
 elif mode == "dashboard":
-    st.header("📊 Dashboard")
+    st.header(t("dashboard.h"))
     from praxia.analytics import Dashboard
 
     d = Dashboard(memory_dir=loom.config.memory_dir)
@@ -699,7 +695,7 @@ elif mode == "dashboard":
 # === Mode: Prompts =========================================================
 
 elif mode == "prompts":
-    st.header("📝 Custom Prompts")
+    st.header(t("prompts.h"))
     from praxia.skills.prompts import PromptStore
 
     store = PromptStore(storage_dir=loom.config.memory_dir / "prompts")
@@ -1210,33 +1206,5 @@ elif mode == "admin":
 
     # --- About (formerly Tab 11) ---------------------------------------
     with tab_about:
-        st.header("ℹ Praxia について")
-        st.markdown(
-            """
-**Praxia** は、業務特化型のマルチエージェント・オーケストレーターです。
-個人で利用するだけで暗黙知が自動蓄積され、有効なものだけが組織知へ昇格する
-**5層メモリ循環機構**を備えています。
-
-#### サポート LLM (15+ 標準 · 100+ via LiteLLM)
-- **Anthropic Claude** (Opus / Sonnet / Haiku)
-- **OpenAI ChatGPT** (GPT-5 / o-series)
-- **Google Gemini** + **Gemma** (cloud + Ollama)
-- **Alibaba Qwen** (API + Ollama)
-- **DeepSeek** (V3 / R1 reasoning) · **Mistral** + **Codestral**
-- **xAI Grok** · **Meta Llama** (Groq fast / Ollama) · **Microsoft Phi**
-- **Cohere Command R+** · **Perplexity Sonar**
-- 他、LiteLLM 経由で 100+
-
-各 LLM ごとに 1 行エイリアスで切替 (`claude` / `gpt-5` / `gemini` 等)、または
-`PRAXIA_LOCAL_MODEL=gemma` でエアギャップ運用。
-
-#### 同梱業務スキル
-- 投資 / 営業 / 設計 / 購買 / 特許 / 法務
-
-#### LTM バックエンド
-- Mem0 / LangMem / Letta / Zep / HindSight / JSON
-- 並列融合 (RRF) または query-routing で複数併用可
-
-[GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0
-            """
-        )
+        st.header(t("about.h"))
+        st.markdown(t("about.body"))
