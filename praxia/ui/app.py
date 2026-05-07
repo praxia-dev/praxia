@@ -1,28 +1,29 @@
 """Default Streamlit UI for Praxia.
 
 Layout:
-    1. Login gate    — visit-time identity + (optional) API-key auth
-    2. Sidebar       — brand · current user · sign-out · option-menu nav
-    3. Main          — workspace for the selected nav item
 
-Nav items (left-to-right of priority):
-    🎬 Run         workflow / skill / agent — sub-tabs with explanations
-    🧠 Memory      browse personal + shared blocks
-    📁 Data        manage local + connector data folders
-    🌙 Consolidate trigger sleep-time consolidation
-    📊 Stats       dashboard
-    📝 Prompts     custom-prompt CRUD + distribution
-    ⚙ Admin        settings · users · connectors · policies · exports · about
+    1. Login   — username only (single-user dev OR auth-store username).
+                 No API-key field — for real auth, run `praxia serve`.
+    2. Top bar — horizontal navigation: Run / Memory / Prompts / Data /
+                 Stats / (Consolidate, Admin if admin role)
+    3. Sidebar — Active data scopes (always visible). The primary
+                 sidebar role: pick which folders / memory layers to
+                 feed into the current run. Plus brand · user · sign-out.
+    4. Main    — workspace for the selected nav view.
 
-The data-scope picker (which folders / memory layers to feed into the
-run) lives **inside the Run workspace**, not in the sidebar — that's
-where the picker is contextually used.
+Per-user preferences (language, color theme, default LLM model) are
+persisted to .praxia/preferences/<user_id>.json, so they survive
+browser reloads / new sessions.
 
-Language is auto-detected from browser/OS; override lives under
-Admin → Settings (rarely changed, doesn't deserve sidebar real estate).
+Run is the high-frequency view (Skill + Agent sub-tabs). Workflows are
+still available via SDK / CLI but aren't a top-level UI item — most
+users invoke workflows via the autonomous Agent or via direct Skill
+calls. This keeps the UI focused on the two paths users actually use
+day-to-day.
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -40,8 +41,6 @@ from praxia.ui.responsive import inject_mobile_css
 st.set_page_config(page_title="Praxia", page_icon="🪡", layout="wide")
 inject_mobile_css()
 
-# Optional dependency: streamlit-option-menu provides the icon-driven
-# vertical nav. Falls back to a selectbox if not installed.
 try:
     from streamlit_option_menu import option_menu
     HAS_OPTION_MENU = True
@@ -50,16 +49,48 @@ except ImportError:
 
 
 # =====================================================================
+# Per-user persistent preferences (.praxia/preferences/<user>.json)
+# =====================================================================
+
+_PREFS_DIR = Path(".praxia") / "preferences"
+
+
+def _prefs_path(user_id: str) -> Path:
+    return _PREFS_DIR / f"{user_id}.json"
+
+
+def _load_user_prefs(user_id: str) -> dict[str, Any]:
+    p = _prefs_path(user_id)
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_user_pref(user_id: str, key: str, value: Any) -> None:
+    """Persist a single preference key. Creates the file if needed."""
+    prefs = _load_user_prefs(user_id)
+    prefs[key] = value
+    p = _prefs_path(user_id)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(
+        json.dumps(prefs, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+# =====================================================================
 # Login gate
 # =====================================================================
 
 def _render_login() -> None:
-    """Render the login form. On submit, populate session_state and rerun."""
     st.markdown(
         "<div style='max-width:480px; margin:6vh auto 0;'>",
         unsafe_allow_html=True,
     )
-    st.markdown(f"# 🪡 {t('app.title').replace('🪡 ', '')}")
+    st.markdown(f"# {t('app.title')}")
     st.caption(t("app.tagline"))
     st.write("")
 
@@ -68,49 +99,48 @@ def _render_login() -> None:
             t("login.user_id"),
             value=os.getenv("PRAXIA_USER_ID", ""),
             placeholder="alice",
+            help=t("login.user_id_help"),
         )
-        org_id_input = st.text_input(
-            t("login.org_id"),
-            value="default-org",
-            placeholder="default-org",
-        )
-        api_key_input = st.text_input(
-            t("login.api_key"),
-            type="password",
-            help=t("login.api_key_help"),
-        )
+        # Org ID — pre-filled, hidden under an expander for the few
+        # users who run multi-tenant.
+        with st.expander(t("login.advanced"), expanded=False):
+            org_id_input = st.text_input(
+                t("login.org_id"), value="default-org",
+            )
         submit = st.form_submit_button(
-            t("login.submit"), type="primary", use_container_width=True
+            t("login.submit"), type="primary", use_container_width=True,
         )
 
         if submit:
-            if not user_id_input.strip():
+            uid = user_id_input.strip()
+            if not uid:
                 st.error(t("login.user_id_required"))
             else:
-                resolved_user = user_id_input.strip()
+                # Resolve role: if the auth store has a user with this
+                # username, use their role. Otherwise, "unknown" (=
+                # single-user dev / trusted-LAN mode).
                 resolved_role = "unknown"
-                # If the user provided an API key, validate against the auth
-                # store. The username we trust is the one returned by auth.
-                if api_key_input:
-                    try:
-                        from praxia.auth import AuthManager
-                        auth_check = AuthManager()
-                        u = auth_check.authenticate(api_key=api_key_input)
-                        if u is None:
-                            st.error(t("login.invalid_key"))
-                            st.markdown("</div>", unsafe_allow_html=True)
-                            return
-                        resolved_user = u.username
-                        resolved_role = u.role
-                    except Exception as e:
-                        st.warning(f"Auth check unavailable: {e}")
+                try:
+                    from praxia.auth import AuthManager
+                    _auth = AuthManager()
+                    matched = _auth.users.get_by_username(uid)
+                    if matched is not None:
+                        resolved_role = matched.role
+                except Exception:
+                    pass
 
                 st.session_state["logged_in"] = True
-                st.session_state["user_id"] = resolved_user
+                st.session_state["user_id"] = uid
                 st.session_state["org_id"] = (
                     org_id_input.strip() or "default-org"
                 )
                 st.session_state["actor_role"] = resolved_role
+
+                # Load persisted preferences for this user.
+                for k, v in _load_user_prefs(uid).items():
+                    if k not in st.session_state:
+                        st.session_state[k] = v
+
                 st.rerun()
 
     st.write("")
@@ -124,92 +154,55 @@ if not st.session_state.get("logged_in"):
 
 
 user_id: str = st.session_state["user_id"]
-org_id: str = st.session_state["org_id"]
+org_id: str = st.session_state.get("org_id", "default-org")
 actor_role: str = st.session_state.get("actor_role", "unknown")
 
 
 # =====================================================================
-# Sidebar: brand · user · sign-out · nav
+# Theme injection (per-user color theme)
 # =====================================================================
 
-with st.sidebar:
-    st.markdown(f"### {t('app.title')}")
-    st.caption(f"👤 **{user_id}** · {actor_role}")
-    if st.button(t("login.sign_out"), use_container_width=True):
-        st.session_state.clear()
-        st.rerun()
-
-    st.divider()
-
-    # Visible nav items are role-aware:
-    #   - all users          → Run / Memory / Data / Prompts / Stats / Preferences
-    #   - admin (or unknown) → adds Consolidate + Admin to the bottom
-    # 'unknown' = single-user dev mode (no users registered yet) — treat
-    # as admin so the maintainer can still reach configuration.
-    BASE_NAV = ["run", "memory", "data", "prompts", "dashboard", "preferences"]
-    ADMIN_NAV = ["consolidate", "admin"]
-    NAV_KEYS = (
-        BASE_NAV + ADMIN_NAV
-        if actor_role in ("admin", "unknown")
-        else BASE_NAV
+theme_choice = st.session_state.get("praxia_theme", "auto")
+if theme_choice == "dark":
+    st.markdown(
+        """
+<style>
+  :root {
+    --background-color: #0a0a0f;
+    --secondary-background-color: #15171f;
+    --text-color: #ecedf0;
+  }
+  .stApp { background-color: #0a0a0f !important; color: #ecedf0 !important; }
+  [data-testid="stSidebar"] { background-color: #15171f !important; }
+  [data-testid="stHeader"] { background-color: transparent !important; }
+  .stMarkdown, .stText, p, span, label, h1, h2, h3, h4, h5, h6 { color: #ecedf0 !important; }
+  [data-testid="stTextInput"] input,
+  [data-testid="stTextArea"] textarea,
+  [data-testid="stSelectbox"] div[role="combobox"] {
+    background-color: #1a1d28 !important; color: #ecedf0 !important;
+  }
+  [data-testid="stExpander"] { background-color: rgba(255,255,255,0.02) !important; }
+  hr { border-color: rgba(255,255,255,0.08) !important; }
+</style>
+        """,
+        unsafe_allow_html=True,
     )
-    # If an old session_state mode is no longer in scope, reset it.
-    if st.session_state.get("praxia_mode") not in NAV_KEYS:
-        st.session_state["praxia_mode"] = NAV_KEYS[0]
-    if "praxia_mode" not in st.session_state:
-        st.session_state["praxia_mode"] = NAV_KEYS[0]
-
-    if HAS_OPTION_MENU:
-        # Icon-driven nav via streamlit-option-menu (optional dep).
-        ICON_MAP = {
-            "run": "play-circle", "memory": "brain", "data": "folder",
-            "consolidate": "moon", "dashboard": "bar-chart",
-            "prompts": "pencil-square", "preferences": "sliders",
-            "admin": "gear",
-        }
-        labels = [t(f"mode.{k}") for k in NAV_KEYS]
-        selected_label = option_menu(
-            menu_title=None,
-            options=labels,
-            icons=[ICON_MAP[k] for k in NAV_KEYS],
-            default_index=NAV_KEYS.index(st.session_state["praxia_mode"]),
-            styles={
-                "container": {"padding": "0", "background-color": "transparent"},
-                "icon": {"font-size": "16px"},
-                "nav-link": {
-                    "font-size": "14px", "padding": "10px 12px",
-                    "margin": "2px 0", "border-radius": "8px",
-                    "--hover-color": "rgba(201,164,86,0.08)",
-                },
-                "nav-link-selected": {
-                    "background-color": "rgba(201,164,86,0.18)",
-                    "color": "inherit", "font-weight": "600",
-                },
-            },
-            key="praxia_nav_om",
-        )
-        st.session_state["praxia_mode"] = NAV_KEYS[labels.index(selected_label)]
-    else:
-        # Stacked vertical buttons — always-available fallback that doesn't
-        # depend on streamlit-option-menu. Active item is rendered as
-        # primary; others as secondary.
-        for key in NAV_KEYS:
-            label = t(f"mode.{key}")
-            is_active = st.session_state["praxia_mode"] == key
-            if st.button(
-                label,
-                use_container_width=True,
-                type="primary" if is_active else "secondary",
-                key=f"nav_btn_{key}",
-            ):
-                st.session_state["praxia_mode"] = key
-                st.rerun()
-
-    mode = st.session_state["praxia_mode"]
+elif theme_choice == "light":
+    st.markdown(
+        """
+<style>
+  .stApp { background-color: #ffffff !important; color: #1a1a22 !important; }
+  [data-testid="stSidebar"] { background-color: #f5f6f8 !important; }
+  [data-testid="stHeader"] { background-color: transparent !important; }
+</style>
+        """,
+        unsafe_allow_html=True,
+    )
+# theme_choice == "auto" → no override; Streamlit's default follows OS pref.
 
 
 # =====================================================================
-# Resolve runtime LLM + memory backend (set via Admin → Settings)
+# Resolve runtime LLM + memory backend
 # =====================================================================
 
 _default_model = list(DEFAULT_ALIASES.keys())[0]
@@ -227,60 +220,17 @@ loom = get_loom(user_id, org_id, model_choice)
 
 
 # =====================================================================
-# Data scope: registry + reusable picker / context-gather
+# Data-scope registry + helpers
 # =====================================================================
 
 scope_registry = ScopeRegistry(loom.config.memory_dir / "data")
 user_scopes = scope_registry.list_for_user(user_id)
-
-
-def render_scope_picker(key_prefix: str) -> list[str]:
-    """Render a Data-scope multi-select inside an expander.
-
-    Returns the list of selected custom-scope ids. Built-in scopes
-    (personal/org/frozen) are reflected in session_state for callers
-    that want to read them.
-    """
-    selected_ids: list[str] = []
-    builtin: list[str] = []
-    with st.expander(f"📁 {t('scope.section_h')}", expanded=False):
-        st.caption(t("scope.section_intro"))
-        col_b, col_c = st.columns(2)
-        with col_b:
-            st.markdown(f"**{t('scope.builtin_h')}**")
-            if st.checkbox(t("scope.personal_memory"), value=True,
-                           key=f"{key_prefix}_b_pm"):
-                builtin.append("personal_memory")
-            if st.checkbox(t("scope.org_memory"), value=True,
-                           key=f"{key_prefix}_b_om"):
-                builtin.append("org_memory")
-            if st.checkbox(t("scope.frozen"), value=False,
-                           key=f"{key_prefix}_b_fz"):
-                builtin.append("frozen")
-        with col_c:
-            st.markdown(f"**{t('scope.custom_h')}**")
-            if user_scopes:
-                for s in user_scopes:
-                    label = (
-                        f"📁 {s.name}" if s.kind == "local"
-                        else f"🔌 {s.name} ({s.connector})"
-                    )
-                    if st.checkbox(label, value=False,
-                                   key=f"{key_prefix}_c_{s.id}"):
-                        selected_ids.append(s.id)
-            else:
-                st.caption(t("scope.empty_hint"))
-    st.session_state[f"praxia_scope_{key_prefix}_builtin"] = builtin
-    return selected_ids
+local_scopes = [s for s in user_scopes if s.kind == "local"]
+connector_scopes = [s for s in user_scopes if s.kind == "connector"]
 
 
 def gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
-    """Concatenate selected custom-scope contents as additional context.
-
-    Local scopes: parse all files via the unified parser.
-    Connector scopes: pull live at execution time.
-    Truncates per-file at 5000 chars and total at max_chars.
-    """
+    """Concatenate selected custom-scope contents as additional context."""
     if not scope_ids:
         return ""
     parts: list[str] = []
@@ -317,7 +267,7 @@ def gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
             }
             try:
                 items = get_connector(scope.connector, **cfg).pull(
-                    scope.connector_path, limit=10
+                    scope.connector_path, limit=10,
                 )
                 for it in items:
                     if used >= max_chars:
@@ -338,171 +288,127 @@ def gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
 
 
 # =====================================================================
-# Mode: Run (Workflow / Skill / Agent)
+# Sidebar — brand · sign-out · ALWAYS-VISIBLE data-scope picker
+# =====================================================================
+
+with st.sidebar:
+    st.markdown(f"### {t('app.title')}")
+    st.caption(f"👤 {user_id} · {actor_role}")
+    if st.button(t("login.sign_out"), use_container_width=True, key="signout"):
+        st.session_state.clear()
+        st.rerun()
+
+    st.divider()
+    st.markdown(f"**📁 {t('scope.section_h')}**")
+    st.caption(t("scope.section_intro"))
+
+    # Built-in scopes
+    st.markdown(f"_{t('scope.builtin_h')}_")
+    if st.checkbox(t("scope.personal_memory"), value=True, key="scope_personal"):
+        pass
+    if st.checkbox(t("scope.org_memory"), value=True, key="scope_org"):
+        pass
+    if st.checkbox(t("scope.frozen"), value=False, key="scope_frozen"):
+        pass
+
+    # Custom scopes (local folders + connector folders)
+    selected_custom_ids: list[str] = []
+    if local_scopes:
+        st.markdown(f"_{t('sidebar.scope.local_h')}_")
+        for s in local_scopes:
+            n_files = len(scope_registry.list_local_files(s))
+            if st.checkbox(
+                f"📁 {s.name} ({n_files})",
+                value=False, key=f"scope_local_{s.id}",
+            ):
+                selected_custom_ids.append(s.id)
+    if connector_scopes:
+        st.markdown(f"_{t('sidebar.scope.connector_h')}_")
+        for s in connector_scopes:
+            if st.checkbox(
+                f"🔌 {s.name} ({s.connector})",
+                value=False, key=f"scope_conn_{s.id}",
+            ):
+                selected_custom_ids.append(s.id)
+
+    if not user_scopes:
+        st.caption(t("sidebar.scope.empty_hint"))
+
+
+# =====================================================================
+# Top-bar navigation (horizontal, role-aware)
+# =====================================================================
+
+BASE_NAV = ["run", "memory", "prompts", "data", "dashboard", "preferences"]
+ADMIN_NAV = ["consolidate", "admin"]
+NAV_KEYS = (
+    BASE_NAV + ADMIN_NAV
+    if actor_role in ("admin", "unknown")
+    else BASE_NAV
+)
+if st.session_state.get("praxia_mode") not in NAV_KEYS:
+    st.session_state["praxia_mode"] = NAV_KEYS[0]
+
+nav_labels = [t(f"mode.{k}") for k in NAV_KEYS]
+
+if HAS_OPTION_MENU:
+    ICON_MAP = {
+        "run": "play-circle", "memory": "brain", "data": "folder",
+        "consolidate": "moon", "dashboard": "bar-chart",
+        "prompts": "pencil-square", "preferences": "sliders",
+        "admin": "gear",
+    }
+    selected_label = option_menu(
+        menu_title=None,
+        options=nav_labels,
+        icons=[ICON_MAP[k] for k in NAV_KEYS],
+        default_index=NAV_KEYS.index(st.session_state["praxia_mode"]),
+        orientation="horizontal",
+        styles={
+            "container": {"padding": "0", "background-color": "transparent"},
+            "icon": {"font-size": "16px"},
+            "nav-link": {
+                "font-size": "14px", "padding": "10px 14px",
+                "margin": "0 2px", "border-radius": "8px",
+                "--hover-color": "rgba(201,164,86,0.08)",
+            },
+            "nav-link-selected": {
+                "background-color": "rgba(201,164,86,0.18)",
+                "color": "inherit", "font-weight": "600",
+            },
+        },
+        key="praxia_nav_top",
+    )
+    st.session_state["praxia_mode"] = NAV_KEYS[nav_labels.index(selected_label)]
+else:
+    cols = st.columns(len(NAV_KEYS))
+    for col, key in zip(cols, NAV_KEYS):
+        is_active = st.session_state["praxia_mode"] == key
+        if col.button(
+            t(f"mode.{key}"),
+            use_container_width=True,
+            type="primary" if is_active else "secondary",
+            key=f"top_nav_{key}",
+        ):
+            st.session_state["praxia_mode"] = key
+            st.rerun()
+
+mode = st.session_state["praxia_mode"]
+st.divider()
+
+
+# =====================================================================
+# Mode: Run (Skill / Agent — Workflow dropped from top-level UI)
 # =====================================================================
 
 if mode == "run":
     st.header(t("run.h"))
     st.caption(t("run.intro"))
 
-    tab_workflow, tab_skill, tab_agent = st.tabs([
-        t("run.tab.workflow"),
+    tab_skill, tab_agent = st.tabs([
         t("run.tab.skill"),
         t("run.tab.agent"),
     ])
-
-    # ---- Workflow (multi-agent flows) -------------------------------
-    with tab_workflow:
-        st.markdown(t("run.workflow.what"))
-        flow_name = st.selectbox(
-            t("flow.pick"),
-            options=["sales-agent", "logic-checker", "rag-optimizer"],
-            key="wf_pick",
-        )
-
-        from praxia.io.parsers import parse_file as _parse, supported_extensions as _exts
-        SUPPORTED_EXT = _exts()
-
-        def _parse_uploaded(file) -> tuple[str, dict]:
-            try:
-                parsed = _parse(
-                    file.getvalue() if hasattr(file, "getvalue") else file.read(),
-                    filename=file.name,
-                )
-                return parsed.content, parsed.metadata
-            except Exception as e:
-                return f"[Failed to parse {file.name}: {e}]", {"error": str(e)}
-
-        flow_inputs: dict[str, Any] = {}
-        if flow_name == "sales-agent":
-            flow_inputs["customer_name"] = st.text_input(
-                t("flow.sales.customer_name"), placeholder="Acme Inc.",
-            )
-            flow_inputs["product"] = st.text_input(
-                t("flow.sales.product"), placeholder="BizFlow",
-            )
-            flow_inputs["additional_context"] = st.text_area(
-                t("flow.sales.context"), height=100,
-            )
-            sales_files = st.file_uploader(
-                t("flow.sales.files").format(exts=", ".join(SUPPORTED_EXT)),
-                type=SUPPORTED_EXT,
-                accept_multiple_files=True,
-                key="sales_files",
-            )
-            if sales_files:
-                extra_text = []
-                for f in sales_files:
-                    content, meta = _parse_uploaded(f)
-                    extra_text.append(f"## File: {f.name}\n{content[:12000]}")
-                    st.caption(
-                        f"📄 {f.name} · parsed {len(content):,} chars · {meta}"
-                    )
-                flow_inputs["additional_context"] += "\n\n" + "\n\n".join(extra_text)
-                st.success(t("flow.sales.attached").format(n=len(sales_files)))
-            flow_cls: Any = SalesAgentFlow
-
-        elif flow_name == "logic-checker":
-            upload_mode = st.radio(
-                t("flow.input_method"),
-                options=["text", "file", "voice"],
-                format_func=lambda v: t(f"flow.input_method.{v}"),
-                horizontal=True,
-                key="lc_input_mode",
-            )
-            if upload_mode == "file":
-                uploaded = st.file_uploader(
-                    t("flow.logic.file").format(exts=", ".join(SUPPORTED_EXT)),
-                    type=SUPPORTED_EXT,
-                    key="logic_file",
-                )
-                if uploaded:
-                    content, meta = _parse_uploaded(uploaded)
-                    flow_inputs["document"] = content
-                    st.caption(
-                        f"📄 {uploaded.name} · parsed {len(content):,} chars · {meta}"
-                    )
-                else:
-                    flow_inputs["document"] = ""
-            elif upload_mode == "voice":
-                audio = st.audio_input(
-                    t("flow.logic.audio_record"), key="lc_audio",
-                )
-                if audio:
-                    from praxia.io.audio import STT
-                    with st.spinner(t("common.transcribing")):
-                        try:
-                            flow_inputs["document"] = STT().transcribe(
-                                audio.getvalue(),
-                                filename="recording.wav",
-                                language="ja",
-                            )
-                            st.success(
-                                t("common.transcribed").format(
-                                    n=len(flow_inputs["document"])
-                                )
-                            )
-                            st.text(flow_inputs["document"][:500])
-                        except Exception as e:
-                            st.error(f"STT failed: {e}")
-                            flow_inputs["document"] = ""
-                else:
-                    flow_inputs["document"] = ""
-            else:  # text
-                flow_inputs["document"] = st.text_area(
-                    t("flow.logic.text_input"), height=300, key="lc_text",
-                )
-            flow_cls = LogicCheckerFlow
-
-        else:  # rag-optimizer
-            flow_inputs["question"] = st.text_input(
-                t("flow.rag.question"), key="rag_q",
-            )
-            st.info(t("flow.rag.retriever_note"))
-
-            def _personal_memory_retriever(q: str) -> list[dict]:
-                try:
-                    hits = loom.personal_memory.search(q, limit=10)
-                except Exception:
-                    hits = []
-                return [{"id": i, "text": h} for i, h in enumerate(hits)]
-
-            flow_inputs["retriever"] = _personal_memory_retriever
-            flow_cls = RAGOptimizationFlow
-
-        # Data scope picker (in the Run workspace, where it's actually used)
-        wf_scope_ids = render_scope_picker("workflow")
-        if wf_scope_ids:
-            scope_ctx = gather_scope_context(wf_scope_ids)
-            if scope_ctx:
-                current = flow_inputs.get("additional_context", "") or ""
-                flow_inputs["additional_context"] = (
-                    current + ("\n\n" if current else "") + scope_ctx
-                )
-                st.caption(t("data.injected").format(n=len(wf_scope_ids)))
-
-        if st.button(
-            t("flow.run_btn"), type="primary",
-            disabled=not any(flow_inputs.values()),
-            key="wf_run",
-        ):
-            with st.spinner(f"Running {flow_cls.name}…"):
-                result = loom.run(flow_cls, inputs=flow_inputs)
-
-            st.success(t("common.done"))
-            st.subheader("Final Output")
-            st.markdown(result.final_output)
-
-            with st.expander(t("flow.steps_h"), expanded=False):
-                for name, step_result in result.step_outputs.items():
-                    st.markdown(f"### `{name}`")
-                    st.markdown(step_result.output)
-                    st.divider()
-
-            st.caption(
-                f"input tokens: {result.total_usage['input_tokens']} | "
-                f"output tokens: {result.total_usage['output_tokens']}"
-            )
 
     # ---- Skill (single domain skill) --------------------------------
     with tab_skill:
@@ -533,9 +439,6 @@ if mode == "run":
         )
 
         # Optional: load a saved prompt template into the input field.
-        # This is the answer to "where do I use my saved prompts?": pick
-        # one here and its body becomes the starting point for the skill
-        # call (you can still edit before running).
         if skill_input_mode in ("text", "file"):
             try:
                 from praxia.skills.prompts import PromptStore as _PS
@@ -555,17 +458,16 @@ if mode == "run":
                         ),
                         key="skill_load_pick",
                     )
-                    if _picked_name:
-                        if st.button(
-                            t("skill.load_btn"), key="skill_load_btn",
-                        ):
-                            _picked = next(
-                                (p for p in _saved if p.name == _picked_name),
-                                None,
-                            )
-                            if _picked is not None:
-                                st.session_state["skill_text"] = _picked.body
-                                st.rerun()
+                    if _picked_name and st.button(
+                        t("skill.load_btn"), key="skill_load_btn",
+                    ):
+                        _picked = next(
+                            (p for p in _saved if p.name == _picked_name),
+                            None,
+                        )
+                        if _picked is not None:
+                            st.session_state["skill_text"] = _picked.body
+                            st.rerun()
 
         user_input = ""
         if skill_input_mode in ("text", "file"):
@@ -621,17 +523,16 @@ if mode == "run":
             t("skill.tts_toggle"), value=False, key="skill_tts",
         )
 
-        # Data scope picker
-        sk_scope_ids = render_scope_picker("skill")
-        if sk_scope_ids and user_input:
-            scope_ctx = gather_scope_context(sk_scope_ids)
+        # Sidebar data-scope picker drives this
+        if selected_custom_ids and user_input:
+            scope_ctx = gather_scope_context(selected_custom_ids)
             if scope_ctx:
                 user_input = (
                     user_input
-                    + "\n\n--- Reference data from selected Data scopes ---\n"
+                    + "\n\n--- Reference data from selected scopes ---\n"
                     + scope_ctx
                 )
-                st.caption(t("data.injected").format(n=len(sk_scope_ids)))
+                st.caption(t("data.injected").format(n=len(selected_custom_ids)))
 
         if st.button(
             t("flow.run_btn"), key="skill_run", type="primary",
@@ -657,11 +558,14 @@ if mode == "run":
                 except Exception as e:
                     st.warning(f"TTS unavailable: {e}")
 
-    # ---- Agent (LLM-driven tool-use loop) ---------------------------
+    # ---- Agent ------------------------------------------------------
     with tab_agent:
         st.markdown(t("run.agent.what"))
         st.info(t("run.agent.coming_soon"))
-        st.code('praxia agent run "your task here" --max-steps 10', language="bash")
+        st.code(
+            'praxia agent run "your task here" --max-steps 10',
+            language="bash",
+        )
 
 
 # =====================================================================
@@ -701,15 +605,12 @@ elif mode == "memory":
 
 
 # =====================================================================
-# Mode: Data folders (manage local + connector scopes)
+# Mode: Data folders
 # =====================================================================
 
 elif mode == "data":
     st.header(t("mode.data"))
     st.markdown(t("data.intro"))
-
-    local_scopes = [s for s in user_scopes if s.kind == "local"]
-    connector_scopes = [s for s in user_scopes if s.kind == "connector"]
 
     sub_local, sub_connector, sub_browse = st.tabs([
         t("data.tab.local"),
@@ -727,7 +628,6 @@ elif mode == "data":
                     if s.description:
                         st.caption(s.description)
                     st.caption(f"id: `{s.id}`  ·  path: `{s.path}`")
-
                     for f in files:
                         col_n, col_s, col_d = st.columns([6, 2, 1])
                         col_n.text(f.name)
@@ -735,7 +635,6 @@ elif mode == "data":
                         if col_d.button("🗑", key=f"delf_{s.id}_{f.name}"):
                             scope_registry.delete_file(s, f.name)
                             st.rerun()
-
                     st.divider()
                     new_files = st.file_uploader(
                         t("data.local.add_files"),
@@ -881,14 +780,14 @@ elif mode == "data":
 
 
 # =====================================================================
-# Mode: Consolidate
+# Mode: Preferences (per-user, persisted)
 # =====================================================================
 
 elif mode == "preferences":
     st.header(t("preferences.h"))
     st.caption(t("preferences.intro"))
 
-    # ---- Language (display only — affects this user's view) ----------
+    # ---- Language ----
     st.subheader(t("preferences.language_h"))
     st.caption(t("preferences.language_intro"))
     current_lang = st.session_state.get("praxia_lang", detect_language())
@@ -903,14 +802,33 @@ elif mode == "preferences":
     )
     if new_lang != current_lang:
         st.session_state["praxia_lang"] = new_lang
+        save_user_pref(user_id, "praxia_lang", new_lang)
         st.rerun()
 
     st.divider()
 
-    # ---- LLM model (per-session) -------------------------------------
+    # ---- Color theme ----
+    st.subheader(t("preferences.theme_h"))
+    st.caption(t("preferences.theme_intro"))
+    current_theme = st.session_state.get("praxia_theme", "auto")
+    THEME_OPTIONS = ["auto", "light", "dark"]
+    new_theme = st.selectbox(
+        t("preferences.theme_label"),
+        options=THEME_OPTIONS,
+        index=THEME_OPTIONS.index(current_theme) if current_theme in THEME_OPTIONS else 0,
+        format_func=lambda c: t(f"preferences.theme.{c}"),
+        key="pref_theme_pick",
+    )
+    if new_theme != current_theme:
+        st.session_state["praxia_theme"] = new_theme
+        save_user_pref(user_id, "praxia_theme", new_theme)
+        st.rerun()
+
+    st.divider()
+
+    # ---- Default LLM model ----
     st.subheader(t("preferences.llm_h"))
     st.caption(t("preferences.llm_intro"))
-
     pref_model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
     pref_current_model = st.session_state.get("praxia_model", _default_model)
     pref_preset_index = (
@@ -935,6 +853,7 @@ elif mode == "preferences":
         )
     if st.button(t("preferences.apply_btn"), type="primary", key="pref_apply"):
         st.session_state["praxia_model"] = pref_picked_model
+        save_user_pref(user_id, "praxia_model", pref_picked_model)
         try:
             st.cache_resource.clear()
         except Exception:
@@ -942,6 +861,10 @@ elif mode == "preferences":
         st.success(t("preferences.applied"))
         st.rerun()
 
+
+# =====================================================================
+# Mode: Consolidate (admin-only via nav filter)
+# =====================================================================
 
 elif mode == "consolidate":
     st.header(t("consolidate.h"))
@@ -1025,7 +948,6 @@ elif mode == "prompts":
         t("prompts.tab.distribute"),
     ])
 
-    # ---- Generate (PromptDesigner) ---------------------------------
     with sub_generate:
         st.markdown(t("prompts.generate.intro"))
 
@@ -1049,8 +971,7 @@ elif mode == "prompts":
                 pd_output_format = st.selectbox(
                     t("prompts.generate.output_format"),
                     options=["text", "json", "markdown", "xml"],
-                    index=1,
-                    key="pd_output_format",
+                    index=1, key="pd_output_format",
                 )
             with pd_col2:
                 pd_include_examples = st.checkbox(
@@ -1059,8 +980,7 @@ elif mode == "prompts":
                 )
                 pd_constraint = st.selectbox(
                     t("prompts.generate.constraint"),
-                    options=["strict", "loose"],
-                    key="pd_constraint",
+                    options=["strict", "loose"], key="pd_constraint",
                 )
             generate_clicked = st.form_submit_button(
                 t("prompts.generate.btn"), type="primary",
@@ -1125,7 +1045,6 @@ elif mode == "prompts":
                         st.session_state.pop(k, None)
                     st.rerun()
 
-    # ---- Browse & edit (with Create-new at bottom) ------------------
     with sub_browse:
         prompts = store.list_for_user(user_id=user_id, role="member")
         if prompts:
@@ -1133,9 +1052,7 @@ elif mode == "prompts":
                 with st.expander(f"📄 {p.name} [{p.scope}]", expanded=False):
                     st.caption(p.description or "—")
                     st.caption(f"tags: {', '.join(p.tags) or '—'}  ·  owner: {p.owner}")
-
                     if p.scope == "personal" and p.owner == user_id:
-                        # Editable: render fields + save/delete
                         new_body = st.text_area(
                             t("prompts.edit.body_label"),
                             value=p.body, height=240,
@@ -1171,7 +1088,6 @@ elif mode == "prompts":
                             st.success(t("prompts.edit.deleted"))
                             st.rerun()
                     else:
-                        # Read-only for org / distributed scopes
                         st.text(
                             p.body[:1000] + ("…" if len(p.body) > 1000 else "")
                         )
@@ -1201,7 +1117,6 @@ elif mode == "prompts":
                     else:
                         st.warning(t("prompts.create.required"))
 
-    # ---- Distribute (admin only) ------------------------------------
     with sub_distribute:
         st.markdown(t("prompts.distribute.intro"))
         if actor_role not in ("admin", "unknown"):
@@ -1231,7 +1146,7 @@ elif mode == "prompts":
 
 
 # =====================================================================
-# Mode: Admin (Settings · Users · Connectors · Policies · Exports · About)
+# Mode: Admin
 # =====================================================================
 
 elif mode == "admin":
@@ -1251,7 +1166,6 @@ elif mode == "admin":
         except Exception:
             pass
 
-    # Access gate: if users exist, only admin role can open Admin.
     if users_exist and actor_role != "admin":
         st.error(t("admin.gate.denied").format(user=user_id, role=actor_role))
         st.markdown(t("admin.gate.howto"))
@@ -1268,7 +1182,6 @@ elif mode == "admin":
         t("admin.about.subtab"),
     ])
 
-    # ---- Settings: language, runtime LLM/backend, persistent keys ---
     with tab_settings:
         from praxia.config import KNOWN_KEYS, PraxiaConfig
 
@@ -1283,9 +1196,7 @@ elif mode == "admin":
                 user=user_id, role=actor_role,
             ))
 
-        # Tenant-default memory backend (admin-controlled).
-        # Per-user language + per-user LLM model live under ⚙ Preferences,
-        # accessible to everyone — they're not admin concerns.
+        # Tenant memory backend (admin-controlled tenant default)
         st.subheader(t("admin.settings.backend_h"))
         st.caption(t("admin.settings.backend_intro"))
         backend_options = ["json", "mem0", "langmem", "letta", "zep"]
@@ -1313,7 +1224,6 @@ elif mode == "admin":
 
         st.divider()
 
-        # Persistent: KNOWN_KEYS by category
         st.subheader(t("admin.settings.persistent_h"))
         st.caption(t("admin.settings.precedence_hint"))
 
@@ -1378,7 +1288,6 @@ elif mode == "admin":
                             st.success(t("admin.settings.saved").format(count=len(pending)))
                             st.info(t("admin.settings.restart_hint"))
 
-    # ---- Users -----------------------------------------------------
     with tab_users:
         st.header("👥 User management (admin)")
         try:
@@ -1461,7 +1370,6 @@ elif mode == "admin":
                             st.success("Deleted")
                             st.rerun()
 
-    # ---- Connectors ------------------------------------------------
     with tab_connectors:
         st.header("🔌 External connectors")
         st.markdown(
@@ -1518,7 +1426,6 @@ elif mode == "admin":
                 except Exception as e:
                     st.error(str(e))
 
-    # ---- Policies --------------------------------------------------
     with tab_policies:
         st.header("🛡 Resource Access Policies")
         st.markdown(
@@ -1560,7 +1467,7 @@ elif mode == "admin":
                     )
                     pa_pattern = st.text_input(
                         "Resource pattern (glob)",
-                        placeholder="box:/Confidential/*  or  kintone:42  or  salesforce:*",
+                        placeholder="box:/Confidential/*  or  kintone:42",
                     )
                     pa_actions = st.multiselect(
                         "Actions", ["read", "write", "list", "*"], default=["*"],
@@ -1607,7 +1514,6 @@ elif mode == "admin":
                         else:
                             st.error(f"🚫 Denied — {decision.reason}")
 
-    # ---- Exports ---------------------------------------------------
     with tab_exports:
         st.markdown(
             "Export audit logs, users, skill usage, memories, and policies for "
@@ -1675,7 +1581,6 @@ elif mode == "admin":
                         mime="application/octet-stream",
                     )
 
-    # ---- About -----------------------------------------------------
     with tab_about:
         st.header(t("about.h"))
         st.markdown(t("about.body"))

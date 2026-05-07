@@ -339,6 +339,66 @@ _T: dict[str, dict[str, str]] = {
         "de": "💾 Anwenden",
         "pt-BR": "💾 Aplicar",
     },
+    "preferences.theme_h": {
+        "en": "🎨 Color theme",
+        "ja": "🎨 カラーテーマ",
+        "zh-CN": "🎨 颜色主题",
+        "ko": "🎨 색상 테마",
+        "es": "🎨 Tema de color",
+        "fr": "🎨 Thème de couleur",
+        "de": "🎨 Farbthema",
+        "pt-BR": "🎨 Tema de cores",
+    },
+    "preferences.theme_intro": {
+        "en": "Auto follows your OS / browser preference. Light or Dark forces a specific theme for this user.",
+        "ja": "自動: OS / ブラウザの設定に追従。ライト / ダーク: このユーザだけ強制的に固定。",
+        "zh-CN": "自动: 跟随系统/浏览器。浅色 / 深色: 对此用户强制固定。",
+        "ko": "자동: OS/브라우저 설정 따라감. 라이트/다크: 이 사용자에게만 고정.",
+        "es": "Auto sigue la preferencia del SO/navegador. Claro u Oscuro lo fija para este usuario.",
+        "fr": "Auto suit la préférence OS/navigateur. Clair ou Sombre force pour cet utilisateur.",
+        "de": "Auto folgt der OS-/Browser-Einstellung. Hell oder Dunkel erzwingt das Thema.",
+        "pt-BR": "Auto segue a preferência do SO/navegador. Claro ou Escuro força o tema.",
+    },
+    "preferences.theme_label": {
+        "en": "Theme",
+        "ja": "テーマ",
+        "zh-CN": "主题",
+        "ko": "테마",
+        "es": "Tema",
+        "fr": "Thème",
+        "de": "Thema",
+        "pt-BR": "Tema",
+    },
+    "preferences.theme.auto": {
+        "en": "Auto (follow system)",
+        "ja": "自動 (システムに従う)",
+        "zh-CN": "自动(跟随系统)",
+        "ko": "자동 (시스템 따라감)",
+        "es": "Auto (seguir sistema)",
+        "fr": "Auto (suivre le système)",
+        "de": "Auto (System folgen)",
+        "pt-BR": "Auto (seguir sistema)",
+    },
+    "preferences.theme.light": {
+        "en": "☀ Light",
+        "ja": "☀ ライト",
+        "zh-CN": "☀ 浅色",
+        "ko": "☀ 라이트",
+        "es": "☀ Claro",
+        "fr": "☀ Clair",
+        "de": "☀ Hell",
+        "pt-BR": "☀ Claro",
+    },
+    "preferences.theme.dark": {
+        "en": "🌙 Dark",
+        "ja": "🌙 ダーク",
+        "zh-CN": "🌙 深色",
+        "ko": "🌙 다크",
+        "es": "🌙 Oscuro",
+        "fr": "🌙 Sombre",
+        "de": "🌙 Dunkel",
+        "pt-BR": "🌙 Escuro",
+    },
     "preferences.applied": {
         "en": "✅ Preference applied. Reloading…",
         "ja": "✅ 設定を適用しました。再読み込み中…",
@@ -379,6 +439,26 @@ _T: dict[str, dict[str, str]] = {
         "fr": "Clé API (optionnelle)",
         "de": "API-Key (optional)",
         "pt-BR": "Chave API (opcional)",
+    },
+    "login.user_id_help": {
+        "en": "Your username. If admin has registered users via `praxia user create`, type that name. Otherwise any name works (single-user dev mode).",
+        "ja": "ユーザ名。管理者が `praxia user create` でユーザを登録済ならその名前を入力。未登録なら何でも OK (単一ユーザ開発モード)。",
+        "zh-CN": "你的用户名。若管理员已用 `praxia user create` 注册过,请输入该用户名。否则任意名称即可(单用户开发模式)。",
+        "ko": "사용자명. 관리자가 `praxia user create` 로 등록했다면 해당 이름을 입력. 미등록이면 아무 이름이나 가능 (단일 사용자 개발 모드).",
+        "es": "Tu nombre de usuario. Si el admin lo registró con `praxia user create`, escríbelo. Si no, cualquier nombre vale (modo dev/usuario único).",
+        "fr": "Votre nom d'utilisateur. Si l'admin l'a enregistré via `praxia user create`, tapez ce nom. Sinon, n'importe quel nom convient (mode dev/mono-utilisateur).",
+        "de": "Dein Benutzername. Falls der admin den Nutzer mit `praxia user create` registriert hat, diesen Namen eingeben. Sonst beliebiger Name (Einzelnutzer-Dev).",
+        "pt-BR": "Seu nome de usuário. Se o admin registrou via `praxia user create`, use esse nome. Caso contrário, qualquer nome serve (modo dev/usuário único).",
+    },
+    "login.advanced": {
+        "en": "Advanced options",
+        "ja": "詳細オプション",
+        "zh-CN": "高级选项",
+        "ko": "고급 옵션",
+        "es": "Opciones avanzadas",
+        "fr": "Options avancées",
+        "de": "Erweiterte Optionen",
+        "pt-BR": "Opções avançadas",
     },
     "login.api_key_help": {
         "en": "Paste a Praxia API key issued via `praxia user create`. Without a key, you stay in single-user dev mode.",
@@ -453,72 +533,56 @@ _T: dict[str, dict[str, str]] = {
     },
     "run.intro": {
         "en": (
-            "Three ways to put Praxia to work, ordered by autonomy:\n\n"
-            "1. **🤖 Autonomous agent** — top-level orchestrator. You give a "
-            "goal; the agent calls **Workflows** and **Skills** as needed, "
-            "iterating until it has the answer. Pick this for fuzzy goals.\n\n"
-            "2. **📋 Pre-built workflow** — a fixed multi-step recipe. Pick "
-            "this when the procedure is known and should always run the "
-            "same way (Sales prep / Logic check / RAG optimization).\n\n"
-            "3. **🛠 Single skill** — a one-shot domain call (Investment / "
-            "Sales / Design / Purchasing / Patent / Legal). Pick this when "
-            "you have one specific question for one specific domain.\n\n"
-            "Workflows and Skills are also the **tools** the autonomous "
-            "agent calls internally — you can use them directly here too."
+            "Two ways to invoke Praxia:\n\n"
+            "- **🛠 Skill** — pick a specific domain skill (Investment, Sales, "
+            "Legal, etc.) and ask one question. One call, one answer.\n"
+            "- **🤖 Agent** — describe a goal; the agent decides which skills "
+            "(and workflows, internally) to call, iterating until done.\n\n"
+            "Pick **Skill** for known one-shot questions; pick **Agent** for "
+            "fuzzy goals that need multiple tools. Pre-built workflows are "
+            "still available via SDK / CLI for power users."
         ),
         "ja": (
-            "Praxia の使い方は 3 通り (自律性の高い順):\n\n"
-            "1. **🤖 自律エージェント** — 最上位のオーケストレータ。ゴールを伝えると、"
-            "**ワークフロー** と **スキル** を必要に応じて呼び出し、満足するまで反復。"
-            "ゆるい目標の時はこれ。\n\n"
-            "2. **📋 定型ワークフロー** — 固定の N ステップ・パイプライン。"
-            "手順が決まっていて毎回同じように動かしたい時 (Sales prep / Logic check / RAG)。\n\n"
-            "3. **🛠 単発スキル** — 1 ドメインの単発呼出 (投資 / 営業 / 設計 / 購買 / 特許 / 法務)。"
-            "1 つの質問を 1 ドメインに投げたい時。\n\n"
-            "**ワークフロー** と **スキル** は、自律エージェントが内部的に呼び出す **ツール** "
-            "でもあります — このページから直接呼ぶことも可能です。"
+            "Praxia の呼び出し方は 2 通り:\n\n"
+            "- **🛠 スキル** — 特定ドメイン (投資 / 営業 / 法務など) のスキルを選んで 1 つ質問。1 回の呼出で 1 つの回答。\n"
+            "- **🤖 エージェント** — ゴールを伝えると、エージェントが必要なスキル (内部的にはワークフローも) を選んで満足まで反復。\n\n"
+            "明確な単発質問は **スキル**、ゆるい目標で複数ツールを使いたいなら **エージェント**。事前定義の Workflow は SDK / CLI 経由で利用可能 (上級ユーザ向け)。"
         ),
         "zh-CN": (
-            "使用 Praxia 的 3 种方式(按自主性排序):\n\n"
-            "1. **🤖 自主代理** — 顶层编排器。给目标即可,代理按需调用工作流与技能,直到完成。\n"
-            "2. **📋 预建工作流** — 固定多步管线 (Sales prep / Logic check / RAG)。\n"
-            "3. **🛠 单一技能** — 单次领域调用 (投资 / 销售 / 设计 / 采购 / 专利 / 法务)。\n\n"
-            "工作流与技能也是自主代理内部调用的工具,在此处也可直接使用。"
+            "调用 Praxia 的 2 种方式:\n\n"
+            "- **🛠 技能** — 选特定领域技能(投资/销售/法务等),问一次答一次。\n"
+            "- **🤖 代理** — 给目标,代理选择需要的技能(内部也用工作流)反复执行直到完成。\n\n"
+            "明确单次问题用 **技能**,模糊目标用 **代理**。预建工作流仍可通过 SDK / CLI 使用。"
         ),
         "ko": (
-            "Praxia 활용 3 가지 (자율성 높은 순):\n\n"
-            "1. **🤖 자율 에이전트** — 최상위 오케스트레이터. 목표만 주면 워크플로/스킬을 호출하여 완료.\n"
-            "2. **📋 정형 워크플로** — 고정 N 단계 파이프라인 (Sales prep / Logic check / RAG).\n"
-            "3. **🛠 단일 스킬** — 1 도메인 단발 호출 (투자/영업/설계/구매/특허/법무).\n\n"
-            "워크플로와 스킬은 자율 에이전트가 내부적으로 호출하는 도구이기도 합니다."
+            "Praxia 호출 2 가지:\n\n"
+            "- **🛠 스킬** — 특정 도메인 (투자/영업/법무 등) 스킬을 골라 1 회 질문.\n"
+            "- **🤖 에이전트** — 목표만 주면 필요한 스킬 (내부적으로 워크플로도) 을 골라 반복 수행.\n\n"
+            "명확한 단발 질문은 **스킬**, 모호한 목표는 **에이전트**. 사전 정의 Workflow 는 SDK / CLI 로 사용 가능."
         ),
         "es": (
-            "Tres formas de usar Praxia (orden por autonomía):\n\n"
-            "1. **🤖 Agente autónomo** — orquestador top-level. Das un objetivo; el agente llama Workflows y Skills hasta acabar.\n"
-            "2. **📋 Workflow pre-construido** — pipeline fijo (Sales prep / Logic check / RAG).\n"
-            "3. **🛠 Habilidad única** — llamada de un dominio (Investment / Sales / Design / etc).\n\n"
-            "Workflows y Skills son las herramientas que el agente autónomo usa internamente — puedes invocarlas directamente aquí."
+            "Dos formas de invocar Praxia:\n\n"
+            "- **🛠 Skill** — elige una habilidad de dominio y haz una pregunta.\n"
+            "- **🤖 Agente** — da un objetivo; el agente elige skills (y workflows internamente) hasta terminar.\n\n"
+            "Skill para preguntas únicas claras; Agent para objetivos difusos. Workflows pre-construidos siguen disponibles vía SDK / CLI."
         ),
         "fr": (
-            "Trois façons d'utiliser Praxia (par autonomie) :\n\n"
-            "1. **🤖 Agent autonome** — orchestrateur de haut niveau. Donnez un objectif ; l'agent appelle Workflows et Skills jusqu'à finir.\n"
-            "2. **📋 Workflow pré-construit** — pipeline fixe (Sales prep / Logic check / RAG).\n"
-            "3. **🛠 Compétence unique** — appel mono-domaine.\n\n"
-            "Workflows et Skills sont les outils que l'agent autonome appelle en interne — vous pouvez les invoquer directement ici."
+            "Deux façons d'utiliser Praxia :\n\n"
+            "- **🛠 Skill** — choisissez une compétence de domaine et posez une question.\n"
+            "- **🤖 Agent** — donnez un objectif ; l'agent choisit skills (et workflows en interne) jusqu'à terminer.\n\n"
+            "Skill pour question ponctuelle ; Agent pour objectif flou. Les workflows pré-construits restent dispo via SDK / CLI."
         ),
         "de": (
-            "Drei Wege, Praxia zu nutzen (nach Autonomie):\n\n"
-            "1. **🤖 Autonomer Agent** — Top-Level-Orchestrator. Du gibst ein Ziel; der Agent ruft Workflows + Skills bei Bedarf.\n"
-            "2. **📋 Vordefinierter Workflow** — feste Pipeline (Sales prep / Logic check / RAG).\n"
-            "3. **🛠 Einzel-Skill** — Domain-Aufruf.\n\n"
-            "Workflows und Skills sind auch die Werkzeuge, die der Agent intern nutzt — direkt hier aufrufbar."
+            "Zwei Wege, Praxia zu nutzen:\n\n"
+            "- **🛠 Skill** — wähle einen Domain-Skill und stelle eine Frage.\n"
+            "- **🤖 Agent** — gib ein Ziel; der Agent wählt Skills (und intern Workflows), bis fertig.\n\n"
+            "Skill für klare einmalige Fragen; Agent für unklare Ziele. Vordefinierte Workflows weiterhin via SDK / CLI verfügbar."
         ),
         "pt-BR": (
-            "Três formas de usar Praxia (por autonomia):\n\n"
-            "1. **🤖 Agente autônomo** — orquestrador top-level. Você dá um objetivo; o agente chama Workflows e Skills até terminar.\n"
-            "2. **📋 Workflow pré-construído** — pipeline fixo (Sales prep / Logic check / RAG).\n"
-            "3. **🛠 Habilidade única** — chamada de domínio.\n\n"
-            "Workflows e Skills são as ferramentas que o agente autônomo usa internamente — você pode invocá-las aqui também."
+            "Duas formas de invocar Praxia:\n\n"
+            "- **🛠 Skill** — escolha uma habilidade de domínio e faça uma pergunta.\n"
+            "- **🤖 Agente** — dê um objetivo; o agente escolhe skills (e workflows internamente) até concluir.\n\n"
+            "Skill para perguntas únicas; Agent para objetivos difusos. Workflows pré-construídos seguem disponíveis via SDK / CLI."
         ),
     },
     "run.tab.workflow": {
