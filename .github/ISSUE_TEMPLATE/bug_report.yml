@@ -1,0 +1,18 @@
+name: Bug report
+description: Praxia がうまく動かない場合
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes: {label: 何が起きたか, description: 期待値と実際の挙動}
+  - type: input
+    attributes: {label: Praxia version, placeholder: "0.1.0a1"}
+  - type: input
+    attributes: {label: Python version, placeholder: "3.11.7"}
+  - type: dropdown
+    attributes:
+      label: LLM provider
+      options: [claude, chatgpt, gemini, deepseek, mistral, grok, qwen, llama, gemma, phi, qwen-local, other]
+  - type: textarea
+    attributes: {label: 再現手順, render: bash}
+  - type: textarea
+    attributes: {label: 関連ログ, render: shell}
