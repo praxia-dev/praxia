@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "praxia",
+  "compatibility_date": "2025-05-01",
+  "assets": {
+    "directory": "./web-publish",
+    "not_found_handling": "single-page-application"
+  }
+}
