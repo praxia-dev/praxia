@@ -62,17 +62,21 @@ praxia ui    <span class="comment"># http://localhost:8501</span></code></pre>
         <h2>Join the hosted waitlist</h2>
         <p>If you want us to run Praxia for your team — onboarding, upgrades, monitoring — leave your details below. We're processing waitlist in batches of ~10 organizations as the hosted plane stabilizes.</p>
 
-        <!-- Tally embed. Form: https://tally.so/r/9q2VgQ -->
+        <!-- Tally embed (official snippet). Form: https://tally.so/r/9q2VgQ
+             The inline loader auto-falls-back to direct iframe.src= assignment
+             if widgets/embed.js is blocked (ad blockers, strict tracking
+             protection), so the form still renders. -->
         <iframe
           data-tally-src="https://tally.so/embed/9q2VgQ?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1"
           loading="lazy"
           width="100%"
-          height="500"
+          height="1065"
           frameborder="0"
           marginheight="0"
           marginwidth="0"
           title="Praxia hosted alpha waitlist"
         ></iframe>
+        <script>var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}</script>
 
         <p class="form-foot">
           Trouble seeing the form? Email us directly:
@@ -91,7 +95,7 @@ praxia ui    <span class="comment"># http://localhost:8501</span></code></pre>
     </section>
   </main>
 
-  <!-- Tally embed loader. Inserts form widgets that have data-tally-src. -->
-  <script async src="https://tally.so/widgets/embed.js"></script>
+  <!-- Tally embed loader is now inline next to the iframe (with adblock
+       fallback). No global script needed here. -->
 </body>
 </html>
