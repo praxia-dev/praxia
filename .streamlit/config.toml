@@ -1,0 +1,16 @@
+# Streamlit runtime config for the Praxia UI.
+#
+# Hides Streamlit's developer-facing toolbar (Deploy button, hamburger
+# menu, "Made with Streamlit" footer, the C / R / hash keyboard shortcuts
+# and the resulting "Clear caches" / "Rerun" dialogs) so end-users see
+# only the Praxia product surface.
+
+[client]
+toolbarMode = "viewer"
+showErrorDetails = true
+
+[browser]
+gatherUsageStats = false
+
+[ui]
+hideTopBar = true

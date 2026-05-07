@@ -141,10 +141,21 @@ with st.sidebar:
 
     st.divider()
 
-    NAV_KEYS = [
-        "run", "memory", "data", "consolidate",
-        "dashboard", "prompts", "admin",
-    ]
+    # Visible nav items are role-aware:
+    #   - all users          → Run / Memory / Data / Prompts / Stats / Preferences
+    #   - admin (or unknown) → adds Consolidate + Admin to the bottom
+    # 'unknown' = single-user dev mode (no users registered yet) — treat
+    # as admin so the maintainer can still reach configuration.
+    BASE_NAV = ["run", "memory", "data", "prompts", "dashboard", "preferences"]
+    ADMIN_NAV = ["consolidate", "admin"]
+    NAV_KEYS = (
+        BASE_NAV + ADMIN_NAV
+        if actor_role in ("admin", "unknown")
+        else BASE_NAV
+    )
+    # If an old session_state mode is no longer in scope, reset it.
+    if st.session_state.get("praxia_mode") not in NAV_KEYS:
+        st.session_state["praxia_mode"] = NAV_KEYS[0]
     if "praxia_mode" not in st.session_state:
         st.session_state["praxia_mode"] = NAV_KEYS[0]
 
@@ -153,7 +164,8 @@ with st.sidebar:
         ICON_MAP = {
             "run": "play-circle", "memory": "brain", "data": "folder",
             "consolidate": "moon", "dashboard": "bar-chart",
-            "prompts": "pencil-square", "admin": "gear",
+            "prompts": "pencil-square", "preferences": "sliders",
+            "admin": "gear",
         }
         labels = [t(f"mode.{k}") for k in NAV_KEYS]
         selected_label = option_menu(
@@ -520,6 +532,41 @@ if mode == "run":
             key="skill_input_mode",
         )
 
+        # Optional: load a saved prompt template into the input field.
+        # This is the answer to "where do I use my saved prompts?": pick
+        # one here and its body becomes the starting point for the skill
+        # call (you can still edit before running).
+        if skill_input_mode in ("text", "file"):
+            try:
+                from praxia.skills.prompts import PromptStore as _PS
+                _ps = _PS(storage_dir=loom.config.memory_dir / "prompts")
+                _saved = _ps.list_for_user(user_id=user_id, role=actor_role or "member")
+            except Exception:
+                _saved = []
+            if _saved:
+                with st.expander(t("skill.use_saved_prompt"), expanded=False):
+                    _names = [""] + [p.name for p in _saved]
+                    _picked_name = st.selectbox(
+                        t("skill.pick_saved_prompt"),
+                        options=_names,
+                        format_func=lambda n: (
+                            t("skill.no_template") if n == ""
+                            else f"📄 {n}"
+                        ),
+                        key="skill_load_pick",
+                    )
+                    if _picked_name:
+                        if st.button(
+                            t("skill.load_btn"), key="skill_load_btn",
+                        ):
+                            _picked = next(
+                                (p for p in _saved if p.name == _picked_name),
+                                None,
+                            )
+                            if _picked is not None:
+                                st.session_state["skill_text"] = _picked.body
+                                st.rerun()
+
         user_input = ""
         if skill_input_mode in ("text", "file"):
             user_input = st.text_area(
@@ -837,6 +884,65 @@ elif mode == "data":
 # Mode: Consolidate
 # =====================================================================
 
+elif mode == "preferences":
+    st.header(t("preferences.h"))
+    st.caption(t("preferences.intro"))
+
+    # ---- Language (display only — affects this user's view) ----------
+    st.subheader(t("preferences.language_h"))
+    st.caption(t("preferences.language_intro"))
+    current_lang = st.session_state.get("praxia_lang", detect_language())
+    if current_lang not in SUPPORTED:
+        current_lang = "en"
+    new_lang = st.selectbox(
+        t("preferences.language_label"),
+        options=SUPPORTED,
+        index=SUPPORTED.index(current_lang),
+        format_func=lambda c: LANG_DISPLAY[c],
+        key="pref_lang_pick",
+    )
+    if new_lang != current_lang:
+        st.session_state["praxia_lang"] = new_lang
+        st.rerun()
+
+    st.divider()
+
+    # ---- LLM model (per-session) -------------------------------------
+    st.subheader(t("preferences.llm_h"))
+    st.caption(t("preferences.llm_intro"))
+
+    pref_model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
+    pref_current_model = st.session_state.get("praxia_model", _default_model)
+    pref_preset_index = (
+        pref_model_options.index(pref_current_model)
+        if pref_current_model in DEFAULT_ALIASES
+        else len(pref_model_options) - 1
+    )
+    pref_picked_model = st.selectbox(
+        t("preferences.model_label"),
+        options=pref_model_options,
+        index=pref_preset_index,
+        key="pref_model_pick",
+    )
+    if pref_picked_model == "custom":
+        pref_picked_model = st.text_input(
+            t("preferences.model_custom"),
+            value=(
+                pref_current_model if pref_current_model not in DEFAULT_ALIASES
+                else "anthropic/claude-opus-4-7"
+            ),
+            key="pref_model_custom_input",
+        )
+    if st.button(t("preferences.apply_btn"), type="primary", key="pref_apply"):
+        st.session_state["praxia_model"] = pref_picked_model
+        try:
+            st.cache_resource.clear()
+        except Exception:
+            pass
+        st.success(t("preferences.applied"))
+        st.rerun()
+
+
 elif mode == "consolidate":
     st.header(t("consolidate.h"))
     st.markdown(t("consolidate.intro"))
@@ -1095,27 +1201,33 @@ elif mode == "prompts":
                     else:
                         st.warning(t("prompts.create.required"))
 
-    # ---- Distribute (admin) -----------------------------------------
+    # ---- Distribute (admin only) ------------------------------------
     with sub_distribute:
         st.markdown(t("prompts.distribute.intro"))
-        with st.form("prompt_distribute_form"):
-            d_name = st.text_input(t("prompts.create.name"), key="dn")
-            d_body = st.text_area(t("prompts.create.body"), height=200, key="db")
-            d_target_users = st.text_input(
-                t("prompts.distribute.target_users"), key="dtu",
-            )
-            d_target_roles = st.multiselect(
-                t("prompts.distribute.target_roles"),
-                ["admin", "operator", "member", "viewer"], key="dtr",
-            )
-            submit = st.form_submit_button(t("prompts.distribute.btn"), type="primary")
-            if submit and d_name and d_body and (d_target_users or d_target_roles):
-                saved = store.distribute(
-                    name=d_name, body=d_body,
-                    target_users=[u.strip() for u in d_target_users.split(",") if u.strip()] or None,
-                    target_roles=d_target_roles or None,
+        if actor_role not in ("admin", "unknown"):
+            st.error(t("prompts.distribute.role_required").format(
+                user=user_id, role=actor_role,
+            ))
+            st.markdown(t("admin.gate.howto"))
+        else:
+            with st.form("prompt_distribute_form"):
+                d_name = st.text_input(t("prompts.create.name"), key="dn")
+                d_body = st.text_area(t("prompts.create.body"), height=200, key="db")
+                d_target_users = st.text_input(
+                    t("prompts.distribute.target_users"), key="dtu",
                 )
-                st.success(t("prompts.distribute.saved").format(n=len(saved)))
+                d_target_roles = st.multiselect(
+                    t("prompts.distribute.target_roles"),
+                    ["admin", "operator", "member", "viewer"], key="dtr",
+                )
+                submit = st.form_submit_button(t("prompts.distribute.btn"), type="primary")
+                if submit and d_name and d_body and (d_target_users or d_target_roles):
+                    saved = store.distribute(
+                        name=d_name, body=d_body,
+                        target_users=[u.strip() for u in d_target_users.split(",") if u.strip()] or None,
+                        target_roles=d_target_roles or None,
+                    )
+                    st.success(t("prompts.distribute.saved").format(n=len(saved)))
 
 
 # =====================================================================
@@ -1171,71 +1283,26 @@ elif mode == "admin":
                 user=user_id, role=actor_role,
             ))
 
-        # Language picker (moved here from sidebar — rarely changed)
-        st.subheader(t("admin.settings.language_h"))
-        st.caption(t("admin.settings.language_intro"))
-        current_lang = st.session_state.get("praxia_lang", detect_language())
-        if current_lang not in SUPPORTED:
-            current_lang = "en"
-        new_lang = st.selectbox(
-            t("admin.settings.language_label"),
-            options=SUPPORTED,
-            index=SUPPORTED.index(current_lang),
-            format_func=lambda c: LANG_DISPLAY[c],
-            key="settings_lang_pick",
+        # Tenant-default memory backend (admin-controlled).
+        # Per-user language + per-user LLM model live under ⚙ Preferences,
+        # accessible to everyone — they're not admin concerns.
+        st.subheader(t("admin.settings.backend_h"))
+        st.caption(t("admin.settings.backend_intro"))
+        backend_options = ["json", "mem0", "langmem", "letta", "zep"]
+        current_backend = st.session_state.get("praxia_backend", "json")
+        picked_backend = st.selectbox(
+            t("admin.settings.backend_label"),
+            options=backend_options,
+            index=(
+                backend_options.index(current_backend)
+                if current_backend in backend_options else 0
+            ),
+            key="settings_backend_pick",
         )
-        if new_lang != current_lang:
-            st.session_state["praxia_lang"] = new_lang
-            st.rerun()
-
-        st.divider()
-
-        # Runtime: LLM model + memory backend
-        st.subheader(t("admin.settings.runtime_h"))
-        st.caption(t("admin.settings.runtime_intro"))
-
-        col_m, col_b = st.columns(2)
-        with col_m:
-            model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
-            current_model = st.session_state.get("praxia_model", _default_model)
-            preset_index = (
-                model_options.index(current_model)
-                if current_model in DEFAULT_ALIASES
-                else len(model_options) - 1
-            )
-            picked_model = st.selectbox(
-                t("admin.settings.model_label"),
-                options=model_options,
-                index=preset_index,
-                key="settings_model_pick",
-            )
-            if picked_model == "custom":
-                picked_model = st.text_input(
-                    t("admin.settings.model_custom"),
-                    value=(
-                        current_model if current_model not in DEFAULT_ALIASES
-                        else "anthropic/claude-opus-4-7"
-                    ),
-                    key="settings_model_custom_input",
-                )
-        with col_b:
-            backend_options = ["json", "mem0", "langmem", "letta", "zep"]
-            current_backend = st.session_state.get("praxia_backend", "json")
-            picked_backend = st.selectbox(
-                t("admin.settings.backend_label"),
-                options=backend_options,
-                index=(
-                    backend_options.index(current_backend)
-                    if current_backend in backend_options else 0
-                ),
-                key="settings_backend_pick",
-            )
-
         if st.button(
-            t("admin.settings.runtime_apply"), type="primary",
-            key="settings_runtime_apply",
+            t("admin.settings.backend_apply"), type="primary",
+            key="settings_backend_apply",
         ):
-            st.session_state["praxia_model"] = picked_model
             st.session_state["praxia_backend"] = picked_backend
             try:
                 st.cache_resource.clear()

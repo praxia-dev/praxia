@@ -220,14 +220,134 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "⚙ Admin",
     },
     "mode.run": {
-        "en": "Run",
-        "ja": "実行",
-        "zh-CN": "运行",
-        "ko": "실행",
-        "es": "Ejecutar",
-        "fr": "Exécuter",
-        "de": "Ausführen",
-        "pt-BR": "Executar",
+        "en": "🎬 Run",
+        "ja": "🎬 実行",
+        "zh-CN": "🎬 运行",
+        "ko": "🎬 실행",
+        "es": "🎬 Ejecutar",
+        "fr": "🎬 Exécuter",
+        "de": "🎬 Ausführen",
+        "pt-BR": "🎬 Executar",
+    },
+    "mode.preferences": {
+        "en": "⚙ Preferences",
+        "ja": "⚙ 個人設定",
+        "zh-CN": "⚙ 偏好设置",
+        "ko": "⚙ 환경 설정",
+        "es": "⚙ Preferencias",
+        "fr": "⚙ Préférences",
+        "de": "⚙ Einstellungen",
+        "pt-BR": "⚙ Preferências",
+    },
+    "preferences.h": {
+        "en": "⚙ Preferences",
+        "ja": "⚙ 個人設定",
+        "zh-CN": "⚙ 偏好设置",
+        "ko": "⚙ 환경 설정",
+        "es": "⚙ Preferencias",
+        "fr": "⚙ Préférences",
+        "de": "⚙ Einstellungen",
+        "pt-BR": "⚙ Preferências",
+    },
+    "preferences.intro": {
+        "en": "Per-user view + runtime preferences. Available to everyone — no admin role required.",
+        "ja": "ユーザ毎の表示 + 実行時設定。全ユーザが使用可能 — admin ロール不要。",
+        "zh-CN": "每用户的视图 + 运行时偏好。所有用户可用 — 无需 admin 角色。",
+        "ko": "사용자별 보기 + 런타임 환경 설정. 모든 사용자 사용 가능 — admin 역할 불필요.",
+        "es": "Preferencias de vista y runtime por usuario. Disponible para todos — sin rol admin.",
+        "fr": "Préférences d'affichage et runtime par utilisateur. Pour tous — pas de rôle admin requis.",
+        "de": "Pro-Nutzer-Anzeige + Laufzeit-Einstellungen. Für alle verfügbar — kein admin nötig.",
+        "pt-BR": "Preferências de visualização e runtime por usuário. Disponível para todos — sem papel admin.",
+    },
+    "preferences.language_h": {
+        "en": "🌐 Language",
+        "ja": "🌐 言語",
+        "zh-CN": "🌐 语言",
+        "ko": "🌐 언어",
+        "es": "🌐 Idioma",
+        "fr": "🌐 Langue",
+        "de": "🌐 Sprache",
+        "pt-BR": "🌐 Idioma",
+    },
+    "preferences.language_intro": {
+        "en": "Auto-detected from browser/OS at first load. Override here for this session.",
+        "ja": "初回起動時にブラウザ/OS から自動検出。このセッションで切替えたい場合のみ変更してください。",
+        "zh-CN": "首次加载时从浏览器/OS 自动检测。需要本会话切换时在此覆盖。",
+        "ko": "처음 로드 시 브라우저/OS 에서 자동 감지. 이 세션에서 다른 언어를 원하면 여기서 변경.",
+        "es": "Auto-detectado del navegador/OS al inicio. Cambia aquí para esta sesión.",
+        "fr": "Auto-détecté depuis le navigateur/OS au démarrage. Modifiez ici pour cette session.",
+        "de": "Beim Laden vom Browser/OS automatisch erkannt. Hier für diese Sitzung ändern.",
+        "pt-BR": "Auto-detectado do navegador/OS no início. Troque aqui para esta sessão.",
+    },
+    "preferences.language_label": {
+        "en": "Display language",
+        "ja": "表示言語",
+        "zh-CN": "显示语言",
+        "ko": "표시 언어",
+        "es": "Idioma de la interfaz",
+        "fr": "Langue d'affichage",
+        "de": "Anzeigesprache",
+        "pt-BR": "Idioma de exibição",
+    },
+    "preferences.llm_h": {
+        "en": "🤖 LLM model",
+        "ja": "🤖 LLM モデル",
+        "zh-CN": "🤖 LLM 模型",
+        "ko": "🤖 LLM 모델",
+        "es": "🤖 Modelo LLM",
+        "fr": "🤖 Modèle LLM",
+        "de": "🤖 LLM-Modell",
+        "pt-BR": "🤖 Modelo LLM",
+    },
+    "preferences.llm_intro": {
+        "en": "Which LLM should answer your runs by default. Per-session — admin can pin a tenant default in Admin → Settings.",
+        "ja": "実行時に既定で使う LLM。このセッション内のみ反映。テナント既定値の固定は admin の設定 → 永続から。",
+        "zh-CN": "默认用于运行的 LLM。仅本会话生效。租户默认在 admin → 持久 中固定。",
+        "ko": "기본 실행에 사용할 LLM. 이 세션에만 반영. 테넌트 기본값은 admin → 영속 에서 고정.",
+        "es": "LLM que responde tus runs por defecto. Por sesión. El admin fija un default tenant en Admin → Settings.",
+        "fr": "LLM par défaut pour vos runs. Par session. L'admin fixe un défaut tenant dans Admin → Settings.",
+        "de": "Standard-LLM für deine Runs. Pro Sitzung. Admin setzt Tenant-Default unter Admin → Settings.",
+        "pt-BR": "LLM padrão para seus runs. Por sessão. Admin fixa default do tenant em Admin → Settings.",
+    },
+    "preferences.model_label": {
+        "en": "LLM model",
+        "ja": "LLM モデル",
+        "zh-CN": "LLM 模型",
+        "ko": "LLM 모델",
+        "es": "Modelo LLM",
+        "fr": "Modèle LLM",
+        "de": "LLM-Modell",
+        "pt-BR": "Modelo LLM",
+    },
+    "preferences.model_custom": {
+        "en": "Custom model string (e.g. anthropic/claude-opus-4-7)",
+        "ja": "カスタムモデル文字列 (例: anthropic/claude-opus-4-7)",
+        "zh-CN": "自定义模型字符串(如 anthropic/claude-opus-4-7)",
+        "ko": "커스텀 모델 문자열 (예: anthropic/claude-opus-4-7)",
+        "es": "Cadena de modelo personalizada (p. ej. anthropic/claude-opus-4-7)",
+        "fr": "Chaîne de modèle personnalisée (ex. anthropic/claude-opus-4-7)",
+        "de": "Benutzerdefinierter Modell-String (z. B. anthropic/claude-opus-4-7)",
+        "pt-BR": "String de modelo personalizada (ex. anthropic/claude-opus-4-7)",
+    },
+    "preferences.apply_btn": {
+        "en": "💾 Apply",
+        "ja": "💾 適用",
+        "zh-CN": "💾 应用",
+        "ko": "💾 적용",
+        "es": "💾 Aplicar",
+        "fr": "💾 Appliquer",
+        "de": "💾 Anwenden",
+        "pt-BR": "💾 Aplicar",
+    },
+    "preferences.applied": {
+        "en": "✅ Preference applied. Reloading…",
+        "ja": "✅ 設定を適用しました。再読み込み中…",
+        "zh-CN": "✅ 偏好已应用,正在重新加载…",
+        "ko": "✅ 환경 설정 적용됨. 재로드 중…",
+        "es": "✅ Preferencia aplicada. Recargando…",
+        "fr": "✅ Préférence appliquée. Rechargement…",
+        "de": "✅ Einstellung angewendet. Lade neu…",
+        "pt-BR": "✅ Preferência aplicada. Recarregando…",
     },
     # ===== Login screen =====================================================
     "login.user_id": {
@@ -332,14 +452,74 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "🎬 Executar",
     },
     "run.intro": {
-        "en": "Three ways to put Praxia to work — pick the one that fits your task.",
-        "ja": "Praxia の使い方は 3 通り — 目的に合うものを選んでください。",
-        "zh-CN": "使用 Praxia 的三种方式 — 根据任务选择。",
-        "ko": "Praxia 를 활용하는 3 가지 방법 — 작업에 맞는 것을 고르세요.",
-        "es": "Tres formas de usar Praxia — elige la que se ajuste.",
-        "fr": "Trois façons d'utiliser Praxia — choisissez celle qui convient.",
-        "de": "Drei Wege, Praxia einzusetzen — wähle den passenden.",
-        "pt-BR": "Três formas de usar Praxia — escolha a que se encaixa.",
+        "en": (
+            "Three ways to put Praxia to work, ordered by autonomy:\n\n"
+            "1. **🤖 Autonomous agent** — top-level orchestrator. You give a "
+            "goal; the agent calls **Workflows** and **Skills** as needed, "
+            "iterating until it has the answer. Pick this for fuzzy goals.\n\n"
+            "2. **📋 Pre-built workflow** — a fixed multi-step recipe. Pick "
+            "this when the procedure is known and should always run the "
+            "same way (Sales prep / Logic check / RAG optimization).\n\n"
+            "3. **🛠 Single skill** — a one-shot domain call (Investment / "
+            "Sales / Design / Purchasing / Patent / Legal). Pick this when "
+            "you have one specific question for one specific domain.\n\n"
+            "Workflows and Skills are also the **tools** the autonomous "
+            "agent calls internally — you can use them directly here too."
+        ),
+        "ja": (
+            "Praxia の使い方は 3 通り (自律性の高い順):\n\n"
+            "1. **🤖 自律エージェント** — 最上位のオーケストレータ。ゴールを伝えると、"
+            "**ワークフロー** と **スキル** を必要に応じて呼び出し、満足するまで反復。"
+            "ゆるい目標の時はこれ。\n\n"
+            "2. **📋 定型ワークフロー** — 固定の N ステップ・パイプライン。"
+            "手順が決まっていて毎回同じように動かしたい時 (Sales prep / Logic check / RAG)。\n\n"
+            "3. **🛠 単発スキル** — 1 ドメインの単発呼出 (投資 / 営業 / 設計 / 購買 / 特許 / 法務)。"
+            "1 つの質問を 1 ドメインに投げたい時。\n\n"
+            "**ワークフロー** と **スキル** は、自律エージェントが内部的に呼び出す **ツール** "
+            "でもあります — このページから直接呼ぶことも可能です。"
+        ),
+        "zh-CN": (
+            "使用 Praxia 的 3 种方式(按自主性排序):\n\n"
+            "1. **🤖 自主代理** — 顶层编排器。给目标即可,代理按需调用工作流与技能,直到完成。\n"
+            "2. **📋 预建工作流** — 固定多步管线 (Sales prep / Logic check / RAG)。\n"
+            "3. **🛠 单一技能** — 单次领域调用 (投资 / 销售 / 设计 / 采购 / 专利 / 法务)。\n\n"
+            "工作流与技能也是自主代理内部调用的工具,在此处也可直接使用。"
+        ),
+        "ko": (
+            "Praxia 활용 3 가지 (자율성 높은 순):\n\n"
+            "1. **🤖 자율 에이전트** — 최상위 오케스트레이터. 목표만 주면 워크플로/스킬을 호출하여 완료.\n"
+            "2. **📋 정형 워크플로** — 고정 N 단계 파이프라인 (Sales prep / Logic check / RAG).\n"
+            "3. **🛠 단일 스킬** — 1 도메인 단발 호출 (투자/영업/설계/구매/특허/법무).\n\n"
+            "워크플로와 스킬은 자율 에이전트가 내부적으로 호출하는 도구이기도 합니다."
+        ),
+        "es": (
+            "Tres formas de usar Praxia (orden por autonomía):\n\n"
+            "1. **🤖 Agente autónomo** — orquestador top-level. Das un objetivo; el agente llama Workflows y Skills hasta acabar.\n"
+            "2. **📋 Workflow pre-construido** — pipeline fijo (Sales prep / Logic check / RAG).\n"
+            "3. **🛠 Habilidad única** — llamada de un dominio (Investment / Sales / Design / etc).\n\n"
+            "Workflows y Skills son las herramientas que el agente autónomo usa internamente — puedes invocarlas directamente aquí."
+        ),
+        "fr": (
+            "Trois façons d'utiliser Praxia (par autonomie) :\n\n"
+            "1. **🤖 Agent autonome** — orchestrateur de haut niveau. Donnez un objectif ; l'agent appelle Workflows et Skills jusqu'à finir.\n"
+            "2. **📋 Workflow pré-construit** — pipeline fixe (Sales prep / Logic check / RAG).\n"
+            "3. **🛠 Compétence unique** — appel mono-domaine.\n\n"
+            "Workflows et Skills sont les outils que l'agent autonome appelle en interne — vous pouvez les invoquer directement ici."
+        ),
+        "de": (
+            "Drei Wege, Praxia zu nutzen (nach Autonomie):\n\n"
+            "1. **🤖 Autonomer Agent** — Top-Level-Orchestrator. Du gibst ein Ziel; der Agent ruft Workflows + Skills bei Bedarf.\n"
+            "2. **📋 Vordefinierter Workflow** — feste Pipeline (Sales prep / Logic check / RAG).\n"
+            "3. **🛠 Einzel-Skill** — Domain-Aufruf.\n\n"
+            "Workflows und Skills sind auch die Werkzeuge, die der Agent intern nutzt — direkt hier aufrufbar."
+        ),
+        "pt-BR": (
+            "Três formas de usar Praxia (por autonomia):\n\n"
+            "1. **🤖 Agente autônomo** — orquestrador top-level. Você dá um objetivo; o agente chama Workflows e Skills até terminar.\n"
+            "2. **📋 Workflow pré-construído** — pipeline fixo (Sales prep / Logic check / RAG).\n"
+            "3. **🛠 Habilidade única** — chamada de domínio.\n\n"
+            "Workflows e Skills são as ferramentas que o agente autônomo usa internamente — você pode invocá-las aqui também."
+        ),
     },
     "run.tab.workflow": {
         "en": "📋 Pre-built workflow",
@@ -820,14 +1000,89 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "✅ '{name}' criada",
     },
     "data.connector.intro": {
-        "en": "Register a path inside an external system as a named folder. Pulls happen at execution time using PRAXIA_CONN_<NAME>_* env vars.",
-        "ja": "外部システム内のパスを名前付きフォルダとして登録します。実行時に PRAXIA_CONN_<NAME>_* 環境変数を使って pull します。",
-        "zh-CN": "将外部系统中的路径注册为命名文件夹。在运行时通过 PRAXIA_CONN_<NAME>_* 环境变量拉取。",
-        "ko": "외부 시스템의 경로를 이름이 있는 폴더로 등록합니다. 실행 시 PRAXIA_CONN_<NAME>_* 환경변수로 pull 합니다.",
-        "es": "Registra una ruta en un sistema externo como carpeta con nombre. Las extracciones se hacen en runtime usando PRAXIA_CONN_<NAME>_*.",
-        "fr": "Enregistrez un chemin dans un système externe comme dossier nommé. Les pulls se font à l'exécution via PRAXIA_CONN_<NAME>_*.",
-        "de": "Registriere einen Pfad in einem externen System als benannten Ordner. Pulls erfolgen zur Laufzeit via PRAXIA_CONN_<NAME>_*.",
-        "pt-BR": "Registre um caminho em sistema externo como pasta nomeada. Pulls em runtime via PRAXIA_CONN_<NAME>_*.",
+        "en": (
+            "Register a path inside an external system (Box / SharePoint / "
+            "Notion / etc.) as a named folder you can target at run time.\n\n"
+            "**Permission model**:\n"
+            "- The **admin** must first enable the connector by setting "
+            "`PRAXIA_CONN_<NAME>_*` env vars (CLI: `praxia config set ...`).\n"
+            "- **Anyone** can then register a folder (path) under an enabled "
+            "connector — the registration itself is just metadata.\n"
+            "- At pull time, the connector uses *whatever credentials it was "
+            "configured with*. With **per-user OAuth** providers (Box, Google, "
+            "Microsoft, Dropbox, Salesforce), each Praxia user authorizes "
+            "with their own account, so the external system's native ACL "
+            "applies — alice only sees what alice has access to. With "
+            "service-account / API-key providers, all users share the same "
+            "view (admin-controlled).\n\n"
+            "Connector folders you register here are visible only to you "
+            "and only used when you select them as a Data scope."
+        ),
+        "ja": (
+            "外部システム (Box / SharePoint / Notion 等) の特定パスを、"
+            "実行時に対象指定できる「名前付きフォルダ」として登録します。\n\n"
+            "**権限モデル**:\n"
+            "- 連携は **管理者** が `PRAXIA_CONN_<NAME>_*` 環境変数で有効化 "
+            "(CLI: `praxia config set ...`)。\n"
+            "- 有効化済みの連携先に対して、**全ユーザ** がフォルダ (パス) を登録可能。"
+            "登録自体はメタデータのみ。\n"
+            "- pull 実行時は、**設定済の認証情報** で外部にアクセス。Box / Google / "
+            "Microsoft / Dropbox / Salesforce など **per-user OAuth** 対応の連携先は、"
+            "各 Praxia ユーザが自身のアカウントで認可するため、外部システムの ACL が"
+            "そのまま反映 — alice には alice が見える範囲しか出ません。"
+            "サービスアカウント / API キー方式の連携先は全ユーザが同じビューを共有 "
+            "(管理者管轄)。\n\n"
+            "ここで登録するコネクタフォルダは **あなたにのみ見え**、"
+            "Data scope で選んだ時だけ利用されます。"
+        ),
+        "zh-CN": (
+            "将外部系统(Box / SharePoint / Notion 等)中的路径注册为可在运行时使用的命名文件夹。\n\n"
+            "**权限模型**: 管理员先通过 `PRAXIA_CONN_<NAME>_*` 环境变量启用连接器。"
+            "之后所有用户可在已启用连接器下注册路径(仅元数据)。"
+            "Pull 时使用配置好的凭据。Per-user OAuth 连接器(Box/Google/MS/Dropbox/Salesforce)各用户用自己账号授权,外部 ACL 生效。"
+            "服务账号/API 密钥连接器所有用户共享同一视图。\n\n"
+            "你注册的文件夹仅你自己可见,选作 Data scope 时才使用。"
+        ),
+        "ko": (
+            "외부 시스템 (Box / SharePoint / Notion 등) 의 경로를 실행 시 사용할 이름 있는 폴더로 등록합니다.\n\n"
+            "**권한 모델**: 관리자가 먼저 `PRAXIA_CONN_<NAME>_*` 환경변수로 커넥터를 활성화. "
+            "이후 모든 사용자가 활성 커넥터에 폴더(경로) 등록 가능 (메타데이터만). "
+            "Pull 시 설정된 자격증명으로 접근. Per-user OAuth (Box/Google/MS/Dropbox/Salesforce) 는 각 사용자가 자신의 계정으로 인증, 외부 ACL 적용. "
+            "서비스 계정 / API 키 방식은 모든 사용자가 동일한 뷰 공유.\n\n"
+            "여기서 등록한 폴더는 본인에게만 보이고, Data scope 로 선택할 때만 사용됩니다."
+        ),
+        "es": (
+            "Registra una ruta en un sistema externo (Box / SharePoint / Notion / etc.) como carpeta con nombre que puedes usar en runtime.\n\n"
+            "**Modelo de permisos**: el admin habilita primero el conector vía `PRAXIA_CONN_<NAME>_*`. "
+            "Cualquiera puede registrar carpetas bajo conectores habilitados (solo metadata). "
+            "El pull usa las credenciales configuradas. Conectores con per-user OAuth (Box/Google/MS/Dropbox/Salesforce) usan la cuenta de cada usuario, ACL externo se aplica. "
+            "Conectores con service account / API key comparten una sola vista.\n\n"
+            "Las carpetas que registres aquí solo son visibles para ti, y solo se usan al seleccionarlas como Data scope."
+        ),
+        "fr": (
+            "Enregistrez un chemin dans un système externe (Box / SharePoint / Notion / etc.) comme dossier nommé utilisable à l'exécution.\n\n"
+            "**Modèle de permissions** : l'admin active d'abord le connecteur via `PRAXIA_CONN_<NAME>_*`. "
+            "Tout le monde peut alors enregistrer des dossiers sous les connecteurs activés (métadonnées uniquement). "
+            "Le pull utilise les credentials configurés. Connecteurs per-user OAuth (Box/Google/MS/Dropbox/Salesforce) : chaque utilisateur s'authentifie avec son compte, ACL externe appliqué. "
+            "Connecteurs service-account / API key : vue partagée.\n\n"
+            "Les dossiers enregistrés ici ne sont visibles que par vous, et utilisés uniquement quand vous les sélectionnez comme Data scope."
+        ),
+        "de": (
+            "Registriere einen Pfad in einem externen System (Box / SharePoint / Notion etc.) als benannten Ordner für Laufzeitnutzung.\n\n"
+            "**Berechtigungsmodell**: Der admin aktiviert den Konnektor zuerst via `PRAXIA_CONN_<NAME>_*`. "
+            "Jeder kann dann Ordner unter aktivierten Konnektoren registrieren (nur Metadaten). "
+            "Pull nutzt die konfigurierten Credentials. Per-user-OAuth-Konnektoren (Box/Google/MS/Dropbox/Salesforce): jeder Nutzer authentifiziert sich selbst, externe ACL wird angewendet. "
+            "Service-Account-/API-Key-Konnektoren: gemeinsame Sicht.\n\n"
+            "Hier registrierte Ordner sind nur für dich sichtbar und werden nur als Data Scope genutzt."
+        ),
+        "pt-BR": (
+            "Registre um caminho em sistema externo (Box / SharePoint / Notion / etc.) como pasta nomeada usável em runtime.\n\n"
+            "**Modelo de permissões**: o admin habilita primeiro o conector via `PRAXIA_CONN_<NAME>_*`. "
+            "Qualquer um pode então registrar pastas sob conectores habilitados (só metadata). "
+            "O pull usa as credenciais configuradas. Conectores per-user OAuth (Box/Google/MS/Dropbox/Salesforce) usam a conta do usuário; ACL externo aplicado. "
+            "Conectores service-account / API key: visão compartilhada.\n\n"
+            "As pastas registradas aqui só são visíveis para você, usadas apenas quando selecionadas como Data scope."
+        ),
     },
     "data.connector.empty": {
         "en": "No connector folders registered yet. Add one below.",
@@ -1291,6 +1546,46 @@ _T: dict[str, dict[str, str]] = {
         "fr": "Synthèse vocale…",
         "de": "Sprache wird synthetisiert…",
         "pt-BR": "Sintetizando voz…",
+    },
+    "skill.use_saved_prompt": {
+        "en": "📜 Load from saved prompts (optional)",
+        "ja": "📜 保存済プロンプトをロード (任意)",
+        "zh-CN": "📜 从已保存提示词加载(可选)",
+        "ko": "📜 저장된 프롬프트에서 로드 (선택)",
+        "es": "📜 Cargar desde prompts guardados (opcional)",
+        "fr": "📜 Charger un prompt enregistré (optionnel)",
+        "de": "📜 Aus gespeicherten Prompts laden (optional)",
+        "pt-BR": "📜 Carregar de prompts salvos (opcional)",
+    },
+    "skill.pick_saved_prompt": {
+        "en": "Pick a saved prompt",
+        "ja": "保存済プロンプトを選択",
+        "zh-CN": "选择已保存的提示词",
+        "ko": "저장된 프롬프트 선택",
+        "es": "Elige un prompt guardado",
+        "fr": "Choisir un prompt enregistré",
+        "de": "Gespeicherten Prompt wählen",
+        "pt-BR": "Escolha um prompt salvo",
+    },
+    "skill.no_template": {
+        "en": "(none — write input from scratch)",
+        "ja": "(無し — ゼロから入力)",
+        "zh-CN": "(无 — 从头输入)",
+        "ko": "(없음 — 처음부터 입력)",
+        "es": "(ninguno — escribe desde cero)",
+        "fr": "(aucun — écrire de zéro)",
+        "de": "(keiner — von Grund auf schreiben)",
+        "pt-BR": "(nenhum — escrever do zero)",
+    },
+    "skill.load_btn": {
+        "en": "📥 Load into input",
+        "ja": "📥 入力欄にロード",
+        "zh-CN": "📥 加载到输入框",
+        "ko": "📥 입력란에 로드",
+        "es": "📥 Cargar en la entrada",
+        "fr": "📥 Charger dans l'entrée",
+        "de": "📥 In Eingabe laden",
+        "pt-BR": "📥 Carregar na entrada",
     },
     # ===== Memory mode ======================================================
     "memory.h": {
@@ -1885,6 +2180,16 @@ _T: dict[str, dict[str, str]] = {
         "de": "**Nur Admin.** Ausgewählten Prompt an Nutzer/Rollen verteilen.",
         "pt-BR": "**Apenas admin.** Envia um prompt curado para usuários/papéis.",
     },
+    "prompts.distribute.role_required": {
+        "en": "🚫 Distribute is admin-only. **{user}** has role `{role}` and can't push prompts to other users.",
+        "ja": "🚫 配信は admin のみ。**{user}** のロールは `{role}` のため他ユーザへの配信不可。",
+        "zh-CN": "🚫 分发仅 admin 可用。**{user}** 角色为 `{role}`,无法向其他用户分发。",
+        "ko": "🚫 배포는 admin 만 가능. **{user}** 역할 `{role}` 이므로 다른 사용자에게 배포 불가.",
+        "es": "🚫 La distribución es solo admin. **{user}** con rol `{role}` no puede distribuir.",
+        "fr": "🚫 Distribution admin uniquement. **{user}** (rôle `{role}`) ne peut pas distribuer.",
+        "de": "🚫 Verteilen nur für admin. **{user}** mit Rolle `{role}` darf nicht verteilen.",
+        "pt-BR": "🚫 Distribuir apenas admin. **{user}** com papel `{role}` não pode distribuir.",
+    },
     "prompts.distribute.target_users": {
         "en": "Target user IDs (comma-separated)",
         "ja": "対象ユーザ ID (カンマ区切り)",
@@ -1981,6 +2286,139 @@ _T: dict[str, dict[str, str]] = {
             "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
             "- 並列融合 (RRF) または query-routing で複数併用可\n\n"
             "[GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0"
+        ),
+        "zh-CN": (
+            "**Praxia** 是面向特定工作流的多智能体编排器,通过 **5 层循环记忆栈** "
+            "**自动提升** 个人隐性知识为组织共享 know-how。\n\n"
+            "#### 支持的 LLM(15+ 一类 · 100+ via LiteLLM)\n"
+            "- **Anthropic Claude**(Opus / Sonnet / Haiku)\n"
+            "- **OpenAI ChatGPT**(GPT-5 / o-series)\n"
+            "- **Google Gemini** + **Gemma**(cloud + Ollama)\n"
+            "- **Alibaba Qwen**(API + Ollama)\n"
+            "- **DeepSeek**(V3 / R1 推理)· **Mistral** + **Codestral**\n"
+            "- **xAI Grok** · **Meta Llama**(Groq fast / Ollama)· **Microsoft Phi**\n"
+            "- **Cohere Command R+** · **Perplexity Sonar**\n"
+            "- LiteLLM 还有 100+\n\n"
+            "用一行别名切换(`claude` / `gpt-5` / `gemini` / ...),"
+            "或 `PRAXIA_LOCAL_MODEL=gemma` 用于气隙环境。\n\n"
+            "#### 内置业务技能\n"
+            "- 投资 · 销售 · 设计 · 采购 · 专利 · 法务\n\n"
+            "#### LTM 后端\n"
+            "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
+            "- 并行融合(RRF)或按查询路由,支持组合使用\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0"
+        ),
+        "ko": (
+            "**Praxia** 는 업무 특화 멀티 에이전트 오케스트레이터로, **5 층 순환 "
+            "메모리 스택** 을 통해 개인의 암묵지를 조직 공유 노하우로 **자동 승격** 합니다.\n\n"
+            "#### 지원 LLM (15+ 기본 · 100+ via LiteLLM)\n"
+            "- **Anthropic Claude** (Opus / Sonnet / Haiku)\n"
+            "- **OpenAI ChatGPT** (GPT-5 / o-series)\n"
+            "- **Google Gemini** + **Gemma** (cloud + Ollama)\n"
+            "- **Alibaba Qwen** (API + Ollama)\n"
+            "- **DeepSeek** (V3 / R1 reasoning) · **Mistral** + **Codestral**\n"
+            "- **xAI Grok** · **Meta Llama** (Groq fast / Ollama) · **Microsoft Phi**\n"
+            "- **Cohere Command R+** · **Perplexity Sonar**\n"
+            "- LiteLLM 으로 100+ 추가\n\n"
+            "한 줄 에이리어스로 전환 (`claude` / `gpt-5` / `gemini` / ...) 하거나, "
+            "`PRAXIA_LOCAL_MODEL=gemma` 로 에어갭 운영.\n\n"
+            "#### 동봉 비즈니스 스킬\n"
+            "- 투자 · 영업 · 설계 · 구매 · 특허 · 법무\n\n"
+            "#### LTM 백엔드\n"
+            "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
+            "- 병렬 융합 (RRF) 또는 쿼리별 라우팅으로 앙상블 가능\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia) | License: Apache 2.0"
+        ),
+        "es": (
+            "**Praxia** es un orquestador multi-agente especializado en workflows que "
+            "**promueve automáticamente** el conocimiento tácito individual al saber "
+            "organizacional, mediante una **pila de memoria cíclica de 5 capas**.\n\n"
+            "#### LLMs soportados (15+ primarios · 100+ vía LiteLLM)\n"
+            "- **Anthropic Claude** (Opus / Sonnet / Haiku)\n"
+            "- **OpenAI ChatGPT** (GPT-5 / o-series)\n"
+            "- **Google Gemini** + **Gemma** (cloud + Ollama)\n"
+            "- **Alibaba Qwen** (API + Ollama)\n"
+            "- **DeepSeek** (V3 / R1 reasoning) · **Mistral** + **Codestral**\n"
+            "- **xAI Grok** · **Meta Llama** (Groq rápido / Ollama) · **Microsoft Phi**\n"
+            "- **Cohere Command R+** · **Perplexity Sonar**\n"
+            "- 100+ más vía LiteLLM\n\n"
+            "Cambia con alias de una línea (`claude` / `gpt-5` / `gemini` / ...) o "
+            "`PRAXIA_LOCAL_MODEL=gemma` para operación air-gapped.\n\n"
+            "#### Habilidades de negocio incluidas\n"
+            "- Inversión · Ventas · Diseño · Compras · Patentes · Legal\n\n"
+            "#### Backends LTM\n"
+            "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
+            "- Fusión paralela (RRF) o enrutamiento por consulta para ensambles\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia) | Licencia: Apache 2.0"
+        ),
+        "fr": (
+            "**Praxia** est un orchestrateur multi-agents spécialisé par workflow qui "
+            "**promeut automatiquement** la connaissance tacite individuelle en "
+            "savoir-faire partagé de l'organisation, via une **pile mémoire cyclique "
+            "à 5 couches**.\n\n"
+            "#### LLMs supportés (15+ natifs · 100+ via LiteLLM)\n"
+            "- **Anthropic Claude** (Opus / Sonnet / Haiku)\n"
+            "- **OpenAI ChatGPT** (GPT-5 / série o)\n"
+            "- **Google Gemini** + **Gemma** (cloud + Ollama)\n"
+            "- **Alibaba Qwen** (API + Ollama)\n"
+            "- **DeepSeek** (V3 / R1 reasoning) · **Mistral** + **Codestral**\n"
+            "- **xAI Grok** · **Meta Llama** (Groq fast / Ollama) · **Microsoft Phi**\n"
+            "- **Cohere Command R+** · **Perplexity Sonar**\n"
+            "- 100+ via LiteLLM\n\n"
+            "Basculez avec des alias d'une ligne (`claude` / `gpt-5` / `gemini` / ...) "
+            "ou `PRAXIA_LOCAL_MODEL=gemma` pour un fonctionnement air-gapped.\n\n"
+            "#### Compétences métiers incluses\n"
+            "- Investissement · Ventes · Design · Achats · Brevets · Juridique\n\n"
+            "#### Backends LTM\n"
+            "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
+            "- Fusion parallèle (RRF) ou routage par requête pour les ensembles\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia) | Licence : Apache 2.0"
+        ),
+        "de": (
+            "**Praxia** ist ein workflow-spezialisierter Multi-Agenten-Orchestrator, "
+            "der individuelles implizites Wissen über einen **5-schichtigen "
+            "zyklischen Memory-Stack** **automatisch in geteiltes Org-Know-how "
+            "befördert**.\n\n"
+            "#### Unterstützte LLMs (15+ direkt · 100+ via LiteLLM)\n"
+            "- **Anthropic Claude** (Opus / Sonnet / Haiku)\n"
+            "- **OpenAI ChatGPT** (GPT-5 / o-Serie)\n"
+            "- **Google Gemini** + **Gemma** (Cloud + Ollama)\n"
+            "- **Alibaba Qwen** (API + Ollama)\n"
+            "- **DeepSeek** (V3 / R1 Reasoning) · **Mistral** + **Codestral**\n"
+            "- **xAI Grok** · **Meta Llama** (Groq fast / Ollama) · **Microsoft Phi**\n"
+            "- **Cohere Command R+** · **Perplexity Sonar**\n"
+            "- 100+ weitere via LiteLLM\n\n"
+            "Wechsle mit Einzeilen-Aliasen (`claude` / `gpt-5` / `gemini` / ...) oder "
+            "`PRAXIA_LOCAL_MODEL=gemma` für Air-gapped-Betrieb.\n\n"
+            "#### Mitgelieferte Business-Skills\n"
+            "- Invest · Sales · Design · Einkauf · Patent · Legal\n\n"
+            "#### LTM-Backends\n"
+            "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
+            "- Parallele Fusion (RRF) oder Routing pro Anfrage für Ensembles\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia) | Lizenz: Apache 2.0"
+        ),
+        "pt-BR": (
+            "**Praxia** é um orquestrador multi-agente especializado em workflows que "
+            "**promove automaticamente** o conhecimento tácito individual em know-how "
+            "organizacional compartilhado, via uma **pilha cíclica de memória de 5 "
+            "camadas**.\n\n"
+            "#### LLMs suportados (15+ primários · 100+ via LiteLLM)\n"
+            "- **Anthropic Claude** (Opus / Sonnet / Haiku)\n"
+            "- **OpenAI ChatGPT** (GPT-5 / série o)\n"
+            "- **Google Gemini** + **Gemma** (cloud + Ollama)\n"
+            "- **Alibaba Qwen** (API + Ollama)\n"
+            "- **DeepSeek** (V3 / R1 reasoning) · **Mistral** + **Codestral**\n"
+            "- **xAI Grok** · **Meta Llama** (Groq rápido / Ollama) · **Microsoft Phi**\n"
+            "- **Cohere Command R+** · **Perplexity Sonar**\n"
+            "- 100+ via LiteLLM\n\n"
+            "Troque com aliases de uma linha (`claude` / `gpt-5` / `gemini` / ...) ou "
+            "`PRAXIA_LOCAL_MODEL=gemma` para operação air-gapped.\n\n"
+            "#### Habilidades de negócio incluídas\n"
+            "- Investimento · Vendas · Design · Compras · Patentes · Jurídico\n\n"
+            "#### Backends LTM\n"
+            "- Mem0 / LangMem / Letta / Zep / HindSight / JSON\n"
+            "- Fusão paralela (RRF) ou roteamento por consulta para ensembles\n\n"
+            "[GitHub](https://github.com/praxia-dev/praxia) | Licença: Apache 2.0"
         ),
     },
     "tab.run_flow": {
@@ -2233,6 +2671,36 @@ _T: dict[str, dict[str, str]] = {
         "fr": "✅ Réglages runtime mis à jour. Rechargement…",
         "de": "✅ Laufzeit-Einstellungen aktualisiert. Lade neu…",
         "pt-BR": "✅ Ajustes runtime atualizados. Recarregando…",
+    },
+    "admin.settings.backend_h": {
+        "en": "Tenant memory backend",
+        "ja": "テナントのメモリバックエンド",
+        "zh-CN": "租户记忆后端",
+        "ko": "테넌트 메모리 백엔드",
+        "es": "Backend de memoria del tenant",
+        "fr": "Backend mémoire du tenant",
+        "de": "Tenant-Memory-Backend",
+        "pt-BR": "Backend de memória do tenant",
+    },
+    "admin.settings.backend_intro": {
+        "en": "Which LTM backend the entire instance uses (JSON / Mem0 / LangMem / Letta / Zep). Tenant-wide — applies to all users.",
+        "ja": "このインスタンス全体で使う LTM バックエンド (JSON / Mem0 / LangMem / Letta / Zep)。テナント単位 — 全ユーザに適用。",
+        "zh-CN": "整个实例使用的 LTM 后端(JSON / Mem0 / LangMem / Letta / Zep)。租户级 — 对所有用户生效。",
+        "ko": "이 인스턴스 전체가 사용하는 LTM 백엔드 (JSON / Mem0 / LangMem / Letta / Zep). 테넌트 단위 — 모든 사용자에 적용.",
+        "es": "Backend LTM usado por toda la instancia (JSON / Mem0 / LangMem / Letta / Zep). Nivel tenant — aplica a todos los usuarios.",
+        "fr": "Backend LTM utilisé par toute l'instance (JSON / Mem0 / LangMem / Letta / Zep). Niveau tenant — pour tous les utilisateurs.",
+        "de": "LTM-Backend für die gesamte Instanz (JSON / Mem0 / LangMem / Letta / Zep). Tenant-weit — für alle Nutzer.",
+        "pt-BR": "Backend LTM usado pela instância inteira (JSON / Mem0 / LangMem / Letta / Zep). Nível tenant — aplica a todos.",
+    },
+    "admin.settings.backend_apply": {
+        "en": "💾 Apply tenant backend",
+        "ja": "💾 テナントバックエンドを適用",
+        "zh-CN": "💾 应用租户后端",
+        "ko": "💾 테넌트 백엔드 적용",
+        "es": "💾 Aplicar backend del tenant",
+        "fr": "💾 Appliquer le backend tenant",
+        "de": "💾 Tenant-Backend anwenden",
+        "pt-BR": "💾 Aplicar backend do tenant",
     },
     "admin.settings.persistent_h": {
         "en": "Persistent: API keys + service credentials",
