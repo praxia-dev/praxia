@@ -26,6 +26,17 @@ _log = logging.getLogger(__name__)
 
 _MOBILE_CSS = """
 <style>
+/* --- Praxia UI: hide Streamlit's default chrome that's irrelevant to the
+       app user (Deploy button, hamburger menu, "Made with Streamlit" footer).
+       These are dev-time conveniences — Praxia is the product, not Streamlit. */
+[data-testid="stToolbar"] { visibility: hidden !important; height: 0 !important; position: fixed !important; }
+[data-testid="stDecoration"] { display: none !important; }
+[data-testid="stStatusWidget"] { visibility: hidden !important; height: 0 !important; position: fixed !important; }
+.stDeployButton { display: none !important; }
+#MainMenu { visibility: hidden !important; height: 0 !important; }
+header[data-testid="stHeader"] { background: transparent; }
+footer { visibility: hidden !important; height: 0 !important; }
+
 /* --- Praxia UI mobile / responsive overrides --- */
 
 /* 1. Tablet & phone: tighter padding, scrollable tabs */

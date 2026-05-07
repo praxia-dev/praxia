@@ -1,22 +1,25 @@
 """Default Streamlit UI for Praxia.
 
-Sidebar (frequently-changed):
-    - Language + compact toggle
-    - User identity (user_id / org_id)
-    - Mode picker — what you're doing right now
-        · Flow         : run a multi-agent flow
-        · Skill        : run a single business skill
-        · Memory       : browse personal + shared memory
-        · Consolidate  : trigger sleep-time consolidation
-        · Dashboard    : personal + org statistics
-        · Prompts      : create / browse / distribute custom prompts
-        · Admin        : sub-tabs for setup + governance
+Layout:
+    1. Login gate    — visit-time identity + (optional) API-key auth
+    2. Sidebar       — brand · current user · sign-out · option-menu nav
+    3. Main          — workspace for the selected nav item
 
-Main area dispatches on the chosen Mode. Admin contains 6 sub-tabs:
-    Settings · Users · Connectors · Policies · Exports · About
+Nav items (left-to-right of priority):
+    🎬 Run         workflow / skill / agent — sub-tabs with explanations
+    🧠 Memory      browse personal + shared blocks
+    📁 Data        manage local + connector data folders
+    🌙 Consolidate trigger sleep-time consolidation
+    📊 Stats       dashboard
+    📝 Prompts     custom-prompt CRUD + distribution
+    ⚙ Admin        settings · users · connectors · policies · exports · about
 
-LLM model and memory backend are now under Admin → Settings (rarely
-changed at runtime, so they don't deserve sidebar real-estate).
+The data-scope picker (which folders / memory layers to feed into the
+run) lives **inside the Run workspace**, not in the sidebar — that's
+where the picker is contextually used.
+
+Language is auto-detected from browser/OS; override lives under
+Admin → Settings (rarely changed, doesn't deserve sidebar real estate).
 """
 from __future__ import annotations
 
@@ -31,64 +34,170 @@ from praxia.core.llm import DEFAULT_ALIASES
 from praxia.data.scopes import DataScope, ScopeRegistry
 from praxia.flows import LogicCheckerFlow, RAGOptimizationFlow, SalesAgentFlow
 from praxia.skills import BUSINESS_SKILLS
-from praxia.ui.i18n import t, language_selector_in_sidebar
-from praxia.ui.responsive import (
-    compact_mode_toggle_in_sidebar,
-    inject_mobile_css,
-)
+from praxia.ui.i18n import t, detect_language, SUPPORTED, LANG_DISPLAY
+from praxia.ui.responsive import inject_mobile_css
 
 st.set_page_config(page_title="Praxia", page_icon="🪡", layout="wide")
 inject_mobile_css()
 
-# === Sidebar ===============================================================
-
-# Locale + UX (top)
-language_selector_in_sidebar()
-compact_mode_toggle_in_sidebar(t("sidebar.compact"))
-
-st.sidebar.title(t("app.title"))
-st.sidebar.caption(t("app.tagline"))
-
-# Identity
-user_id = st.sidebar.text_input(
-    t("sidebar.user"),
-    value=os.getenv("PRAXIA_USER_ID", "default-user"),
-)
-org_id = st.sidebar.text_input(t("sidebar.org"), value="default-org")
-
-st.sidebar.divider()
-
-# Mode picker — operational view (replaces the previous 11-tab strip)
-MODE_OPTIONS = [
-    "flow",
-    "skill",
-    "memory",
-    "data",
-    "consolidate",
-    "dashboard",
-    "prompts",
-    "admin",
-]
-
-mode = st.sidebar.selectbox(
-    t("sidebar.view"),
-    options=MODE_OPTIONS,
-    format_func=lambda m: t(f"mode.{m}"),
-    key="praxia_mode",
-)
-
-st.sidebar.divider()
-st.sidebar.markdown(
-    f"📚 [{t('sidebar.readme')}](https://github.com/praxia-dev/praxia)  \n"
-    f"🐛 [{t('sidebar.issues')}](https://github.com/praxia-dev/praxia/issues)"
-)
+# Optional dependency: streamlit-option-menu provides the icon-driven
+# vertical nav. Falls back to a selectbox if not installed.
+try:
+    from streamlit_option_menu import option_menu
+    HAS_OPTION_MENU = True
+except ImportError:
+    HAS_OPTION_MENU = False
 
 
-# === Resolve runtime LLM + backend (set via Admin → Settings) ==============
+# =====================================================================
+# Login gate
+# =====================================================================
+
+def _render_login() -> None:
+    """Render the login form. On submit, populate session_state and rerun."""
+    st.markdown(
+        "<div style='max-width:480px; margin:6vh auto 0;'>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"# 🪡 {t('app.title').replace('🪡 ', '')}")
+    st.caption(t("app.tagline"))
+    st.write("")
+
+    with st.form("praxia_login", clear_on_submit=False):
+        user_id_input = st.text_input(
+            t("login.user_id"),
+            value=os.getenv("PRAXIA_USER_ID", ""),
+            placeholder="alice",
+        )
+        org_id_input = st.text_input(
+            t("login.org_id"),
+            value="default-org",
+            placeholder="default-org",
+        )
+        api_key_input = st.text_input(
+            t("login.api_key"),
+            type="password",
+            help=t("login.api_key_help"),
+        )
+        submit = st.form_submit_button(
+            t("login.submit"), type="primary", use_container_width=True
+        )
+
+        if submit:
+            if not user_id_input.strip():
+                st.error(t("login.user_id_required"))
+            else:
+                resolved_user = user_id_input.strip()
+                resolved_role = "unknown"
+                # If the user provided an API key, validate against the auth
+                # store. The username we trust is the one returned by auth.
+                if api_key_input:
+                    try:
+                        from praxia.auth import AuthManager
+                        auth_check = AuthManager()
+                        u = auth_check.authenticate(api_key=api_key_input)
+                        if u is None:
+                            st.error(t("login.invalid_key"))
+                            st.markdown("</div>", unsafe_allow_html=True)
+                            return
+                        resolved_user = u.username
+                        resolved_role = u.role
+                    except Exception as e:
+                        st.warning(f"Auth check unavailable: {e}")
+
+                st.session_state["logged_in"] = True
+                st.session_state["user_id"] = resolved_user
+                st.session_state["org_id"] = (
+                    org_id_input.strip() or "default-org"
+                )
+                st.session_state["actor_role"] = resolved_role
+                st.rerun()
+
+    st.write("")
+    st.caption(t("login.dev_hint"))
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+if not st.session_state.get("logged_in"):
+    _render_login()
+    st.stop()
+
+
+user_id: str = st.session_state["user_id"]
+org_id: str = st.session_state["org_id"]
+actor_role: str = st.session_state.get("actor_role", "unknown")
+
+
+# =====================================================================
+# Sidebar: brand · user · sign-out · nav
+# =====================================================================
+
+with st.sidebar:
+    st.markdown(f"### {t('app.title')}")
+    st.caption(f"👤 **{user_id}** · {actor_role}")
+    if st.button(t("login.sign_out"), use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
+
+    st.divider()
+
+    NAV_ITEMS = [
+        ("run", "play-circle"),
+        ("memory", "brain"),
+        ("data", "folder"),
+        ("consolidate", "moon"),
+        ("dashboard", "bar-chart"),
+        ("prompts", "pencil-square"),
+        ("admin", "gear"),
+    ]
+    nav_keys = [k for k, _ in NAV_ITEMS]
+    nav_labels = [t(f"mode.{k}") for k in nav_keys]
+    nav_icons = [icon for _, icon in NAV_ITEMS]
+
+    if HAS_OPTION_MENU:
+        selected_label = option_menu(
+            menu_title=None,
+            options=nav_labels,
+            icons=nav_icons,
+            default_index=0,
+            styles={
+                "container": {
+                    "padding": "0",
+                    "background-color": "transparent",
+                },
+                "icon": {"font-size": "16px"},
+                "nav-link": {
+                    "font-size": "14px",
+                    "padding": "10px 12px",
+                    "margin": "2px 0",
+                    "--hover-color": "rgba(201,164,86,0.08)",
+                    "border-radius": "8px",
+                },
+                "nav-link-selected": {
+                    "background-color": "rgba(201,164,86,0.18)",
+                    "color": "inherit",
+                    "font-weight": "600",
+                },
+            },
+            key="praxia_nav",
+        )
+        mode = nav_keys[nav_labels.index(selected_label)]
+    else:
+        mode = st.selectbox(
+            t("sidebar.view"),
+            options=nav_keys,
+            format_func=lambda k: t(f"mode.{k}"),
+            key="praxia_mode",
+        )
+
+
+# =====================================================================
+# Resolve runtime LLM + memory backend (set via Admin → Settings)
+# =====================================================================
 
 _default_model = list(DEFAULT_ALIASES.keys())[0]
-model_choice = st.session_state.get("praxia_model", _default_model)
-backend_choice = st.session_state.get("praxia_backend", "json")
+model_choice: str = st.session_state.get("praxia_model", _default_model)
+backend_choice: str = st.session_state.get("praxia_backend", "json")
 os.environ["PRAXIA_MEMORY_BACKEND"] = backend_choice
 
 
@@ -100,66 +209,60 @@ def get_loom(_user_id: str, _org_id: str, _model: str) -> Praxia:
 loom = get_loom(user_id, org_id, model_choice)
 
 
-# === Data scope registry + sidebar selector ================================
+# =====================================================================
+# Data scope: registry + reusable picker / context-gather
+# =====================================================================
 
 scope_registry = ScopeRegistry(loom.config.memory_dir / "data")
 user_scopes = scope_registry.list_for_user(user_id)
 
-st.sidebar.divider()
-st.sidebar.markdown(f"**📁 {t('sidebar.scope.h')}**")
 
-# Built-in scopes — always available
-selected_builtin: list[str] = []
-if st.sidebar.checkbox(t("scope.personal_memory"), value=True, key="scope_personal"):
-    selected_builtin.append("personal_memory")
-if st.sidebar.checkbox(t("scope.org_memory"), value=True, key="scope_org"):
-    selected_builtin.append("org_memory")
-if st.sidebar.checkbox(t("scope.frozen"), value=False, key="scope_frozen"):
-    selected_builtin.append("frozen")
+def render_scope_picker(key_prefix: str) -> list[str]:
+    """Render a Data-scope multi-select inside an expander.
 
-# Custom scopes (local + connector folders the user has registered)
-selected_custom_ids: list[str] = []
-local_scopes = [s for s in user_scopes if s.kind == "local"]
-connector_scopes = [s for s in user_scopes if s.kind == "connector"]
-
-if local_scopes:
-    st.sidebar.caption(t("sidebar.scope.local_h"))
-    for s in local_scopes:
-        n_files = len(scope_registry.list_local_files(s))
-        if st.sidebar.checkbox(
-            f"📁 {s.name} ({n_files})",
-            value=False,
-            key=f"scope_local_{s.id}",
-        ):
-            selected_custom_ids.append(s.id)
-
-if connector_scopes:
-    st.sidebar.caption(t("sidebar.scope.connector_h"))
-    for s in connector_scopes:
-        if st.sidebar.checkbox(
-            f"🔌 {s.name} ({s.connector})",
-            value=False,
-            key=f"scope_conn_{s.id}",
-        ):
-            selected_custom_ids.append(s.id)
-
-if not user_scopes:
-    st.sidebar.caption(t("sidebar.scope.empty_hint"))
-
-st.session_state["praxia_selected_scopes"] = {
-    "builtin": selected_builtin,
-    "custom_ids": selected_custom_ids,
-}
+    Returns the list of selected custom-scope ids. Built-in scopes
+    (personal/org/frozen) are reflected in session_state for callers
+    that want to read them.
+    """
+    selected_ids: list[str] = []
+    builtin: list[str] = []
+    with st.expander(f"📁 {t('scope.section_h')}", expanded=False):
+        st.caption(t("scope.section_intro"))
+        col_b, col_c = st.columns(2)
+        with col_b:
+            st.markdown(f"**{t('scope.builtin_h')}**")
+            if st.checkbox(t("scope.personal_memory"), value=True,
+                           key=f"{key_prefix}_b_pm"):
+                builtin.append("personal_memory")
+            if st.checkbox(t("scope.org_memory"), value=True,
+                           key=f"{key_prefix}_b_om"):
+                builtin.append("org_memory")
+            if st.checkbox(t("scope.frozen"), value=False,
+                           key=f"{key_prefix}_b_fz"):
+                builtin.append("frozen")
+        with col_c:
+            st.markdown(f"**{t('scope.custom_h')}**")
+            if user_scopes:
+                for s in user_scopes:
+                    label = (
+                        f"📁 {s.name}" if s.kind == "local"
+                        else f"🔌 {s.name} ({s.connector})"
+                    )
+                    if st.checkbox(label, value=False,
+                                   key=f"{key_prefix}_c_{s.id}"):
+                        selected_ids.append(s.id)
+            else:
+                st.caption(t("scope.empty_hint"))
+    st.session_state[f"praxia_scope_{key_prefix}_builtin"] = builtin
+    return selected_ids
 
 
-def _gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
-    """Read selected custom scopes' contents as additional execution context.
+def gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
+    """Concatenate selected custom-scope contents as additional context.
 
-    Local scopes: parse all files via the unified parser, concatenate.
-    Connector scopes: pull from the configured connector path at run time.
-
-    Truncates per-file at 5000 chars and total at max_chars to keep token use
-    bounded. Errors are surfaced as inline notes rather than raised.
+    Local scopes: parse all files via the unified parser.
+    Connector scopes: pull live at execution time.
+    Truncates per-file at 5000 chars and total at max_chars.
     """
     if not scope_ids:
         return ""
@@ -181,7 +284,10 @@ def _gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
                         f"{parsed.content[:5000]}\n"
                     )
                 except Exception as exc:
-                    chunk = f"## File [{scope.name}/{f.name}] (parse error: {exc})\n"
+                    chunk = (
+                        f"## File [{scope.name}/{f.name}] "
+                        f"(parse error: {exc})\n"
+                    )
                 parts.append(chunk)
                 used += len(chunk)
         elif scope.kind == "connector" and scope.connector and scope.connector_path:
@@ -199,7 +305,10 @@ def _gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
                 for it in items:
                     if used >= max_chars:
                         break
-                    body = it.content if isinstance(it.content, str) else f"<binary {len(it.content)} bytes>"
+                    body = (
+                        it.content if isinstance(it.content, str)
+                        else f"<binary {len(it.content)} bytes>"
+                    )
                     chunk = (
                         f"## {scope.connector}:{scope.connector_path}/{it.name}\n"
                         f"{body[:5000]}\n"
@@ -211,219 +320,301 @@ def _gather_scope_context(scope_ids: list[str], max_chars: int = 20000) -> str:
     return "\n\n".join(parts)
 
 
-# === Mode: Flow ============================================================
+# =====================================================================
+# Mode: Run (Workflow / Skill / Agent)
+# =====================================================================
 
-if mode == "flow":
-    st.header(t("flow.h"))
+if mode == "run":
+    st.header(t("run.h"))
+    st.caption(t("run.intro"))
 
-    flow_name = st.selectbox(
-        t("flow.pick"),
-        options=["sales-agent", "logic-checker", "rag-optimizer"],
-    )
+    tab_workflow, tab_skill, tab_agent = st.tabs([
+        t("run.tab.workflow"),
+        t("run.tab.skill"),
+        t("run.tab.agent"),
+    ])
 
-    # All registered parsers — drives the file_uploader type list
-    from praxia.io.parsers import parse_file as _parse, supported_extensions as _exts
-    SUPPORTED_EXT = _exts()
-
-    def _parse_uploaded(file) -> tuple[str, dict]:
-        """Run an uploaded Streamlit file through the unified parser."""
-        try:
-            parsed = _parse(file.getvalue() if hasattr(file, "getvalue") else file.read(), filename=file.name)
-            return parsed.content, parsed.metadata
-        except Exception as e:
-            return f"[Failed to parse {file.name}: {e}]", {"error": str(e)}
-
-    flow_inputs: dict[str, Any] = {}
-    if flow_name == "sales-agent":
-        flow_inputs["customer_name"] = st.text_input(t("flow.sales.customer_name"), placeholder="Acme Inc.")
-        flow_inputs["product"] = st.text_input(t("flow.sales.product"), placeholder="BizFlow")
-        flow_inputs["additional_context"] = st.text_area(t("flow.sales.context"), height=100)
-        sales_files = st.file_uploader(
-            t("flow.sales.files").format(exts=", ".join(SUPPORTED_EXT)),
-            type=SUPPORTED_EXT,
-            accept_multiple_files=True,
-            key="sales_files",
+    # ---- Workflow (multi-agent flows) -------------------------------
+    with tab_workflow:
+        st.markdown(t("run.workflow.what"))
+        flow_name = st.selectbox(
+            t("flow.pick"),
+            options=["sales-agent", "logic-checker", "rag-optimizer"],
+            key="wf_pick",
         )
-        if sales_files:
-            extra_text = []
-            for f in sales_files:
-                content, meta = _parse_uploaded(f)
-                extra_text.append(f"## File: {f.name}\n{content[:12000]}")
-                st.caption(f"📄 {f.name} · parsed {len(content):,} chars · {meta}")
-            flow_inputs["additional_context"] += "\n\n" + "\n\n".join(extra_text)
-            st.success(t("flow.sales.attached").format(n=len(sales_files)))
-        flow_cls: Any = SalesAgentFlow
-    elif flow_name == "logic-checker":
-        upload_mode = st.radio(
+
+        from praxia.io.parsers import parse_file as _parse, supported_extensions as _exts
+        SUPPORTED_EXT = _exts()
+
+        def _parse_uploaded(file) -> tuple[str, dict]:
+            try:
+                parsed = _parse(
+                    file.getvalue() if hasattr(file, "getvalue") else file.read(),
+                    filename=file.name,
+                )
+                return parsed.content, parsed.metadata
+            except Exception as e:
+                return f"[Failed to parse {file.name}: {e}]", {"error": str(e)}
+
+        flow_inputs: dict[str, Any] = {}
+        if flow_name == "sales-agent":
+            flow_inputs["customer_name"] = st.text_input(
+                t("flow.sales.customer_name"), placeholder="Acme Inc.",
+            )
+            flow_inputs["product"] = st.text_input(
+                t("flow.sales.product"), placeholder="BizFlow",
+            )
+            flow_inputs["additional_context"] = st.text_area(
+                t("flow.sales.context"), height=100,
+            )
+            sales_files = st.file_uploader(
+                t("flow.sales.files").format(exts=", ".join(SUPPORTED_EXT)),
+                type=SUPPORTED_EXT,
+                accept_multiple_files=True,
+                key="sales_files",
+            )
+            if sales_files:
+                extra_text = []
+                for f in sales_files:
+                    content, meta = _parse_uploaded(f)
+                    extra_text.append(f"## File: {f.name}\n{content[:12000]}")
+                    st.caption(
+                        f"📄 {f.name} · parsed {len(content):,} chars · {meta}"
+                    )
+                flow_inputs["additional_context"] += "\n\n" + "\n\n".join(extra_text)
+                st.success(t("flow.sales.attached").format(n=len(sales_files)))
+            flow_cls: Any = SalesAgentFlow
+
+        elif flow_name == "logic-checker":
+            upload_mode = st.radio(
+                t("flow.input_method"),
+                options=["text", "file", "voice"],
+                format_func=lambda v: t(f"flow.input_method.{v}"),
+                horizontal=True,
+                key="lc_input_mode",
+            )
+            if upload_mode == "file":
+                uploaded = st.file_uploader(
+                    t("flow.logic.file").format(exts=", ".join(SUPPORTED_EXT)),
+                    type=SUPPORTED_EXT,
+                    key="logic_file",
+                )
+                if uploaded:
+                    content, meta = _parse_uploaded(uploaded)
+                    flow_inputs["document"] = content
+                    st.caption(
+                        f"📄 {uploaded.name} · parsed {len(content):,} chars · {meta}"
+                    )
+                else:
+                    flow_inputs["document"] = ""
+            elif upload_mode == "voice":
+                audio = st.audio_input(
+                    t("flow.logic.audio_record"), key="lc_audio",
+                )
+                if audio:
+                    from praxia.io.audio import STT
+                    with st.spinner(t("common.transcribing")):
+                        try:
+                            flow_inputs["document"] = STT().transcribe(
+                                audio.getvalue(),
+                                filename="recording.wav",
+                                language="ja",
+                            )
+                            st.success(
+                                t("common.transcribed").format(
+                                    n=len(flow_inputs["document"])
+                                )
+                            )
+                            st.text(flow_inputs["document"][:500])
+                        except Exception as e:
+                            st.error(f"STT failed: {e}")
+                            flow_inputs["document"] = ""
+                else:
+                    flow_inputs["document"] = ""
+            else:  # text
+                flow_inputs["document"] = st.text_area(
+                    t("flow.logic.text_input"), height=300, key="lc_text",
+                )
+            flow_cls = LogicCheckerFlow
+
+        else:  # rag-optimizer
+            flow_inputs["question"] = st.text_input(
+                t("flow.rag.question"), key="rag_q",
+            )
+            st.info(t("flow.rag.retriever_note"))
+
+            def _personal_memory_retriever(q: str) -> list[dict]:
+                try:
+                    hits = loom.personal_memory.search(q, limit=10)
+                except Exception:
+                    hits = []
+                return [{"id": i, "text": h} for i, h in enumerate(hits)]
+
+            flow_inputs["retriever"] = _personal_memory_retriever
+            flow_cls = RAGOptimizationFlow
+
+        # Data scope picker (in the Run workspace, where it's actually used)
+        wf_scope_ids = render_scope_picker("workflow")
+        if wf_scope_ids:
+            scope_ctx = gather_scope_context(wf_scope_ids)
+            if scope_ctx:
+                current = flow_inputs.get("additional_context", "") or ""
+                flow_inputs["additional_context"] = (
+                    current + ("\n\n" if current else "") + scope_ctx
+                )
+                st.caption(t("data.injected").format(n=len(wf_scope_ids)))
+
+        if st.button(
+            t("flow.run_btn"), type="primary",
+            disabled=not any(flow_inputs.values()),
+            key="wf_run",
+        ):
+            with st.spinner(f"Running {flow_cls.name}…"):
+                result = loom.run(flow_cls, inputs=flow_inputs)
+
+            st.success(t("common.done"))
+            st.subheader("Final Output")
+            st.markdown(result.final_output)
+
+            with st.expander(t("flow.steps_h"), expanded=False):
+                for name, step_result in result.step_outputs.items():
+                    st.markdown(f"### `{name}`")
+                    st.markdown(step_result.output)
+                    st.divider()
+
+            st.caption(
+                f"input tokens: {result.total_usage['input_tokens']} | "
+                f"output tokens: {result.total_usage['output_tokens']}"
+            )
+
+    # ---- Skill (single domain skill) --------------------------------
+    with tab_skill:
+        st.markdown(t("run.skill.what"))
+
+        skill_options = {
+            f"{s.manifest.domain} — {s.manifest.name}": s
+            for s in BUSINESS_SKILLS
+        }
+        label = st.selectbox(
+            t("skill.pick"), options=list(skill_options.keys()), key="sk_pick",
+        )
+        skill_cls = skill_options[label]
+        st.caption(skill_cls.manifest.description)
+
+        from praxia.io.parsers import parse_file as _parse2, supported_extensions as _exts2
+        SKILL_EXTS = _exts2()
+
+        skill_input_mode = st.radio(
             t("flow.input_method"),
             options=["text", "file", "voice"],
-            format_func=lambda v: t(f"flow.input_method.{v}"),
+            format_func=lambda v: (
+                t(f"skill.input_method.{v}") if v != "voice"
+                else t("flow.input_method.voice")
+            ),
             horizontal=True,
+            key="skill_input_mode",
         )
-        if upload_mode == "file":
-            uploaded = st.file_uploader(
-                t("flow.logic.file").format(exts=", ".join(SUPPORTED_EXT)),
-                type=SUPPORTED_EXT,
-                key="logic_file",
+
+        user_input = ""
+        if skill_input_mode in ("text", "file"):
+            user_input = st.text_area(
+                t("skill.input"), height=200,
+                placeholder=t("skill.input_placeholder"),
+                key="skill_text",
             )
-            if uploaded:
-                content, meta = _parse_uploaded(uploaded)
-                flow_inputs["document"] = content
-                st.caption(f"📄 {uploaded.name} · parsed {len(content):,} chars · {meta}")
-            else:
-                flow_inputs["document"] = ""
-        elif upload_mode == "voice":
-            audio = st.audio_input(t("flow.logic.audio_record"))
+
+        if skill_input_mode == "file":
+            skill_files = st.file_uploader(
+                t("skill.attach_label").format(exts=", ".join(SKILL_EXTS)),
+                type=SKILL_EXTS,
+                accept_multiple_files=True,
+                key="skill_files",
+            )
+            if skill_files:
+                attached_text: list[str] = []
+                for f in skill_files:
+                    try:
+                        parsed = _parse2(f.getvalue(), filename=f.name)
+                        attached_text.append(
+                            f"## Attached file: {f.name}\n{parsed.content[:12000]}"
+                        )
+                        st.caption(
+                            f"📄 {f.name} · {len(parsed.content):,} chars · "
+                            f"{parsed.metadata}"
+                        )
+                    except Exception as e:
+                        st.error(f"Failed to parse {f.name}: {e}")
+                user_input = (user_input or "") + "\n\n" + "\n\n".join(attached_text)
+
+        if skill_input_mode == "voice":
+            audio = st.audio_input(t("skill.audio_record"), key="skill_audio")
             if audio:
                 from praxia.io.audio import STT
                 with st.spinner(t("common.transcribing")):
                     try:
-                        flow_inputs["document"] = STT().transcribe(
-                            audio.getvalue(), filename="recording.wav", language="ja"
+                        user_input = STT().transcribe(
+                            audio.getvalue(),
+                            filename="skill_input.wav",
+                            language="ja",
                         )
-                        st.success(t("common.transcribed").format(n=len(flow_inputs["document"])))
-                        st.text(flow_inputs["document"][:500])
+                        st.success(t("common.transcribed").format(n=len(user_input)))
+                        st.text_area(
+                            t("skill.audio_edit"), value=user_input,
+                            height=120, key="stt_edit",
+                        )
                     except Exception as e:
                         st.error(f"STT failed: {e}")
-                        flow_inputs["document"] = ""
-            else:
-                flow_inputs["document"] = ""
-        else:  # text
-            flow_inputs["document"] = st.text_area(t("flow.logic.text_input"), height=300)
-        flow_cls = LogicCheckerFlow
-    else:  # rag-optimizer
-        flow_inputs["question"] = st.text_input(t("flow.rag.question"))
-        st.info(t("flow.rag.retriever_note"))
-        def _personal_memory_retriever(q: str) -> list[dict]:
-            try:
-                hits = loom.personal_memory.search(q, limit=10)
-            except Exception:
-                hits = []
-            return [{"id": i, "text": h} for i, h in enumerate(hits)]
-        flow_inputs["retriever"] = _personal_memory_retriever
-        flow_cls = RAGOptimizationFlow
 
-    # Inject selected Data-scope content into the flow as additional context.
-    if selected_custom_ids:
-        scope_ctx = _gather_scope_context(selected_custom_ids)
-        if scope_ctx:
-            current = flow_inputs.get("additional_context", "") or ""
-            flow_inputs["additional_context"] = (
-                current + ("\n\n" if current else "") + scope_ctx
-            )
-            st.caption(t("data.injected").format(n=len(selected_custom_ids)))
-
-    if st.button(t("flow.run_btn"), type="primary", disabled=not any(flow_inputs.values())):
-        with st.spinner(f"Running {flow_cls.name}…"):
-            result = loom.run(flow_cls, inputs=flow_inputs)
-
-        st.success(t("common.done"))
-        st.subheader("Final Output")
-        st.markdown(result.final_output)
-
-        with st.expander(t("flow.steps_h"), expanded=False):
-            for name, step_result in result.step_outputs.items():
-                st.markdown(f"### `{name}`")
-                st.markdown(step_result.output)
-                st.divider()
-
-        st.caption(
-            f"input tokens: {result.total_usage['input_tokens']} | "
-            f"output tokens: {result.total_usage['output_tokens']}"
+        enable_tts = st.checkbox(
+            t("skill.tts_toggle"), value=False, key="skill_tts",
         )
 
+        # Data scope picker
+        sk_scope_ids = render_scope_picker("skill")
+        if sk_scope_ids and user_input:
+            scope_ctx = gather_scope_context(sk_scope_ids)
+            if scope_ctx:
+                user_input = (
+                    user_input
+                    + "\n\n--- Reference data from selected Data scopes ---\n"
+                    + scope_ctx
+                )
+                st.caption(t("data.injected").format(n=len(sk_scope_ids)))
 
-# === Mode: Skill ===========================================================
-
-elif mode == "skill":
-    st.header(t("skill.h"))
-
-    skill_options = {f"{s.manifest.domain} — {s.manifest.name}": s for s in BUSINESS_SKILLS}
-    label = st.selectbox(t("skill.pick"), options=list(skill_options.keys()))
-    skill_cls = skill_options[label]
-
-    st.caption(skill_cls.manifest.description)
-
-    # Input mode: text / file / voice
-    from praxia.io.parsers import parse_file as _parse2, supported_extensions as _exts2
-    SKILL_EXTS = _exts2()
-
-    skill_input_mode = st.radio(
-        t("flow.input_method"),
-        options=["text", "file", "voice"],
-        format_func=lambda v: t(f"skill.input_method.{v}") if v != "voice" else t("flow.input_method.voice"),
-        horizontal=True,
-        key="skill_input_mode",
-    )
-
-    user_input = ""
-    if skill_input_mode in ("text", "file"):
-        user_input = st.text_area(t("skill.input"), height=200, placeholder=t("skill.input_placeholder"))
-
-    if skill_input_mode == "file":
-        skill_files = st.file_uploader(
-            t("skill.attach_label").format(exts=", ".join(SKILL_EXTS)),
-            type=SKILL_EXTS,
-            accept_multiple_files=True,
-            key="skill_files",
-        )
-        if skill_files:
-            attached_text: list[str] = []
-            for f in skill_files:
+        if st.button(
+            t("flow.run_btn"), key="skill_run", type="primary",
+            disabled=not user_input,
+        ):
+            llm = LLM(model_choice)
+            skill_obj = skill_cls(llm=llm)
+            with st.spinner(f"Running {skill_obj.manifest.name}…"):
+                output = skill_obj.run(user_input)
+            st.markdown(output)
+            if loom.skill_registry:
+                loom.skill_registry.log_usage(
+                    skill_name=skill_obj.manifest.name, user_id=user_id,
+                )
+            if enable_tts:
+                from praxia.io.audio import TTS
                 try:
-                    parsed = _parse2(f.getvalue(), filename=f.name)
-                    attached_text.append(f"## Attached file: {f.name}\n{parsed.content[:12000]}")
-                    st.caption(f"📄 {f.name} · {len(parsed.content):,} chars · {parsed.metadata}")
+                    with st.spinner(t("skill.tts_synthesizing")):
+                        audio_bytes = TTS().synthesize(
+                            output[:4000], voice="alloy", format="mp3",
+                        )
+                    st.audio(audio_bytes, format="audio/mp3")
                 except Exception as e:
-                    st.error(f"Failed to parse {f.name}: {e}")
-            user_input = (user_input or "") + "\n\n" + "\n\n".join(attached_text)
+                    st.warning(f"TTS unavailable: {e}")
 
-    if skill_input_mode == "voice":
-        audio = st.audio_input(t("skill.audio_record"), key="skill_audio")
-        if audio:
-            from praxia.io.audio import STT
-            with st.spinner(t("common.transcribing")):
-                try:
-                    user_input = STT().transcribe(
-                        audio.getvalue(), filename="skill_input.wav", language="ja"
-                    )
-                    st.success(t("common.transcribed").format(n=len(user_input)))
-                    st.text_area(t("skill.audio_edit"), value=user_input, height=120, key="stt_edit")
-                except Exception as e:
-                    st.error(f"STT failed: {e}")
-
-    enable_tts = st.checkbox(t("skill.tts_toggle"), value=False, key="skill_tts")
-
-    # Inject selected Data-scope content into the skill prompt as reference data.
-    if selected_custom_ids and user_input:
-        scope_ctx = _gather_scope_context(selected_custom_ids)
-        if scope_ctx:
-            user_input = (
-                user_input
-                + "\n\n--- Reference data from selected Data scopes ---\n"
-                + scope_ctx
-            )
-            st.caption(t("data.injected").format(n=len(selected_custom_ids)))
-
-    if st.button(t("flow.run_btn"), key="skill_run", type="primary", disabled=not user_input):
-        llm = LLM(model_choice)
-        skill_obj = skill_cls(llm=llm)
-        with st.spinner(f"Running {skill_obj.manifest.name}…"):
-            output = skill_obj.run(user_input)
-        st.markdown(output)
-        if loom.skill_registry:
-            loom.skill_registry.log_usage(skill_name=skill_obj.manifest.name, user_id=user_id)
-        if enable_tts:
-            from praxia.io.audio import TTS
-            try:
-                with st.spinner(t("skill.tts_synthesizing")):
-                    audio_bytes = TTS().synthesize(output[:4000], voice="alloy", format="mp3")
-                st.audio(audio_bytes, format="audio/mp3")
-            except Exception as e:
-                st.warning(f"TTS unavailable: {e}")
+    # ---- Agent (LLM-driven tool-use loop) ---------------------------
+    with tab_agent:
+        st.markdown(t("run.agent.what"))
+        st.info(t("run.agent.coming_soon"))
+        st.code('praxia agent run "your task here" --max-steps 10', language="bash")
 
 
-# === Mode: Memory ==========================================================
+# =====================================================================
+# Mode: Memory
+# =====================================================================
 
 elif mode == "memory":
     st.header(t("memory.h"))
@@ -436,7 +627,8 @@ elif mode == "memory":
             st.metric(t("memory.entries_total"), len(entries))
             search_q = st.text_input(t("memory.search"), key="personal_search")
             shown = (
-                loom.personal_memory.search(search_q, limit=20) if search_q else [e.text for e in entries[-20:]]
+                loom.personal_memory.search(search_q, limit=20)
+                if search_q else [e.text for e in entries[-20:]]
             )
             for s in shown:
                 st.text(s)
@@ -451,14 +643,21 @@ elif mode == "memory":
                 with st.expander(f"📦 {block.label}", expanded=False):
                     st.caption(block.description)
                     st.text(block.value)
-                    st.caption(f"contributors: {', '.join(block.promoted_from)}")
+                    st.caption(
+                        f"contributors: {', '.join(block.promoted_from)}"
+                    )
 
 
-# === Mode: Data folders (manage local + connector scopes) ==================
+# =====================================================================
+# Mode: Data folders (manage local + connector scopes)
+# =====================================================================
 
 elif mode == "data":
     st.header(t("mode.data"))
     st.markdown(t("data.intro"))
+
+    local_scopes = [s for s in user_scopes if s.kind == "local"]
+    connector_scopes = [s for s in user_scopes if s.kind == "connector"]
 
     sub_local, sub_connector, sub_browse = st.tabs([
         t("data.tab.local"),
@@ -466,19 +665,17 @@ elif mode == "data":
         t("data.tab.browse"),
     ])
 
-    # ---- Local folders ---------------------------------------------------
     with sub_local:
         st.caption(t("data.local.intro"))
-
         if local_scopes:
             for s in local_scopes:
                 files = scope_registry.list_local_files(s)
-                with st.expander(f"📁 {s.name} · {len(files)} files", expanded=False):
+                with st.expander(f"📁 {s.name} · {len(files)} files",
+                                 expanded=False):
                     if s.description:
                         st.caption(s.description)
                     st.caption(f"id: `{s.id}`  ·  path: `{s.path}`")
 
-                    # File list with per-file delete
                     for f in files:
                         col_n, col_s, col_d = st.columns([6, 2, 1])
                         col_n.text(f.name)
@@ -494,14 +691,16 @@ elif mode == "data":
                         key=f"upload_more_{s.id}",
                     )
                     col_save, col_del = st.columns(2)
-                    if col_save.button(t("data.local.save_uploads"), key=f"save_{s.id}"):
+                    if col_save.button(t("data.local.save_uploads"),
+                                       key=f"save_{s.id}"):
                         if new_files:
                             saved = scope_registry.save_uploaded_files(s, new_files)
                             st.success(t("data.local.saved").format(n=len(saved)))
                             st.rerun()
                         else:
                             st.warning(t("data.local.no_files_to_save"))
-                    if col_del.button(t("data.local.delete_folder"), type="secondary", key=f"delfol_{s.id}"):
+                    if col_del.button(t("data.local.delete_folder"),
+                                      type="secondary", key=f"delfol_{s.id}"):
                         scope_registry.delete(user_id, s.id)
                         st.success(t("data.local.folder_deleted").format(name=s.name))
                         st.rerun()
@@ -528,10 +727,8 @@ elif mode == "data":
                     st.success(t("data.local.created").format(name=new_name))
                     st.rerun()
 
-    # ---- Connector folders ----------------------------------------------
     with sub_connector:
         st.caption(t("data.connector.intro"))
-
         if connector_scopes:
             for s in connector_scopes:
                 with st.expander(
@@ -541,7 +738,8 @@ elif mode == "data":
                     if s.description:
                         st.caption(s.description)
                     st.caption(f"id: `{s.id}`")
-                    if st.button(t("data.connector.delete"), key=f"delcon_{s.id}"):
+                    if st.button(t("data.connector.delete"),
+                                 key=f"delcon_{s.id}"):
                         scope_registry.delete(user_id, s.id)
                         st.success(t("data.local.folder_deleted").format(name=s.name))
                         st.rerun()
@@ -553,7 +751,7 @@ elif mode == "data":
         from praxia.connectors.registry import list_builtin
         with st.form("data_connector_create_form", clear_on_submit=True):
             cn_name = st.text_input(
-                t("data.connector.create_name"), placeholder="Customer Acme"
+                t("data.connector.create_name"), placeholder="Customer Acme",
             )
             cn_desc = st.text_input(t("data.connector.create_desc"))
             cn_connector = st.selectbox(
@@ -569,12 +767,11 @@ elif mode == "data":
                     st.warning(t("data.connector.create_required"))
                 else:
                     scope_registry.create_connector(
-                        user_id, cn_name, cn_connector, cn_path, cn_desc
+                        user_id, cn_name, cn_connector, cn_path, cn_desc,
                     )
                     st.success(t("data.local.created").format(name=cn_name))
                     st.rerun()
 
-    # ---- Browse: peek at one scope's contents ---------------------------
     with sub_browse:
         if not user_scopes:
             st.info(t("data.browse.empty"))
@@ -602,11 +799,13 @@ elif mode == "data":
                             st.caption(f"parsed {len(parsed.content):,} chars")
                         except Exception as exc:
                             st.text(f"<could not parse: {exc}>")
-            else:  # connector
+            else:
                 st.markdown(
-                    f"**{picked.name}** ({picked.connector}: `{picked.connector_path}`)"
+                    f"**{picked.name}** "
+                    f"({picked.connector}: `{picked.connector_path}`)"
                 )
-                if st.button(t("data.browse.connector_pull"), key=f"prev_{picked.id}"):
+                if st.button(t("data.browse.connector_pull"),
+                             key=f"prev_{picked.id}"):
                     from praxia.connectors import get_connector
                     cfg_prefix = f"PRAXIA_CONN_{picked.connector.upper()}_"
                     cfg = {
@@ -616,7 +815,7 @@ elif mode == "data":
                     }
                     try:
                         items = get_connector(picked.connector, **cfg).pull(
-                            picked.connector_path, limit=10
+                            picked.connector_path, limit=10,
                         )
                         st.success(f"Pulled {len(items)} items")
                         for it in items:
@@ -629,7 +828,9 @@ elif mode == "data":
                         st.error(str(exc))
 
 
-# === Mode: Consolidate =====================================================
+# =====================================================================
+# Mode: Consolidate
+# =====================================================================
 
 elif mode == "consolidate":
     st.header(t("consolidate.h"))
@@ -644,7 +845,9 @@ elif mode == "consolidate":
         st.json(report)
 
 
-# === Mode: Dashboard =======================================================
+# =====================================================================
+# Mode: Dashboard
+# =====================================================================
 
 elif mode == "dashboard":
     st.header(t("dashboard.h"))
@@ -662,7 +865,10 @@ elif mode == "dashboard":
         c5, c6, c7 = st.columns(3)
         c5.metric("Episodes", s.episodes)
         c6.metric("Outcomes", s.outcomes_recorded)
-        c7.metric("Tokens (in/out)", f"{s.total_input_tokens:,} / {s.total_output_tokens:,}")
+        c7.metric(
+            "Tokens (in/out)",
+            f"{s.total_input_tokens:,} / {s.total_output_tokens:,}",
+        )
         if s.top_skills:
             st.subheader("Top skills")
             st.table([{"skill": n, "count": c} for n, c in s.top_skills])
@@ -692,7 +898,9 @@ elif mode == "dashboard":
             st.table([{"skill": n, "count": c} for n, c in s.top_skills])
 
 
-# === Mode: Prompts =========================================================
+# =====================================================================
+# Mode: Prompts
+# =====================================================================
 
 elif mode == "prompts":
     st.header(t("prompts.h"))
@@ -712,9 +920,7 @@ elif mode == "prompts":
             submit = st.form_submit_button("Save")
             if submit and name and body:
                 store.save_personal(
-                    user_id=user_id,
-                    name=name,
-                    body=body,
+                    user_id=user_id, name=name, body=body,
                     description=description,
                     tags=[s.strip() for s in tags.split(",") if s.strip()],
                 )
@@ -733,27 +939,30 @@ elif mode == "prompts":
         with st.form("prompt_distribute_form"):
             d_name = st.text_input("Name", key="dn")
             d_body = st.text_area("Body", height=200, key="db")
-            d_target_users = st.text_input("Target user IDs (comma-separated)", key="dtu")
+            d_target_users = st.text_input(
+                "Target user IDs (comma-separated)", key="dtu",
+            )
             d_target_roles = st.multiselect(
-                "Target roles", ["admin", "operator", "member", "viewer"], key="dtr"
+                "Target roles", ["admin", "operator", "member", "viewer"],
+                key="dtr",
             )
             submit = st.form_submit_button("Distribute")
             if submit and d_name and d_body and (d_target_users or d_target_roles):
                 saved = store.distribute(
-                    name=d_name,
-                    body=d_body,
+                    name=d_name, body=d_body,
                     target_users=[u.strip() for u in d_target_users.split(",") if u.strip()] or None,
                     target_roles=d_target_roles or None,
                 )
                 st.success(f"Distributed to {len(saved)} target(s)")
 
 
-# === Mode: Admin (sub-tabs) ================================================
+# =====================================================================
+# Mode: Admin (Settings · Users · Connectors · Policies · Exports · About)
+# =====================================================================
 
 elif mode == "admin":
     st.header(t("admin.header"))
 
-    # Auth manager — needed by most admin sub-tabs.
     try:
         from praxia.auth import AuthManager
         auth = AuthManager(storage_dir=loom.config.memory_dir / "auth")
@@ -761,29 +970,18 @@ elif mode == "admin":
         st.error(f"Auth not available: {e}")
         auth = None
 
-    # Resolve actor identity + role from the sidebar's user_id.
-    actor_role = "unknown"
     users_exist = False
     if auth is not None:
-        try:
-            _u = auth.users.get_by_username(user_id)
-            if _u is not None:
-                actor_role = _u.role
-        except Exception:
-            pass
         try:
             users_exist = bool(auth.users.list_all())
         except Exception:
             pass
 
-    # Access gate: if the auth store has any users registered, only allow
-    # signed-in admin users into Admin. If no users exist (single-user dev
-    # mode), allow access but show a clear warning.
+    # Access gate: if users exist, only admin role can open Admin.
     if users_exist and actor_role != "admin":
         st.error(t("admin.gate.denied").format(user=user_id, role=actor_role))
         st.markdown(t("admin.gate.howto"))
         st.stop()
-
     if not users_exist:
         st.warning(t("admin.gate.dev_mode"))
 
@@ -796,7 +994,7 @@ elif mode == "admin":
         t("admin.about.subtab"),
     ])
 
-    # --- Settings: runtime knobs (LLM/backend) + KNOWN_KEYS config -----
+    # ---- Settings: language, runtime LLM/backend, persistent keys ---
     with tab_settings:
         from praxia.config import KNOWN_KEYS, PraxiaConfig
 
@@ -805,11 +1003,32 @@ elif mode == "admin":
         if actor_role == "admin":
             st.success(t("admin.settings.role_ok").format(user=user_id))
         elif actor_role == "unknown":
-            st.warning(t("admin.settings.role_unknown").format(user=user_id))
+            st.info(t("admin.settings.role_unknown").format(user=user_id))
         else:
-            st.error(t("admin.settings.role_blocked").format(user=user_id, role=actor_role))
+            st.error(t("admin.settings.role_blocked").format(
+                user=user_id, role=actor_role,
+            ))
 
-        # ---- Runtime: LLM model + memory backend (moved from sidebar) ----
+        # Language picker (moved here from sidebar — rarely changed)
+        st.subheader(t("admin.settings.language_h"))
+        st.caption(t("admin.settings.language_intro"))
+        current_lang = st.session_state.get("praxia_lang", detect_language())
+        if current_lang not in SUPPORTED:
+            current_lang = "en"
+        new_lang = st.selectbox(
+            t("admin.settings.language_label"),
+            options=SUPPORTED,
+            index=SUPPORTED.index(current_lang),
+            format_func=lambda c: LANG_DISPLAY[c],
+            key="settings_lang_pick",
+        )
+        if new_lang != current_lang:
+            st.session_state["praxia_lang"] = new_lang
+            st.rerun()
+
+        st.divider()
+
+        # Runtime: LLM model + memory backend
         st.subheader(t("admin.settings.runtime_h"))
         st.caption(t("admin.settings.runtime_intro"))
 
@@ -820,7 +1039,7 @@ elif mode == "admin":
             preset_index = (
                 model_options.index(current_model)
                 if current_model in DEFAULT_ALIASES
-                else len(model_options) - 1  # "custom"
+                else len(model_options) - 1
             )
             picked_model = st.selectbox(
                 t("admin.settings.model_label"),
@@ -831,7 +1050,10 @@ elif mode == "admin":
             if picked_model == "custom":
                 picked_model = st.text_input(
                     t("admin.settings.model_custom"),
-                    value=current_model if current_model not in DEFAULT_ALIASES else "anthropic/claude-opus-4-7",
+                    value=(
+                        current_model if current_model not in DEFAULT_ALIASES
+                        else "anthropic/claude-opus-4-7"
+                    ),
                     key="settings_model_custom_input",
                 )
         with col_b:
@@ -840,14 +1062,19 @@ elif mode == "admin":
             picked_backend = st.selectbox(
                 t("admin.settings.backend_label"),
                 options=backend_options,
-                index=backend_options.index(current_backend) if current_backend in backend_options else 0,
+                index=(
+                    backend_options.index(current_backend)
+                    if current_backend in backend_options else 0
+                ),
                 key="settings_backend_pick",
             )
 
-        if st.button(t("admin.settings.runtime_apply"), type="primary", key="settings_runtime_apply"):
+        if st.button(
+            t("admin.settings.runtime_apply"), type="primary",
+            key="settings_runtime_apply",
+        ):
             st.session_state["praxia_model"] = picked_model
             st.session_state["praxia_backend"] = picked_backend
-            # Force loom to re-init with new model/backend on next rerun.
             try:
                 st.cache_resource.clear()
             except Exception:
@@ -857,7 +1084,7 @@ elif mode == "admin":
 
         st.divider()
 
-        # ---- Persistent: KNOWN_KEYS by category ----
+        # Persistent: KNOWN_KEYS by category
         st.subheader(t("admin.settings.persistent_h"))
         st.caption(t("admin.settings.precedence_hint"))
 
@@ -883,12 +1110,15 @@ elif mode == "admin":
                         if current is None:
                             help_text = t("admin.settings.help.unset")
                         elif is_secret:
-                            help_text = t("admin.settings.help.secret_set").format(masked=_mask_for_display(current))
+                            help_text = t("admin.settings.help.secret_set").format(
+                                masked=_mask_for_display(current)
+                            )
                         else:
-                            help_text = t("admin.settings.help.value_set").format(value=current)
+                            help_text = t("admin.settings.help.value_set").format(
+                                value=current
+                            )
                         new_val = st.text_input(
-                            key,
-                            value="",
+                            key, value="",
                             type="password" if is_secret else "default",
                             placeholder=t("admin.settings.placeholder.unchanged"),
                             help=help_text,
@@ -919,11 +1149,11 @@ elif mode == "admin":
                             st.success(t("admin.settings.saved").format(count=len(pending)))
                             st.info(t("admin.settings.restart_hint"))
 
-    # --- Users (formerly Tab 7) ----------------------------------------
+    # ---- Users -----------------------------------------------------
     with tab_users:
         st.header("👥 User management (admin)")
         try:
-            from praxia.auth import Role  # noqa: F401  (re-export check)
+            from praxia.auth import Role  # noqa: F401
             users_list = auth.users.list_all() if auth is not None else []
         except Exception as e:
             st.error(f"Auth not available: {e}")
@@ -933,28 +1163,28 @@ elif mode == "admin":
 
         with sub_list:
             if users_list:
-                st.table(
-                    [
-                        {
-                            "username": u.username,
-                            "role": u.role,
-                            "email": u.email or "—",
-                            "active": u.is_active,
-                        }
-                        for u in users_list
-                    ]
-                )
+                st.table([
+                    {
+                        "username": u.username, "role": u.role,
+                        "email": u.email or "—", "active": u.is_active,
+                    }
+                    for u in users_list
+                ])
             else:
                 st.info("No users yet.")
 
         with sub_create:
             with st.form("user_create_form"):
                 new_username = st.text_input("Username")
-                new_role = st.selectbox("Role", ["admin", "operator", "member", "viewer"])
+                new_role = st.selectbox(
+                    "Role", ["admin", "operator", "member", "viewer"],
+                )
                 new_email = st.text_input("Email")
                 submit = st.form_submit_button("Create")
                 if submit and new_username and auth is not None:
-                    user, raw = auth.create_user(new_username, role=new_role, email=new_email or None)
+                    user, raw = auth.create_user(
+                        new_username, role=new_role, email=new_email or None,
+                    )
                     st.success(f"Created {user.username} (role={user.role})")
                     st.code(raw, language="text")
                     st.warning("Save this API key now — it will not be shown again.")
@@ -962,39 +1192,52 @@ elif mode == "admin":
         with sub_edit:
             if users_list:
                 target = st.selectbox("Select user", [u.username for u in users_list])
-                user_target = next((u for u in users_list if u.username == target), None)
+                user_target = next(
+                    (u for u in users_list if u.username == target), None,
+                )
                 if user_target:
                     colA, colB = st.columns(2)
                     with colA:
                         new_role = st.selectbox(
                             "New role",
                             ["admin", "operator", "member", "viewer"],
-                            index=["admin", "operator", "member", "viewer"].index(user_target.role),
+                            index=["admin", "operator", "member", "viewer"].index(
+                                user_target.role
+                            ),
                         )
-                        new_email = st.text_input("New email", value=user_target.email or "")
+                        new_email = st.text_input(
+                            "New email", value=user_target.email or "",
+                        )
                         if st.button("Update") and auth is not None:
-                            auth.update_user(target, role=new_role, email=new_email or None)
+                            auth.update_user(
+                                target, role=new_role,
+                                email=new_email or None,
+                            )
                             st.success("Updated")
                             st.rerun()
                     with colB:
                         if st.button("Rotate API key") and auth is not None:
                             new_key = auth.users.rotate_api_key(user_target.id)
                             st.code(new_key, language="text")
-                        if st.button("Deactivate" if user_target.is_active else "Activate") and auth is not None:
+                        if st.button(
+                            "Deactivate" if user_target.is_active else "Activate"
+                        ) and auth is not None:
                             auth.update_user(target, is_active=not user_target.is_active)
                             st.success("Toggled")
                             st.rerun()
-                        if st.button("🗑 Delete (cannot undo)", type="primary") and auth is not None:
+                        if st.button(
+                            "🗑 Delete (cannot undo)", type="primary"
+                        ) and auth is not None:
                             auth.delete_user(target)
                             st.success("Deleted")
                             st.rerun()
 
-    # --- Connectors (formerly Tab 8) -----------------------------------
+    # ---- Connectors ------------------------------------------------
     with tab_connectors:
         st.header("🔌 External connectors")
         st.markdown(
-            "Pull data from external systems for use as context, or push Praxia "
-            "outputs back to your team's systems of record."
+            "Pull data from external systems for use as context, or push "
+            "Praxia outputs back to your team's systems of record."
         )
         from praxia.connectors.registry import list_builtin
 
@@ -1040,40 +1283,34 @@ elif mode == "admin":
                         if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
                     }
                     receipt = get_connector(sel, **cfg).push(
-                        path, ConnectorItem(id="", name="praxia_output", content=body)
+                        path, ConnectorItem(id="", name="praxia_output", content=body),
                     )
                     st.success(f"Pushed: {receipt}")
                 except Exception as e:
                     st.error(str(e))
 
-    # --- Policies (formerly Tab 9) -------------------------------------
+    # ---- Policies --------------------------------------------------
     with tab_policies:
         st.header("🛡 Resource Access Policies")
         st.markdown(
             "Control which users / roles can access connector paths, memory "
             "namespaces, prompts, and skills. Designed for enterprise IS departments."
         )
-
         sub_list, sub_add, sub_test = st.tabs(["List", "Add", "Test"])
-
         if auth:
             with sub_list:
                 policies = auth.policies.list()
                 if policies:
-                    st.table(
-                        [
-                            {
-                                "id": p.id[:8],
-                                "effect": p.effect,
-                                "type": p.resource_type,
-                                "pattern": p.resource_pattern,
-                                "actions": ",".join(p.actions),
-                                "principals": ",".join(p.principals),
-                                "description": p.description,
-                            }
-                            for p in policies
-                        ]
-                    )
+                    st.table([
+                        {
+                            "id": p.id[:8], "effect": p.effect,
+                            "type": p.resource_type, "pattern": p.resource_pattern,
+                            "actions": ",".join(p.actions),
+                            "principals": ",".join(p.principals),
+                            "description": p.description,
+                        }
+                        for p in policies
+                    ])
                     target_id = st.selectbox(
                         "Remove policy by ID",
                         options=[""] + [p.id for p in policies],
@@ -1085,18 +1322,20 @@ elif mode == "admin":
                             st.rerun()
                 else:
                     st.info("No policies yet. Defaults to 'allow' when no policy matches.")
-
             with sub_add:
                 with st.form("policy_add_form"):
                     pa_effect = st.selectbox("Effect", ["allow", "deny"])
                     pa_type = st.selectbox(
-                        "Resource type", ["connector", "memory", "prompt", "skill", "block", "*"]
+                        "Resource type",
+                        ["connector", "memory", "prompt", "skill", "block", "*"],
                     )
                     pa_pattern = st.text_input(
                         "Resource pattern (glob)",
                         placeholder="box:/Confidential/*  or  kintone:42  or  salesforce:*",
                     )
-                    pa_actions = st.multiselect("Actions", ["read", "write", "list", "*"], default=["*"])
+                    pa_actions = st.multiselect(
+                        "Actions", ["read", "write", "list", "*"], default=["*"],
+                    )
                     pa_principals = st.text_input(
                         "Principals (comma-separated user_ids and role:<name>)",
                         value="*",
@@ -1104,38 +1343,42 @@ elif mode == "admin":
                     pa_description = st.text_input("Description")
                     if st.form_submit_button("Add policy") and pa_pattern:
                         p = auth.policies.add(
-                            effect=pa_effect,
-                            resource_type=pa_type,
+                            effect=pa_effect, resource_type=pa_type,
                             resource_pattern=pa_pattern,
                             actions=pa_actions or ["*"],
-                            principals=[s.strip() for s in pa_principals.split(",") if s.strip()],
+                            principals=[
+                                s.strip() for s in pa_principals.split(",") if s.strip()
+                            ],
                             description=pa_description,
                         )
                         st.success(f"Added policy {p.id[:8]}")
                         st.rerun()
-
             with sub_test:
                 with st.form("policy_test_form"):
                     pt_user = st.text_input("user_id", value="alice")
-                    pt_role = st.selectbox("role", ["admin", "operator", "member", "viewer"])
+                    pt_role = st.selectbox(
+                        "role", ["admin", "operator", "member", "viewer"],
+                    )
                     pt_type = st.selectbox(
-                        "resource_type", ["connector", "memory", "prompt", "skill", "block"]
+                        "resource_type",
+                        ["connector", "memory", "prompt", "skill", "block"],
                     )
                     pt_id = st.text_input(
-                        "resource_id", placeholder="box:/Praxia/specs"
+                        "resource_id", placeholder="box:/Praxia/specs",
                     )
                     pt_action = st.selectbox("action", ["read", "write", "list"])
                     if st.form_submit_button("Evaluate") and pt_id:
                         decision = auth.policies.evaluate(
                             user_id=pt_user, role=pt_role,
-                            resource_type=pt_type, resource_id=pt_id, action=pt_action,
+                            resource_type=pt_type, resource_id=pt_id,
+                            action=pt_action,
                         )
                         if decision.allowed:
                             st.success(f"✅ Allowed — {decision.reason}")
                         else:
                             st.error(f"🚫 Denied — {decision.reason}")
 
-    # --- Exports (formerly the Admin Downloads sub-tab) ----------------
+    # ---- Exports ---------------------------------------------------
     with tab_exports:
         st.markdown(
             "Export audit logs, users, skill usage, memories, and policies for "
@@ -1145,13 +1388,9 @@ elif mode == "admin":
             kind = st.selectbox(
                 "What to export",
                 [
-                    "Audit log",
-                    "Users",
-                    "Skill usage",
-                    "Personal memory (one user)",
-                    "All personal memories",
-                    "Shared memory blocks",
-                    "Access policies",
+                    "Audit log", "Users", "Skill usage",
+                    "Personal memory (one user)", "All personal memories",
+                    "Shared memory blocks", "Access policies",
                 ],
             )
             fmt = st.selectbox("Format", ["csv", "json", "jsonl"])
@@ -1168,14 +1407,17 @@ elif mode == "admin":
                 ts = int(__import__("time").time())
                 path: Path | list[Path]
                 if kind == "Audit log":
-                    path = auth.exports.export_audit(output_path=out_dir / f"audit_{ts}.{fmt}", format=fmt)
+                    path = auth.exports.export_audit(
+                        output_path=out_dir / f"audit_{ts}.{fmt}", format=fmt,
+                    )
                 elif kind == "Users":
-                    path = auth.exports.export_users(output_path=out_dir / f"users_{ts}.{fmt}", format=fmt)
+                    path = auth.exports.export_users(
+                        output_path=out_dir / f"users_{ts}.{fmt}", format=fmt,
+                    )
                 elif kind == "Skill usage":
                     path = auth.exports.export_skill_usage(
                         output_path=out_dir / f"skill_usage_{ts}.{fmt}",
-                        format=fmt,
-                        skill_name=extra_input or None,
+                        format=fmt, skill_name=extra_input or None,
                     )
                 elif kind == "Personal memory (one user)":
                     path = auth.exports.export_personal_memory(
@@ -1185,15 +1427,15 @@ elif mode == "admin":
                     )
                 elif kind == "All personal memories":
                     path = auth.exports.export_all_personal_memory(
-                        output_dir=out_dir / f"all_memory_{ts}", format=fmt
+                        output_dir=out_dir / f"all_memory_{ts}", format=fmt,
                     )
                 elif kind == "Shared memory blocks":
                     path = auth.exports.export_shared_memory(
-                        output_path=out_dir / f"shared_{ts}.{fmt}", format=fmt
+                        output_path=out_dir / f"shared_{ts}.{fmt}", format=fmt,
                     )
-                else:  # Access policies
+                else:
                     path = auth.exports.export_policies(
-                        output_path=out_dir / f"policies_{ts}.{fmt}", format=fmt
+                        output_path=out_dir / f"policies_{ts}.{fmt}", format=fmt,
                     )
                 st.success(f"Exported → {path}")
                 if isinstance(path, Path) and path.exists():
@@ -1204,7 +1446,7 @@ elif mode == "admin":
                         mime="application/octet-stream",
                     )
 
-    # --- About (formerly Tab 11) ---------------------------------------
+    # ---- About -----------------------------------------------------
     with tab_about:
         st.header(t("about.h"))
         st.markdown(t("about.body"))
