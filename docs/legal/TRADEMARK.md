@@ -80,7 +80,7 @@ You may use the Praxia name in titles and content of educational material:
 - ✅ A YouTube series called "Praxia in 30 minutes"
 - ✅ A Coursera course "Memory architectures with Praxia"
 
-We appreciate (but do not require) a courtesy email to `hello@praxia.dev`
+We appreciate (but do not require) a courtesy email to `hello@praxia.tools`
 so we can amplify your work.
 
 ### 3.5 The Praxia logo (▣)
@@ -122,7 +122,7 @@ You may not run a hosted service that uses "Praxia" in its product name:
 
 You may not register a domain that:
 - Uses "praxia" as the second-level domain in a TLD where we have a presence
-  (e.g., `praxia.com`, `praxia.io`, `praxia.ai` are reserved by GenArch
+  (e.g., `praxia.com`, `praxia.io`, `praxia.tools` are reserved by GenArch
   intent even if they are not yet registered)
 - Uses a confusingly similar variant: `praxia-ai.com`, `praxiahq.com`,
   `getpraxia.com`
@@ -151,7 +151,7 @@ You may not:
 
 ## 5. How to request permission
 
-Email `trademark@praxia.dev` (or open a GitHub issue with the `trademark`
+Email `trademark@praxia.tools` (or open a GitHub issue with the `trademark`
 label if you prefer public discussion) with:
 
 1. Who you are and what you want to call your project / service
@@ -178,7 +178,7 @@ We try to respond within 14 days.
 If you see "Praxia" being used in a way that appears to violate this policy:
 
 - For clear cut-and-paste forks renaming to "Praxia X": email
-  `trademark@praxia.dev`
+  `trademark@praxia.tools`
 - For domain squatters: same address
 - For typosquatting ("praxxia", "praxiaa") or impersonation: same address
 
@@ -214,9 +214,9 @@ restrict uses that were permitted at the time you started them.
 
 | Topic | Contact |
 |---|---|
-| Permission request | trademark@praxia.dev |
-| Misuse report | trademark@praxia.dev |
-| General questions | hello@praxia.dev |
+| Permission request | trademark@praxia.tools |
+| Misuse report | trademark@praxia.tools |
+| General questions | hello@praxia.tools |
 | Public discussion | GitHub issue with `trademark` label |
 
 ---

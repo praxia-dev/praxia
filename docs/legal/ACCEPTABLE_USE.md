@@ -48,8 +48,8 @@ professional**. You agree not to:
 
 ## Reporting violations
 
-To report a violation, contact `security@praxia.dev` or
-`abuse@praxia.dev`.
+To report a violation, contact `security@praxia.tools` or
+`abuse@praxia.tools`.
 
 ## Enforcement
 

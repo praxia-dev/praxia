@@ -12,7 +12,7 @@
 |---|---|---|
 | [LICENSE](../../LICENSE) | OSS code users | ✅ Apache 2.0 (final) |
 | [NOTICE](../../NOTICE.md) | OSS code users | ✅ Final |
-| [Terms of Service](TERMS.md) | Users of hosted Praxia (`praxia.dev`, portal) | 🟡 Template — review with counsel |
+| [Terms of Service](TERMS.md) | Users of hosted Praxia (`praxia.tools`, portal) | 🟡 Template — review with counsel |
 | [Privacy Policy](PRIVACY.md) | Visitors + portal sign-ups | 🟡 Template — review with counsel |
 | [Acceptable Use Policy](ACCEPTABLE_USE.md) | All users | 🟡 Template |
 | [Cookie Policy](COOKIES.md) | Website visitors | 🟡 Template |

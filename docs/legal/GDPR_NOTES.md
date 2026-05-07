@@ -112,7 +112,7 @@ The static landing page processes:
 | Chosen language | `localStorage["praxia-lang"]` | Strictly necessary (Art. 6(1)(f)) |
 | Cookie consent record | `localStorage["praxia-consent"]` | Strictly necessary |
 | Anonymous visit count | Cloudflare Web Analytics (cookie-less) — **only if user opts in** | Consent (Art. 6(1)(a)) |
-| Contact email (`hello@praxia.dev`) submissions | Email inbox | Legitimate interest |
+| Contact email (`hello@praxia.tools`) submissions | Email inbox | Legitimate interest |
 
 **The consent banner** ([consent.js](../landing/consent.js)) implements:
 - Default-off for analytics (no analytics cookies set without explicit opt-in)
@@ -206,6 +206,6 @@ If you believe Praxia has been used in a way that violates GDPR, or if you
 spot a security/privacy issue in the codebase:
 
 - Open an issue with the `privacy` label at <https://github.com/genarch/praxia/issues>
-- Or email `security@praxia.dev` (PGP key TBD)
+- Or email `security@praxia.tools` (PGP key TBD)
 
 We aim to respond within 7 days.

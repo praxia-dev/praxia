@@ -8,8 +8,8 @@
 
 **Effective date**: TO BE FINALIZED
 **Controller**: GenArch (the "Provider")
-**Contact**: `hello@praxia.dev` · Privacy / data subject requests:
-`privacy@praxia.dev`
+**Contact**: `hello@praxia.tools` · Privacy / data subject requests:
+`privacy@praxia.tools`
 
 ---
 
@@ -18,7 +18,7 @@
 This policy describes how the Provider collects, uses, and protects
 personal data when you use:
 
-- The Praxia website (`praxia.dev`, `praxia.pages.dev`,
+- The Praxia website (`praxia.tools`, `praxia.tools`,
   `genarch.github.io/praxia`)
 - The Praxia portal (sign-in / sign-up forms)
 - Any hosted Praxia service operated by the Provider
@@ -128,7 +128,7 @@ Depending on your jurisdiction, you may have the right to:
 - **Withdraw consent** where processing is based on consent
 - **Lodge a complaint** with your local data protection authority
 
-To exercise these rights, contact `privacy@praxia.dev`. We respond
+To exercise these rights, contact `privacy@praxia.tools`. We respond
 within 30 days.
 
 ## 9. Security
@@ -161,9 +161,9 @@ users at least 30 days before taking effect.
 
 ## 12. Contact
 
-- General privacy inquiries: `privacy@praxia.dev`
-- Data subject requests: `privacy@praxia.dev`
-- Security incidents: `security@praxia.dev`
+- General privacy inquiries: `privacy@praxia.tools`
+- Data subject requests: `privacy@praxia.tools`
+- Security incidents: `security@praxia.tools`
 
 For Japanese residents: 個人情報保護法に基づくお問い合わせは上記アドレスへ。
 

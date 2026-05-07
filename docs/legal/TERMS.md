@@ -7,14 +7,14 @@
 
 **Effective date**: TO BE FINALIZED
 **Provider**: GenArch (the "Provider")
-**Contact**: hello@praxia.dev
+**Contact**: hello@praxia.tools
 
 ---
 
 ## 1. Acceptance
 
-By accessing or using the Praxia website (`praxia.dev`,
-`praxia.pages.dev`, `genarch.github.io/praxia`), the Praxia portal, or
+By accessing or using the Praxia website (`praxia.tools`,
+`praxia.tools`, `genarch.github.io/praxia`), the Praxia portal, or
 any hosted service operated by the Provider (collectively, the
 "Service"), you agree to be bound by these Terms of Service ("Terms").
 
@@ -163,8 +163,8 @@ different governing law and dispute resolution provisions.
 
 ## 15. Contact
 
-Questions about these Terms: `hello@praxia.dev`
-Security or trademark concerns: `security@praxia.dev`
+Questions about these Terms: `hello@praxia.tools`
+Security or trademark concerns: `security@praxia.tools`
 
 ---
 

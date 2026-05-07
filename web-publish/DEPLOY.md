@@ -4,7 +4,7 @@ We run **two mirrors** in parallel:
 
 | Mirror | URL | Role |
 |---|---|---|
-| **Cloudflare Pages** | `https://praxia.pages.dev/` | **Primary / canonical** — fast worldwide (320+ POPs) |
+| **Cloudflare Pages** | `https://praxia.tools/` | **Primary / canonical** — fast worldwide (320+ POPs) |
 | **GitHub Pages** | `https://genarch.github.io/praxia/` | **Secondary / fallback** — official, integrated with the repo |
 
 Both mirrors serve the same files from `web-publish/`. Search engines see Cloudflare as canonical (via `<link rel="canonical">`); the GitHub Pages mirror shows a banner nudging visitors to switch.
@@ -30,7 +30,7 @@ Both mirrors serve the same files from `web-publish/`. Search engines see Cloudf
    Environment vars:     (none)
    ```
 4. **Save and Deploy**. The first build takes ~30 s.
-5. **Default URL**: `https://praxia.pages.dev/` (or `praxia-something.pages.dev` if the name is taken).
+5. **Default URL**: `https://praxia.tools/` (or `praxia-something.pages.dev` if the name is taken).
 
 ### Built-in features (no extra config required)
 
@@ -53,15 +53,15 @@ Both mirrors serve the same files from `web-publish/`. Search engines see Cloudf
 
 ### Custom domain (optional, $12/yr)
 
-If you own `praxia.dev`:
+If you own `praxia.tools`:
 
 1. Cloudflare Pages → your project → **Custom domains** → Set up a custom domain
-2. Enter `praxia.dev`
+2. Enter `praxia.tools`
 3. Cloudflare auto-creates DNS records (if domain is on Cloudflare DNS)
 4. SSL issues automatically; live in ~5 minutes
 
 After DNS propagates, update:
-- `<link rel="canonical">` in `index.html` → `https://praxia.dev/`
+- `<link rel="canonical">` in `index.html` → `https://praxia.tools/`
 - `sitemap.xml` URLs
 - `robots.txt` Sitemap line
 
@@ -97,13 +97,13 @@ The landing page detects which mirror the visitor is on and adapts:
 
 | You're visiting… | Behaviour |
 |---|---|
-| `praxia.pages.dev` (Cloudflare) | Nav shows `🔘 GitHub Pages mirror` pill; no banner |
+| `praxia.tools` (Cloudflare) | Nav shows `🔘 GitHub Pages mirror` pill; no banner |
 | `genarch.github.io/praxia` (GH Pages) | Nav shows `🔘 Faster mirror (Cloudflare)` pill **and** a banner at the top of the page nudging users to switch |
 | Local file:// preview | Nav pill points at GitHub repo |
 
 The banner is dismissable per session (uses `sessionStorage`).
 
-The HTML `<link rel="canonical">` always points at `https://praxia.pages.dev/`, so search engines consolidate ranking on the Cloudflare mirror.
+The HTML `<link rel="canonical">` always points at `https://praxia.tools/`, so search engines consolidate ranking on the Cloudflare mirror.
 
 ---
 
@@ -113,7 +113,7 @@ After both deploys:
 
 ```bash
 # Verify Cloudflare returns the page
-curl -sI https://praxia.pages.dev/ | head -5
+curl -sI https://praxia.tools/ | head -5
 #  → HTTP/2 200
 #  → cf-ray: ...
 
@@ -123,10 +123,10 @@ curl -sI https://genarch.github.io/praxia/ | head -5
 
 # Sanity-check the canonical tag
 curl -s https://genarch.github.io/praxia/ | grep canonical
-#  → <link rel="canonical" href="https://praxia.pages.dev/" />
+#  → <link rel="canonical" href="https://praxia.tools/" />
 
 # Sanity-check the security headers (Cloudflare only)
-curl -sI https://praxia.pages.dev/ | grep -iE 'strict-transport|x-frame|content-security'
+curl -sI https://praxia.tools/ | grep -iE 'strict-transport|x-frame|content-security'
 ```
 
 ---
@@ -171,7 +171,7 @@ Or use a self-hosted analytics solution (Plausible, Umami) if you want full data
 ```
 Push to main
   │
-  ├─► Cloudflare Pages builds → https://praxia.pages.dev/  (30 s, primary)
+  ├─► Cloudflare Pages builds → https://praxia.tools/  (30 s, primary)
   └─► GitHub Pages builds      → https://genarch.github.io/praxia/  (1 min, fallback)
        │
        └─► Visitor arrives → JS detects mirror → adapts nav + banner

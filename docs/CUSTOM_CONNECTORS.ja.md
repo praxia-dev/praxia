@@ -287,7 +287,7 @@ PyPI 公開前に:
 - [ ] README が本ガイドへリンク + `pull()` / `push()` の `path` セマンティクスを文書化
 - [ ] git でバージョンタグ済み
 
-[praxia.dev/plugins] への掲載手順:
+[praxia.tools/plugins] への掲載手順:
 1. GitHub リポジトリに `praxia-connector` トピックを付与
 2. Praxia 本体への PR で `docs/PLUGINS.md` に追加
 

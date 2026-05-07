@@ -119,10 +119,10 @@ class TestHtmlExporter:
     def test_links(self):
         from praxia.io.exporters import export_as
 
-        html = export_as("[Praxia](https://praxia.dev)", format="html").bytes.decode(
+        html = export_as("[Praxia](https://praxia.tools)", format="html").bytes.decode(
             "utf-8"
         )
-        assert 'href="https://praxia.dev"' in html
+        assert 'href="https://praxia.tools"' in html
         assert ">Praxia</a>" in html
 
     def test_xss_script_tag_escaped(self):

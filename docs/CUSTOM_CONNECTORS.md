@@ -288,7 +288,7 @@ Before pushing your package to PyPI:
 - [ ] README points back to this guide and documents the `pull()` / `push()` `path` semantics for your service.
 - [ ] Versioned & tagged in git.
 
-To get listed on the [praxia.dev/plugins] page:
+To get listed on the [praxia.tools/plugins] page:
 1. Tag the GitHub repo with topic `praxia-connector`.
 2. Open a PR against the main Praxia repo adding your package to `docs/PLUGINS.md`.
 
