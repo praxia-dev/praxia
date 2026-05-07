@@ -94,15 +94,35 @@ def _render_login() -> None:
     st.caption(t("app.tagline"))
     st.write("")
 
+    # Detect auth-store state: if any users exist, an API key is required
+    # because there's nothing else stopping a non-admin from typing 'alice'
+    # and being treated as alice.
+    users_exist = False
+    try:
+        from praxia.auth import AuthManager
+        _probe_auth = AuthManager()
+        users_exist = bool(_probe_auth.users.list_all())
+    except Exception:
+        pass
+
+    if users_exist:
+        st.info(t("login.users_exist_hint"))
+    else:
+        st.warning(t("login.dev_mode_hint"))
+
     with st.form("praxia_login", clear_on_submit=False):
+        api_key_input = st.text_input(
+            t("login.api_key"),
+            type="password",
+            placeholder=t("login.api_key_placeholder"),
+            help=t("login.api_key_help"),
+        )
         user_id_input = st.text_input(
             t("login.user_id"),
             value=os.getenv("PRAXIA_USER_ID", ""),
             placeholder="alice",
             help=t("login.user_id_help"),
         )
-        # Org ID — pre-filled, hidden under an expander for the few
-        # users who run multi-tenant.
         with st.expander(t("login.advanced"), expanded=False):
             org_id_input = st.text_input(
                 t("login.org_id"), value="default-org",
@@ -113,38 +133,59 @@ def _render_login() -> None:
 
         if submit:
             uid = user_id_input.strip()
-            if not uid:
-                st.error(t("login.user_id_required"))
-            else:
-                # Resolve role: if the auth store has a user with this
-                # username, use their role. Otherwise, "unknown" (=
-                # single-user dev / trusted-LAN mode).
-                resolved_role = "unknown"
+            api_key = api_key_input.strip()
+
+            # Resolve identity. Priority:
+            #   1. If API key provided → must validate. The username we
+            #      trust is the one returned by auth, NOT the text input.
+            #   2. If no API key but users exist → reject (auth required).
+            #   3. If no API key and no users exist → single-user dev mode,
+            #      allow whatever username they typed.
+            if api_key:
                 try:
                     from praxia.auth import AuthManager
                     _auth = AuthManager()
-                    matched = _auth.users.get_by_username(uid)
-                    if matched is not None:
-                        resolved_role = matched.role
-                except Exception:
-                    pass
+                    u = _auth.authenticate(api_key=api_key)
+                    if u is None:
+                        st.error(t("login.invalid_key"))
+                        st.markdown("</div>", unsafe_allow_html=True)
+                        return
+                    resolved_user = u.username
+                    resolved_role = u.role
+                except Exception as e:
+                    st.error(f"Auth check failed: {e}")
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    return
+            elif users_exist:
+                # Auth store has users but caller didn't provide a key.
+                # Refuse — typing a username alone is not authentication.
+                st.error(t("login.api_key_required"))
+                st.markdown("</div>", unsafe_allow_html=True)
+                return
+            else:
+                # No users registered → single-user dev mode.
+                if not uid:
+                    st.error(t("login.user_id_required"))
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    return
+                resolved_user = uid
+                resolved_role = "unknown"
 
-                st.session_state["logged_in"] = True
-                st.session_state["user_id"] = uid
-                st.session_state["org_id"] = (
-                    org_id_input.strip() or "default-org"
-                )
-                st.session_state["actor_role"] = resolved_role
+            st.session_state["logged_in"] = True
+            st.session_state["user_id"] = resolved_user
+            st.session_state["org_id"] = (
+                org_id_input.strip() or "default-org"
+            )
+            st.session_state["actor_role"] = resolved_role
 
-                # Load persisted preferences for this user.
-                for k, v in _load_user_prefs(uid).items():
-                    if k not in st.session_state:
-                        st.session_state[k] = v
+            for k, v in _load_user_prefs(resolved_user).items():
+                if k not in st.session_state:
+                    st.session_state[k] = v
 
-                st.rerun()
+            st.rerun()
 
     st.write("")
-    st.caption(t("login.dev_hint"))
+    st.caption(t("login.security_note"))
     st.markdown("</div>", unsafe_allow_html=True)
 
 
