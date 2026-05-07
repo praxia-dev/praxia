@@ -552,17 +552,77 @@ Events include: `auth.api_key`, `auth.sso.login`, `authz.<permission>`,
 
 ## 10. Default UI
 
-5-tab Streamlit app launched via `praxia ui`:
+Streamlit app launched via `praxia ui`. The layout is built around the
+fact that **Run is the primary daily view** and the user iterates by
+swapping data context, not by switching pages.
 
-| Tab | Functionality |
-|---|---|
-| **Run Flow** | Pick flow + LLM, fill inputs, see step-by-step output |
-| **Business Skill** | Drop-down of 6 skills, send input, render Markdown response |
-| **Memory** | Browse personal memory entries + shared blocks; search |
-| **Consolidate** | Trigger sleep-time consolidation, view promotion verdicts |
-| **About** | LLM/backend selection, GitHub links |
+### Sign-in
 
-Sidebar lets users switch model and backend without code changes.
+Login is a single screen:
+
+- **Single-user dev mode** (no users registered yet): User ID alone — anyone reaching the URL can sign in with any name. Suitable for laptop / trusted-LAN.
+- **Multi-user mode** (after `praxia user create alice --role admin` issued at least one credential): User ID + Password (= the API key issued at user-create time).
+
+> Multi-user / internet-exposed deployments should run `praxia serve`
+> (FastAPI + OIDC SSO) instead — the Streamlit UI is designed for
+> trusted environments only.
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  [🎬 Run] [🧠 Knowledge] [📝 Prompts] [📁 Data] [📊 Stats]            │ ← sticky top-bar
+│                  [👤 Preferences] [⚙ Admin]*                         │   nav
+├────────────────────────┬─────────────────────────────────────────────┤
+│  🪡 Praxia              │                                             │
+│  👤 alice · admin       │                                             │
+│  [Sign out]             │                                             │
+│  ─────────              │   Selected view's workspace                 │
+│  📁 Context             │                                             │
+│  ☑ Personal memory      │   (* admin role only)                       │
+│  ☑ Org memory           │                                             │
+│  ☐ Frozen layer         │                                             │
+│  📁 Q3 Sales (12)       │                                             │
+│   📁 …Acme/Q3 (5)       │                                             │
+│  🔌 Box: /Customers     │                                             │
+└────────────────────────┴─────────────────────────────────────────────┘
+```
+
+The sidebar is the **Context picker** — pick which folders / memory
+layers feed the current run. Local folders nest as a tree (parent →
+children). Selected folders flow into both Run sub-tabs as additional
+reference data, with grep-based relevance filtering on large folders
+to keep token use bounded.
+
+### Views
+
+| View | Sub-tabs | Functionality |
+|------|---------|---------------|
+| **🎬 Run** | 🤖 Agent · 🛠 Skill | **Agent**: chat interface backed by `AutonomousAgent`. State a goal; the LLM picks tools (search / connector pulls / skills) and iterates. Conversation history persisted in session. **Skill**: pick a domain skill (investment / sales / design / purchasing / patent / legal), submit input, get one answer. |
+| **🧠 Knowledge** | — | Browseable personal + shared memory entries, plus the Skill registry (your skills + org-promoted ones). Search across personal memory. |
+| **📁 Data** | 📁 Local · 🔌 Connector · 🔍 Browse | Manage data folders. Local folders accept uploads and can be **nested** (parent_id-based tree). Connector folders register external paths (Box / SharePoint / Notion / etc.) — admin must enable the connector via env vars first. |
+| **📝 Prompts** | ✨ Generate · 📚 Browse & edit · 📤 Distribute | **Generate** uses PromptDesigner: 1-line task → polished system + user template + few-shot + 5-criterion rubric. **Browse & edit**: full CRUD on personal prompts, read-only on org / distributed scopes. **Distribute** (admin): push curated prompts to specific users or roles. |
+| **📊 Stats** | — | 3 KPIs (total runs / success rate / memory entries) + Top-skills bar chart for personal scope; equivalent for org scope (active users / org runs / success rate + Top users / Top skills). plotly with Praxia gold palette. |
+| **👤 Preferences** | — | Per-user persistent settings (saved to `.praxia/preferences/<user>.json`): Display language (auto-detect from browser/OS, override per-user), Color theme (Auto / Light / Dark — Light follows Streamlit default, Dark applies branded CSS overrides). |
+| **⚙ Admin** | 🔑 Settings · 👥 Users · 🔌 Connectors · 🛡 Policies · 🌙 Consolidate · 💾 Exports · ℹ About | **Settings**: tenant-default LLM model + memory backend, plus the persistent KNOWN_KEYS catalog (~50 keys grouped by category — LLM / Memory / Auth / SSO / KMS / OAuth / SCIM / MCP / Audio) editable with masked-secret display. Every change is audit-logged. **Users / Connectors / Policies**: CRUD over the auth store, connector configs, and resource-access rules. **Consolidate**: dry-run / live trigger of sleep-time promotion (memory + skills). **Exports**: CSV / JSON / JSONL exports of audit log, users, skill usage, memory, policies. |
+
+### Persistence
+
+| What | Where | Lifetime |
+|------|-------|----------|
+| Sign-in session | `st.session_state` | Streamlit session (browser tab) |
+| User preferences | `.praxia/preferences/<user_id>.json` | Across browser sessions |
+| Local data folders | `.praxia/data/<user_id>/<scope_id>/` (files) + `scopes.json` (metadata) | Permanent until explicit delete |
+| Personal memory | `.praxia/memory/<user_id>/` (backend-specific) | Until explicit delete or consolidation |
+| Skill registry | `.praxia/skills/{personal,org}/<name>/SKILL.md` | Permanent |
+
+### Streamlit chrome
+
+The Deploy button, hamburger menu, "Made with Streamlit" footer, and
+the dev keyboard shortcuts (C / R) are hidden via
+`.streamlit/config.toml` (`toolbarMode = "viewer"`,
+`runOnSave = false`, `fileWatcherType = "none"`) — Praxia is the
+product, not the framework it happens to render in.
 
 ---
 
