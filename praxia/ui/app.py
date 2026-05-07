@@ -111,17 +111,17 @@ def _render_login() -> None:
         st.warning(t("login.dev_mode_hint"))
 
     with st.form("praxia_login", clear_on_submit=False):
-        api_key_input = st.text_input(
-            t("login.api_key"),
-            type="password",
-            placeholder=t("login.api_key_placeholder"),
-            help=t("login.api_key_help"),
-        )
         user_id_input = st.text_input(
             t("login.user_id"),
             value=os.getenv("PRAXIA_USER_ID", ""),
             placeholder="alice",
             help=t("login.user_id_help"),
+        )
+        api_key_input = st.text_input(
+            t("login.api_key"),
+            type="password",
+            placeholder=t("login.api_key_placeholder"),
+            help=t("login.api_key_help"),
         )
         with st.expander(t("login.advanced"), expanded=False):
             org_id_input = st.text_input(
