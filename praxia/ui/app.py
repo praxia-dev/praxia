@@ -1277,11 +1277,21 @@ elif mode == "prompts":
     from praxia.skills.prompts import PromptStore
 
     store = PromptStore(storage_dir=loom.config.memory_dir / "prompts")
-    sub_generate, sub_browse, sub_distribute = st.tabs([
-        t("prompts.tab.generate"),
-        t("prompts.tab.browse"),
-        t("prompts.tab.distribute"),
-    ])
+    # Distribute is admin-only; hide the tab entirely for non-admin
+    # users instead of rendering it with a denied error inside.
+    is_admin_or_dev = actor_role in ("admin", "unknown")
+    if is_admin_or_dev:
+        sub_generate, sub_browse, sub_distribute = st.tabs([
+            t("prompts.tab.generate"),
+            t("prompts.tab.browse"),
+            t("prompts.tab.distribute"),
+        ])
+    else:
+        sub_generate, sub_browse = st.tabs([
+            t("prompts.tab.generate"),
+            t("prompts.tab.browse"),
+        ])
+        sub_distribute = None
 
     with sub_generate:
         st.markdown(t("prompts.generate.intro"))
@@ -1381,7 +1391,16 @@ elif mode == "prompts":
                     st.rerun()
 
     with sub_browse:
-        prompts = store.list_for_user(user_id=user_id, role="member")
+        st.caption(t("prompts.browse.scope_hint"))
+        # The merged view: personal + org + distributed-to-this-user-or-role.
+        # Use the actual signed-in role so distributed prompts targeting
+        # admin/operator/etc. show up to those roles too. This is also
+        # 'where distributed prompts go' — recipients see them here with
+        # a [distributed] scope tag.
+        prompts = store.list_for_user(
+            user_id=user_id,
+            role=actor_role if actor_role != "unknown" else "admin",
+        )
         if prompts:
             for p in prompts:
                 with st.expander(f"📄 {p.name} [{p.scope}]", expanded=False):
@@ -1452,14 +1471,9 @@ elif mode == "prompts":
                     else:
                         st.warning(t("prompts.create.required"))
 
-    with sub_distribute:
-        st.markdown(t("prompts.distribute.intro"))
-        if actor_role not in ("admin", "unknown"):
-            st.error(t("prompts.distribute.role_required").format(
-                user=user_id, role=actor_role,
-            ))
-            st.markdown(t("admin.gate.howto"))
-        else:
+    if sub_distribute is not None:
+        with sub_distribute:
+            st.markdown(t("prompts.distribute.intro"))
             with st.form("prompt_distribute_form"):
                 d_name = st.text_input(t("prompts.create.name"), key="dn")
                 d_body = st.text_area(t("prompts.create.body"), height=200, key="db")
@@ -1470,7 +1484,9 @@ elif mode == "prompts":
                     t("prompts.distribute.target_roles"),
                     ["admin", "operator", "member", "viewer"], key="dtr",
                 )
-                submit = st.form_submit_button(t("prompts.distribute.btn"), type="primary")
+                submit = st.form_submit_button(
+                    t("prompts.distribute.btn"), type="primary",
+                )
                 if submit and d_name and d_body and (d_target_users or d_target_roles):
                     saved = store.distribute(
                         name=d_name, body=d_body,
@@ -1478,6 +1494,36 @@ elif mode == "prompts":
                         target_roles=d_target_roles or None,
                     )
                     st.success(t("prompts.distribute.saved").format(n=len(saved)))
+
+            # Show what's currently distributed (admin overview)
+            st.divider()
+            st.subheader(t("prompts.distribute.history_h"))
+            st.caption(t("prompts.distribute.history_intro"))
+            try:
+                from praxia.skills.prompts import PromptStore as _PS
+                _store = _PS(storage_dir=loom.config.memory_dir / "prompts")
+                # Walk the distributed/ directory: each subdirectory is a target
+                _dist_root = _store.root / "distributed"
+                rows: list[dict[str, str]] = []
+                if _dist_root.exists():
+                    for tgt in sorted(_dist_root.iterdir()):
+                        if not tgt.is_dir():
+                            continue
+                        for f in sorted(tgt.glob("*.json")):
+                            p = _store._read(f)
+                            if p is not None:
+                                rows.append({
+                                    "name": p.name,
+                                    "target": tgt.name,
+                                    "tags": ", ".join(p.tags) or "—",
+                                    "owner": p.owner,
+                                })
+                if rows:
+                    st.table(rows)
+                else:
+                    st.caption(t("prompts.distribute.history_empty"))
+            except Exception as e:
+                st.caption(f"({e})")
 
 
 # =====================================================================
