@@ -372,14 +372,68 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "🤖 Agente autônomo",
     },
     "run.workflow.what": {
-        "en": "**What it is**: a fixed N-step pipeline of multiple agents (e.g. Sales prep = customer research → hypothesis → FAQ → proposal draft).\n\n**Pick this when** you want the same procedure to repeat reliably.",
-        "ja": "**これは何**: 複数エージェントによる定型 N ステップ・パイプライン (例: Sales prep = 顧客調査 → 仮説 → FAQ → 提案ドラフト)。\n\n**使う場面**: 同じ手順を毎回再現したい時。",
-        "zh-CN": "**是什么**: 多代理的固定 N 步流水线 (例: Sales prep = 客户调研 → 假设 → FAQ → 草稿)。\n\n**何时使用**: 想要相同流程可靠重复时。",
-        "ko": "**무엇**: 여러 에이전트의 고정 N 단계 파이프라인 (예: Sales prep = 고객 조사 → 가설 → FAQ → 초안).\n\n**언제**: 동일 절차를 매번 재현하고 싶을 때.",
-        "es": "**Qué es**: pipeline fijo de N pasos con varios agentes (p. ej. Sales prep = investigación → hipótesis → FAQ → borrador).\n\n**Cuándo**: cuando quieres repetir el mismo procedimiento.",
-        "fr": "**Qu'est-ce**: pipeline fixe à N étapes multi-agents (ex. Sales prep = recherche client → hypothèse → FAQ → brouillon).\n\n**Quand**: pour reproduire la même procédure.",
-        "de": "**Was ist es**: feste N-Schritt-Pipeline mehrerer Agenten (z. B. Sales prep = Recherche → Hypothese → FAQ → Entwurf).\n\n**Wann**: wenn dasselbe Vorgehen verlässlich wiederholt werden soll.",
-        "pt-BR": "**O que é**: pipeline fixo de N passos com múltiplos agentes (ex. Sales prep = pesquisa → hipótese → FAQ → rascunho).\n\n**Quando**: quando quer repetir o mesmo procedimento.",
+        "en": (
+            "**What this is**: a *fixed sequence* of multiple agents that runs end-to-end. "
+            "The 3 built-in workflows:\n\n"
+            "- **sales-agent** — customer research → pain hypotheses → FAQ → proposal draft\n"
+            "- **logic-checker** — structure check → contradiction check → readability review\n"
+            "- **rag-optimizer** — query rewrite → retrieval → relevance eval → hallucination check loop\n\n"
+            "**Pick this when** you have a *recurring procedure* that should always run the same way."
+        ),
+        "ja": (
+            "**これは何**: 複数エージェントが **決まった手順** で連続実行される定型パイプライン。"
+            "標準で 3 種類:\n\n"
+            "- **sales-agent** — 顧客調査 → 課題仮説 → FAQ → 提案書ドラフト\n"
+            "- **logic-checker** — 構造チェック → 矛盾チェック → 読みやすさレビュー\n"
+            "- **rag-optimizer** — クエリ書換え → 検索 → 関連度評価 → ハルシネーション検証ループ\n\n"
+            "**使う場面**: 毎回同じ手順を踏みたい **定型業務** がある時。"
+        ),
+        "zh-CN": (
+            "**是什么**: 多个代理按 *固定顺序* 端到端运行。内置 3 种:\n\n"
+            "- **sales-agent** — 客户调研 → 痛点假设 → FAQ → 提案草稿\n"
+            "- **logic-checker** — 结构检查 → 矛盾检查 → 可读性审查\n"
+            "- **rag-optimizer** — 查询改写 → 检索 → 相关度评估 → 幻觉检查循环\n\n"
+            "**何时使用**: 有 *重复性流程* 且每次都应以相同方式运行时。"
+        ),
+        "ko": (
+            "**무엇**: 여러 에이전트가 *고정된 순서* 로 끝까지 실행되는 파이프라인. 기본 3 종:\n\n"
+            "- **sales-agent** — 고객 조사 → 페인포인트 가설 → FAQ → 제안서 초안\n"
+            "- **logic-checker** — 구조 검토 → 모순 검토 → 가독성 리뷰\n"
+            "- **rag-optimizer** — 쿼리 재작성 → 검색 → 관련도 평가 → 환각 검사 루프\n\n"
+            "**언제**: 매번 같은 절차로 진행해야 하는 *반복 업무* 가 있을 때."
+        ),
+        "es": (
+            "**Qué es**: una *secuencia fija* de varios agentes que se ejecuta de extremo a extremo. "
+            "3 workflows integrados:\n\n"
+            "- **sales-agent** — investigación → hipótesis → FAQ → borrador\n"
+            "- **logic-checker** — estructura → contradicción → legibilidad\n"
+            "- **rag-optimizer** — reescritura → recuperación → relevancia → bucle anti-alucinación\n\n"
+            "**Cuándo**: tienes un procedimiento *recurrente* que siempre debe ejecutarse igual."
+        ),
+        "fr": (
+            "**Qu'est-ce**: une *séquence fixe* de plusieurs agents qui s'exécute de bout en bout. "
+            "3 workflows intégrés :\n\n"
+            "- **sales-agent** — recherche → hypothèses → FAQ → brouillon\n"
+            "- **logic-checker** — structure → contradiction → lisibilité\n"
+            "- **rag-optimizer** — réécriture → récupération → pertinence → boucle anti-hallucination\n\n"
+            "**Quand** : vous avez une procédure *récurrente* qui doit toujours s'exécuter de la même façon."
+        ),
+        "de": (
+            "**Was ist es**: eine *feste Sequenz* mehrerer Agenten, die end-to-end läuft. "
+            "3 eingebaute Workflows:\n\n"
+            "- **sales-agent** — Recherche → Hypothesen → FAQ → Entwurf\n"
+            "- **logic-checker** — Struktur → Widerspruch → Lesbarkeit\n"
+            "- **rag-optimizer** — Query-Rewrite → Retrieval → Relevanz → Halluzinations-Loop\n\n"
+            "**Wann**: für *wiederkehrende* Abläufe, die immer gleich laufen sollen."
+        ),
+        "pt-BR": (
+            "**O que é**: uma *sequência fixa* de vários agentes que roda end-to-end. "
+            "3 workflows integrados:\n\n"
+            "- **sales-agent** — pesquisa → hipóteses → FAQ → rascunho\n"
+            "- **logic-checker** — estrutura → contradição → legibilidade\n"
+            "- **rag-optimizer** — reescrita → recuperação → relevância → loop anti-alucinação\n\n"
+            "**Quando**: você tem um procedimento *recorrente* que sempre deve rodar do mesmo jeito."
+        ),
     },
     "run.skill.what": {
         "en": "**What it is**: a single domain-tuned agent call (Investment / Sales / Design / Purchasing / Patent / Legal).\n\n**Pick this when** one ask = one answer is enough.",
@@ -1311,14 +1365,79 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "🌙 Consolidação noturna",
     },
     "consolidate.intro": {
-        "en": "Auto-promote eligible entries from personal memory → shared memory. **Dry-run** previews what would be promoted without writing.",
-        "ja": "個人メモリ → 共有メモリへの自動昇格を実行します。**dry-run** で何が昇格されるかを事前確認できます。",
-        "zh-CN": "将合格条目从个人记忆 → 共享记忆自动晋升。**Dry-run** 预览将被晋升的内容,不写入。",
-        "ko": "개인 메모리 → 공유 메모리로 자격 있는 항목을 자동 승격합니다. **Dry-run** 으로 승격될 항목을 미리 확인할 수 있습니다.",
-        "es": "Promueve entradas elegibles de memoria personal → memoria compartida. **Dry-run** previsualiza qué se promovería sin escribir.",
-        "fr": "Promeut automatiquement les entrées éligibles de la mémoire personnelle → mémoire partagée. **Dry-run** prévisualise sans écrire.",
-        "de": "Befördert geeignete Einträge automatisch aus dem persönlichen → geteilten Speicher. **Dry-run** zeigt die Vorschau ohne Schreibzugriff.",
-        "pt-BR": "Promove entradas elegíveis da memória pessoal → memória compartilhada. **Dry-run** prévia sem gravar.",
+        "en": (
+            "**What this does**: scans every user's personal-memory entries and "
+            "**automatically promotes** the high-value ones into the org-wide "
+            "shared memory layer. Three signals run in parallel:\n\n"
+            "- **Frequency** — same pattern repeats across N+ users\n"
+            "- **Outcome** — pattern correlated with successful flow runs\n"
+            "- **LLM self-eval** — pattern scored highly for re-use value\n\n"
+            "Items that pass the threshold get promoted. The rest stay personal.\n\n"
+            "**When you'd run this**: typically as a nightly cron job. The button "
+            "below is for manual / on-demand runs (e.g. testing, post-onboarding "
+            "of a new team member).\n\n"
+            "**Dry-run** previews what *would* be promoted without writing — "
+            "recommended on first use."
+        ),
+        "ja": (
+            "**何をするか**: 全ユーザの個人メモリをスキャンし、価値の高い項目を "
+            "**自動的に** 組織共有メモリへ昇格させます。3 つのシグナルを並列評価:\n\n"
+            "- **頻度** — N 人以上のユーザで同じパターンが繰り返される\n"
+            "- **アウトカム** — フロー成功に相関するパターン\n"
+            "- **LLM 自己評価** — 再利用価値のスコアリング\n\n"
+            "閾値を超えた項目だけ昇格、それ以外は個人メモリに留まります。\n\n"
+            "**実行タイミング**: 通常は夜間バッチで定期実行。下のボタンは手動・"
+            "オンデマンド実行用 (テスト・新メンバー受け入れ後など)。\n\n"
+            "**Dry-run** は何が昇格されるかを書込みなしで確認できます — 初回は推奨。"
+        ),
+        "zh-CN": (
+            "**作用**: 扫描所有用户的个人记忆条目,**自动晋升** 高价值条目至组织共享记忆。"
+            "3 个信号并行评估: 频次 (N+ 用户重复)、成果(与成功相关)、LLM 自评分。"
+            "通过阈值的条目被晋升,其余留在个人。\n\n"
+            "通常作为夜间定时任务,下方按钮用于手动 / 按需执行。**Dry-run** 不写入预览。"
+        ),
+        "ko": (
+            "**무엇**: 모든 사용자의 개인 메모리 항목을 스캔하여 가치 있는 항목을 "
+            "**자동으로** 조직 공유 메모리로 승격. 3 가지 시그널 병렬 평가: "
+            "빈도 (N 명 이상에서 반복) / 성과 (성공과 상관) / LLM 자가 평가. "
+            "임계값 통과한 항목만 승격, 나머지는 개인 메모리에 유지.\n\n"
+            "보통 야간 배치로 운영. 아래 버튼은 수동 실행. **Dry-run** 은 쓰기 없이 미리보기."
+        ),
+        "es": (
+            "**Qué hace**: escanea las entradas de memoria personal de todos los usuarios "
+            "y **promueve automáticamente** las de alto valor a la memoria compartida org. "
+            "3 señales en paralelo: frecuencia (repetida en N+ usuarios), outcome "
+            "(correlación con éxito), auto-evaluación LLM. Los ítems que superan el "
+            "umbral se promueven; el resto se queda personal.\n\n"
+            "Típicamente se ejecuta como cron nocturno. El botón es para runs manuales. "
+            "**Dry-run** previsualiza sin escribir."
+        ),
+        "fr": (
+            "**Ce que cela fait** : scanne toutes les mémoires personnelles et "
+            "**promeut automatiquement** les entrées à forte valeur vers la mémoire "
+            "partagée de l'org. 3 signaux en parallèle : fréquence (répétée chez N+ "
+            "utilisateurs), résultat (corrélé au succès), auto-éval LLM. Les éléments "
+            "au-dessus du seuil sont promus.\n\n"
+            "Typiquement lancé en cron nocturne. Le bouton ci-dessous sert aux runs "
+            "manuels. **Dry-run** : aperçu sans écriture."
+        ),
+        "de": (
+            "**Was es tut**: scannt die persönlichen Speicher aller Nutzer und "
+            "**befördert hochwertige Einträge automatisch** in den geteilten Org-Speicher. "
+            "3 Signale parallel: Frequenz (wiederholt sich bei N+ Nutzern), Outcome "
+            "(korreliert mit Erfolg), LLM-Selbstbewertung. Einträge über der Schwelle "
+            "werden befördert.\n\n"
+            "Typisch als nächtlicher Cron-Job. Der Button startet manuell. "
+            "**Dry-run**: Vorschau ohne Schreibzugriff."
+        ),
+        "pt-BR": (
+            "**O que faz**: varre as memórias pessoais de todos os usuários e "
+            "**promove automaticamente** entradas valiosas para a memória compartilhada "
+            "da org. 3 sinais paralelos: frequência (repetido em N+ usuários), outcome "
+            "(correlacionado com sucesso), auto-avaliação LLM.\n\n"
+            "Tipicamente roda como cron noturno. Botão abaixo: execução manual. "
+            "**Dry-run** prévia sem gravar."
+        ),
     },
     "consolidate.threshold": {
         "en": "Auto-promote threshold",
@@ -1371,6 +1490,440 @@ _T: dict[str, dict[str, str]] = {
         "fr": "📝 Prompts personnalisés",
         "de": "📝 Benutzerdefinierte Prompts",
         "pt-BR": "📝 Prompts personalizados",
+    },
+    "prompts.intro": {
+        "en": "Generate a polished prompt template from a 1-line task, browse / edit / delete your saved prompts, or distribute curated prompts to your team.",
+        "ja": "1 行の指示からプロンプトテンプレートを自動生成、保存済プロンプトの閲覧・編集・削除、またはチームへの配布。",
+        "zh-CN": "从一行任务生成精炼的提示模板,浏览/编辑/删除保存的提示词,或向团队分发已审核的提示。",
+        "ko": "1 줄 작업으로 프롬프트 템플릿 생성, 저장된 프롬프트 열람·편집·삭제, 또는 팀에 배포.",
+        "es": "Genera una plantilla de prompt a partir de una tarea de 1 línea, navega/edita/elimina tus prompts guardados o distribúyelos al equipo.",
+        "fr": "Générez un template de prompt à partir d'une tâche d'une ligne, parcourez/modifiez/supprimez vos prompts ou distribuez-les à l'équipe.",
+        "de": "Erzeuge eine Prompt-Vorlage aus einer einzeiligen Aufgabe, durchstöbere/bearbeite/lösche gespeicherte Prompts oder verteile kuratierte Prompts ans Team.",
+        "pt-BR": "Gere um template de prompt a partir de uma tarefa de 1 linha, navegue/edite/exclua prompts salvos ou distribua ao time.",
+    },
+    "prompts.tab.generate": {
+        "en": "✨ Generate (PromptDesigner)",
+        "ja": "✨ 生成 (PromptDesigner)",
+        "zh-CN": "✨ 生成 (PromptDesigner)",
+        "ko": "✨ 생성 (PromptDesigner)",
+        "es": "✨ Generar (PromptDesigner)",
+        "fr": "✨ Générer (PromptDesigner)",
+        "de": "✨ Generieren (PromptDesigner)",
+        "pt-BR": "✨ Gerar (PromptDesigner)",
+    },
+    "prompts.tab.browse": {
+        "en": "📚 Browse & edit",
+        "ja": "📚 一覧・編集",
+        "zh-CN": "📚 浏览与编辑",
+        "ko": "📚 목록·편집",
+        "es": "📚 Explorar y editar",
+        "fr": "📚 Parcourir et éditer",
+        "de": "📚 Durchsuchen & Bearbeiten",
+        "pt-BR": "📚 Explorar e editar",
+    },
+    "prompts.tab.distribute": {
+        "en": "📤 Distribute (admin)",
+        "ja": "📤 配信 (管理者)",
+        "zh-CN": "📤 分发 (管理员)",
+        "ko": "📤 배포 (관리자)",
+        "es": "📤 Distribuir (admin)",
+        "fr": "📤 Distribuer (admin)",
+        "de": "📤 Verteilen (Admin)",
+        "pt-BR": "📤 Distribuir (admin)",
+    },
+    # ----- Generate (PromptDesigner) -----
+    "prompts.generate.intro": {
+        "en": "Describe your task in 1 line — get a production-grade prompt template back: tuned system message, `${variable}` user template, 2-3 few-shot examples, 5-criterion eval rubric. Per-LLM idioms applied automatically.",
+        "ja": "やりたいことを 1 行で書くだけで、本番品質のプロンプト設計が返ってきます — チューニング済 system メッセージ、`${variable}` 入り user テンプレート、Few-Shot 例 2〜3 件、5 観点の評価ルーブリック付き。LLM ごとの作法を自動適用。",
+        "zh-CN": "用一行描述任务,即可获得生产级提示模板: 调优 system 消息、含 `${variable}` 的 user 模板、2-3 个 few-shot 示例、5 项评估标准。自动适用 LLM 特定写法。",
+        "ko": "한 줄로 작업을 설명하면 프로덕션 품질의 프롬프트 템플릿을 받습니다: 튜닝된 system 메시지, `${variable}` 포함 user 템플릿, Few-Shot 예시 2-3 개, 5 기준 루브릭. LLM 별 관용구 자동 적용.",
+        "es": "Describe tu tarea en 1 línea: recibirás un template de prompt de producción — system ajustado, plantilla user con `${variable}`, 2-3 few-shot, rúbrica de 5 criterios. Idiomas por LLM aplicados automáticamente.",
+        "fr": "Décrivez votre tâche en 1 ligne — recevez un template de prompt prêt prod : system affûté, template user avec `${variable}`, 2-3 few-shot, rubrique à 5 critères. Idiomes par LLM appliqués auto.",
+        "de": "Beschreibe deine Aufgabe in 1 Zeile — erhalte ein produktionsreifes Prompt-Template: getuneter System-Prompt, User-Template mit `${variable}`, 2-3 Few-Shot, 5-Kriterien-Rubrik. LLM-Idiome automatisch angewendet.",
+        "pt-BR": "Descreva sua tarefa em 1 linha — receba um template de prompt pronto: system ajustado, template user com `${variable}`, 2-3 few-shot, rubrica de 5 critérios. Idiomas por LLM aplicados automaticamente.",
+    },
+    "prompts.generate.task_label": {
+        "en": "Task description",
+        "ja": "タスク内容",
+        "zh-CN": "任务描述",
+        "ko": "작업 설명",
+        "es": "Descripción de la tarea",
+        "fr": "Description de la tâche",
+        "de": "Aufgabenbeschreibung",
+        "pt-BR": "Descrição da tarefa",
+    },
+    "prompts.generate.task_placeholder": {
+        "en": "e.g. score contract risk 1-5 in JSON",
+        "ja": "例: 契約書のリスクを 1〜5 段階で JSON 評価",
+        "zh-CN": "例: 以 JSON 评 1-5 级合同风险",
+        "ko": "예: 계약서 리스크를 1-5 로 JSON 평가",
+        "es": "p. ej. valorar riesgo de contrato 1-5 en JSON",
+        "fr": "ex. noter le risque du contrat 1-5 en JSON",
+        "de": "z. B. Vertragsrisiko 1-5 als JSON bewerten",
+        "pt-BR": "ex. avaliar risco do contrato 1-5 em JSON",
+    },
+    "prompts.generate.target_llm": {
+        "en": "Target LLM family",
+        "ja": "対象 LLM ファミリ",
+        "zh-CN": "目标 LLM 家族",
+        "ko": "대상 LLM 패밀리",
+        "es": "Familia LLM objetivo",
+        "fr": "Famille LLM cible",
+        "de": "Ziel-LLM-Familie",
+        "pt-BR": "Família LLM alvo",
+    },
+    "prompts.generate.target_llm_auto": {
+        "en": "(auto — use current LLM)",
+        "ja": "(自動 — 現在の LLM を使用)",
+        "zh-CN": "(自动 — 使用当前 LLM)",
+        "ko": "(자동 — 현재 LLM 사용)",
+        "es": "(auto — usar LLM actual)",
+        "fr": "(auto — utiliser le LLM actuel)",
+        "de": "(auto — aktuelles LLM)",
+        "pt-BR": "(auto — usar LLM atual)",
+    },
+    "prompts.generate.output_format": {
+        "en": "Expected output format",
+        "ja": "出力形式",
+        "zh-CN": "期望输出格式",
+        "ko": "출력 형식",
+        "es": "Formato de salida",
+        "fr": "Format de sortie",
+        "de": "Ausgabeformat",
+        "pt-BR": "Formato de saída",
+    },
+    "prompts.generate.include_examples": {
+        "en": "Include 2-3 few-shot examples",
+        "ja": "Few-shot 例 2〜3 件を含める",
+        "zh-CN": "包含 2-3 个 few-shot 示例",
+        "ko": "Few-shot 예시 2-3 개 포함",
+        "es": "Incluir 2-3 ejemplos few-shot",
+        "fr": "Inclure 2-3 exemples few-shot",
+        "de": "2-3 Few-Shot-Beispiele einschließen",
+        "pt-BR": "Incluir 2-3 exemplos few-shot",
+    },
+    "prompts.generate.constraint": {
+        "en": "Constraint level",
+        "ja": "制約レベル",
+        "zh-CN": "约束级别",
+        "ko": "제약 수준",
+        "es": "Nivel de restricción",
+        "fr": "Niveau de contrainte",
+        "de": "Constraint-Level",
+        "pt-BR": "Nível de restrição",
+    },
+    "prompts.generate.btn": {
+        "en": "✨ Generate template",
+        "ja": "✨ テンプレート生成",
+        "zh-CN": "✨ 生成模板",
+        "ko": "✨ 템플릿 생성",
+        "es": "✨ Generar template",
+        "fr": "✨ Générer le template",
+        "de": "✨ Template erzeugen",
+        "pt-BR": "✨ Gerar template",
+    },
+    "prompts.generate.task_required": {
+        "en": "Task description is required.",
+        "ja": "タスク内容は必須です。",
+        "zh-CN": "需要任务描述。",
+        "ko": "작업 설명이 필요합니다.",
+        "es": "Se requiere descripción de tarea.",
+        "fr": "Description de la tâche requise.",
+        "de": "Aufgabenbeschreibung erforderlich.",
+        "pt-BR": "Descrição da tarefa é obrigatória.",
+    },
+    "prompts.generate.designing": {
+        "en": "Designing prompt template…",
+        "ja": "プロンプト設計中…",
+        "zh-CN": "设计提示模板中…",
+        "ko": "프롬프트 템플릿 설계 중…",
+        "es": "Diseñando plantilla…",
+        "fr": "Création du template…",
+        "de": "Erzeuge Template…",
+        "pt-BR": "Projetando template…",
+    },
+    "prompts.generate.save_h": {
+        "en": "💾 Save to your prompt library",
+        "ja": "💾 プロンプトライブラリに保存",
+        "zh-CN": "💾 保存到你的提示词库",
+        "ko": "💾 프롬프트 라이브러리에 저장",
+        "es": "💾 Guardar en tu biblioteca de prompts",
+        "fr": "💾 Enregistrer dans la bibliothèque",
+        "de": "💾 In Prompt-Bibliothek speichern",
+        "pt-BR": "💾 Salvar na biblioteca de prompts",
+    },
+    "prompts.generate.save_name": {
+        "en": "Name",
+        "ja": "名前",
+        "zh-CN": "名称",
+        "ko": "이름",
+        "es": "Nombre",
+        "fr": "Nom",
+        "de": "Name",
+        "pt-BR": "Nome",
+    },
+    "prompts.generate.save_desc": {
+        "en": "Description",
+        "ja": "説明",
+        "zh-CN": "描述",
+        "ko": "설명",
+        "es": "Descripción",
+        "fr": "Description",
+        "de": "Beschreibung",
+        "pt-BR": "Descrição",
+    },
+    "prompts.generate.save_btn": {
+        "en": "💾 Save to library",
+        "ja": "💾 ライブラリに保存",
+        "zh-CN": "💾 保存到库",
+        "ko": "💾 라이브러리에 저장",
+        "es": "💾 Guardar en biblioteca",
+        "fr": "💾 Enregistrer",
+        "de": "💾 Speichern",
+        "pt-BR": "💾 Salvar",
+    },
+    "prompts.generate.discard_btn": {
+        "en": "Discard",
+        "ja": "破棄",
+        "zh-CN": "丢弃",
+        "ko": "버리기",
+        "es": "Descartar",
+        "fr": "Abandonner",
+        "de": "Verwerfen",
+        "pt-BR": "Descartar",
+    },
+    "prompts.generate.saved": {
+        "en": "✅ Saved as '{name}'",
+        "ja": "✅ '{name}' として保存しました",
+        "zh-CN": "✅ 已保存为「{name}」",
+        "ko": "✅ '{name}' 으로 저장됨",
+        "es": "✅ Guardado como '{name}'",
+        "fr": "✅ Enregistré sous « {name} »",
+        "de": "✅ Als '{name}' gespeichert",
+        "pt-BR": "✅ Salvo como '{name}'",
+    },
+    # ----- Browse & edit -----
+    "prompts.browse.empty": {
+        "en": "No prompts yet. Use the **Generate** tab to create one, or the **Create new prompt** form below to write one manually.",
+        "ja": "プロンプト未登録。**生成** タブで作成、または下の **新規作成** フォームで手書き登録できます。",
+        "zh-CN": "暂无提示词。使用 **生成** 标签创建,或下方 **新建** 表单手动编写。",
+        "ko": "프롬프트 없음. **생성** 탭에서 만들거나 아래 **새 프롬프트** 폼에서 수동 작성하세요.",
+        "es": "Sin prompts. Usa la pestaña **Generar** o el formulario **Nuevo prompt** de abajo.",
+        "fr": "Aucun prompt. Utilisez l'onglet **Générer** ou le formulaire **Nouveau** ci-dessous.",
+        "de": "Noch keine Prompts. Nutze den **Generieren**-Tab oder das **Neu**-Formular unten.",
+        "pt-BR": "Sem prompts. Use a aba **Gerar** ou o formulário **Novo prompt** abaixo.",
+    },
+    "prompts.edit.body_label": {
+        "en": "Prompt body",
+        "ja": "プロンプト本文",
+        "zh-CN": "提示词正文",
+        "ko": "프롬프트 본문",
+        "es": "Cuerpo del prompt",
+        "fr": "Corps du prompt",
+        "de": "Prompt-Inhalt",
+        "pt-BR": "Corpo do prompt",
+    },
+    "prompts.edit.desc_label": {
+        "en": "Description",
+        "ja": "説明",
+        "zh-CN": "描述",
+        "ko": "설명",
+        "es": "Descripción",
+        "fr": "Description",
+        "de": "Beschreibung",
+        "pt-BR": "Descrição",
+    },
+    "prompts.edit.tags_label": {
+        "en": "Tags (comma-separated)",
+        "ja": "タグ (カンマ区切り)",
+        "zh-CN": "标签(逗号分隔)",
+        "ko": "태그 (쉼표 구분)",
+        "es": "Etiquetas (separadas por coma)",
+        "fr": "Tags (séparés par virgule)",
+        "de": "Tags (kommagetrennt)",
+        "pt-BR": "Tags (separadas por vírgula)",
+    },
+    "prompts.edit.save_btn": {
+        "en": "💾 Save changes",
+        "ja": "💾 変更を保存",
+        "zh-CN": "💾 保存更改",
+        "ko": "💾 변경 저장",
+        "es": "💾 Guardar cambios",
+        "fr": "💾 Enregistrer",
+        "de": "💾 Änderungen speichern",
+        "pt-BR": "💾 Salvar alterações",
+    },
+    "prompts.edit.delete_btn": {
+        "en": "🗑 Delete prompt",
+        "ja": "🗑 プロンプト削除",
+        "zh-CN": "🗑 删除提示词",
+        "ko": "🗑 프롬프트 삭제",
+        "es": "🗑 Eliminar prompt",
+        "fr": "🗑 Supprimer le prompt",
+        "de": "🗑 Prompt löschen",
+        "pt-BR": "🗑 Excluir prompt",
+    },
+    "prompts.edit.saved": {
+        "en": "✅ Saved",
+        "ja": "✅ 保存しました",
+        "zh-CN": "✅ 已保存",
+        "ko": "✅ 저장됨",
+        "es": "✅ Guardado",
+        "fr": "✅ Enregistré",
+        "de": "✅ Gespeichert",
+        "pt-BR": "✅ Salvo",
+    },
+    "prompts.edit.deleted": {
+        "en": "🗑 Deleted",
+        "ja": "🗑 削除しました",
+        "zh-CN": "🗑 已删除",
+        "ko": "🗑 삭제됨",
+        "es": "🗑 Eliminado",
+        "fr": "🗑 Supprimé",
+        "de": "🗑 Gelöscht",
+        "pt-BR": "🗑 Excluído",
+    },
+    "prompts.edit.readonly_hint": {
+        "en": "Read-only — `{scope}` scope can't be edited from this view.",
+        "ja": "読み取り専用 — `{scope}` スコープはこの画面から編集できません。",
+        "zh-CN": "只读 — 此视图无法编辑 `{scope}` 范围。",
+        "ko": "읽기 전용 — 이 뷰에서 `{scope}` 범위는 편집 불가.",
+        "es": "Solo lectura — el ámbito `{scope}` no se edita aquí.",
+        "fr": "Lecture seule — le scope `{scope}` n'est pas éditable ici.",
+        "de": "Nur lesen — `{scope}`-Scope hier nicht editierbar.",
+        "pt-BR": "Somente leitura — escopo `{scope}` não é editável aqui.",
+    },
+    # ----- Create new prompt -----
+    "prompts.create.h": {
+        "en": "✏️ Create a new prompt manually",
+        "ja": "✏️ 新規プロンプト手動作成",
+        "zh-CN": "✏️ 手动新建提示词",
+        "ko": "✏️ 새 프롬프트 수동 생성",
+        "es": "✏️ Crear nuevo prompt manualmente",
+        "fr": "✏️ Créer un nouveau prompt manuellement",
+        "de": "✏️ Neuen Prompt manuell erstellen",
+        "pt-BR": "✏️ Criar novo prompt manualmente",
+    },
+    "prompts.create.name": {
+        "en": "Name",
+        "ja": "名前",
+        "zh-CN": "名称",
+        "ko": "이름",
+        "es": "Nombre",
+        "fr": "Nom",
+        "de": "Name",
+        "pt-BR": "Nome",
+    },
+    "prompts.create.desc": {
+        "en": "Description",
+        "ja": "説明",
+        "zh-CN": "描述",
+        "ko": "설명",
+        "es": "Descripción",
+        "fr": "Description",
+        "de": "Beschreibung",
+        "pt-BR": "Descrição",
+    },
+    "prompts.create.tags": {
+        "en": "Tags (comma-separated)",
+        "ja": "タグ (カンマ区切り)",
+        "zh-CN": "标签(逗号分隔)",
+        "ko": "태그 (쉼표 구분)",
+        "es": "Etiquetas (separadas por coma)",
+        "fr": "Tags (séparés par virgule)",
+        "de": "Tags (kommagetrennt)",
+        "pt-BR": "Tags (separadas por vírgula)",
+    },
+    "prompts.create.body": {
+        "en": "Prompt body",
+        "ja": "プロンプト本文",
+        "zh-CN": "提示词正文",
+        "ko": "프롬프트 본문",
+        "es": "Cuerpo del prompt",
+        "fr": "Corps du prompt",
+        "de": "Prompt-Inhalt",
+        "pt-BR": "Corpo do prompt",
+    },
+    "prompts.create.btn": {
+        "en": "Create",
+        "ja": "作成",
+        "zh-CN": "创建",
+        "ko": "생성",
+        "es": "Crear",
+        "fr": "Créer",
+        "de": "Erstellen",
+        "pt-BR": "Criar",
+    },
+    "prompts.create.required": {
+        "en": "Name and body are required.",
+        "ja": "名前と本文は必須です。",
+        "zh-CN": "需要名称与正文。",
+        "ko": "이름과 본문이 필요합니다.",
+        "es": "Se requieren nombre y cuerpo.",
+        "fr": "Nom et corps requis.",
+        "de": "Name und Inhalt erforderlich.",
+        "pt-BR": "Nome e corpo são obrigatórios.",
+    },
+    "prompts.create.saved": {
+        "en": "✅ Created '{name}'",
+        "ja": "✅ '{name}' を作成しました",
+        "zh-CN": "✅ 已创建「{name}」",
+        "ko": "✅ '{name}' 생성됨",
+        "es": "✅ Creado '{name}'",
+        "fr": "✅ « {name} » créé",
+        "de": "✅ '{name}' erstellt",
+        "pt-BR": "✅ '{name}' criado",
+    },
+    # ----- Distribute -----
+    "prompts.distribute.intro": {
+        "en": "**Admin only.** Push a curated prompt to specific users or roles.",
+        "ja": "**管理者のみ。** 厳選プロンプトを特定ユーザまたはロールに配信。",
+        "zh-CN": "**仅管理员。** 将精选提示推送给特定用户或角色。",
+        "ko": "**관리자 전용.** 선별된 프롬프트를 특정 사용자/역할에 배포.",
+        "es": "**Solo admin.** Empuja un prompt curado a usuarios o roles específicos.",
+        "fr": "**Admin uniquement.** Pousse un prompt soigné vers des utilisateurs / rôles.",
+        "de": "**Nur Admin.** Ausgewählten Prompt an Nutzer/Rollen verteilen.",
+        "pt-BR": "**Apenas admin.** Envia um prompt curado para usuários/papéis.",
+    },
+    "prompts.distribute.target_users": {
+        "en": "Target user IDs (comma-separated)",
+        "ja": "対象ユーザ ID (カンマ区切り)",
+        "zh-CN": "目标用户 ID(逗号分隔)",
+        "ko": "대상 사용자 ID (쉼표 구분)",
+        "es": "IDs de usuarios objetivo (coma)",
+        "fr": "ID utilisateurs cibles (virgule)",
+        "de": "Ziel-User-IDs (kommagetrennt)",
+        "pt-BR": "IDs de usuários alvo (vírgula)",
+    },
+    "prompts.distribute.target_roles": {
+        "en": "Target roles",
+        "ja": "対象ロール",
+        "zh-CN": "目标角色",
+        "ko": "대상 역할",
+        "es": "Roles objetivo",
+        "fr": "Rôles cibles",
+        "de": "Zielrollen",
+        "pt-BR": "Papéis alvo",
+    },
+    "prompts.distribute.btn": {
+        "en": "📤 Distribute",
+        "ja": "📤 配信",
+        "zh-CN": "📤 分发",
+        "ko": "📤 배포",
+        "es": "📤 Distribuir",
+        "fr": "📤 Distribuer",
+        "de": "📤 Verteilen",
+        "pt-BR": "📤 Distribuir",
+    },
+    "prompts.distribute.saved": {
+        "en": "✅ Distributed to {n} target(s)",
+        "ja": "✅ {n} 件の対象に配信しました",
+        "zh-CN": "✅ 已分发至 {n} 个目标",
+        "ko": "✅ {n} 개 대상에 배포됨",
+        "es": "✅ Distribuido a {n} objetivos",
+        "fr": "✅ Distribué à {n} cibles",
+        "de": "✅ An {n} Ziele verteilt",
+        "pt-BR": "✅ Distribuído para {n} alvos",
     },
     # ===== About ============================================================
     "about.h": {

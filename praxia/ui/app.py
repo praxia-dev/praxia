@@ -141,54 +141,59 @@ with st.sidebar:
 
     st.divider()
 
-    NAV_ITEMS = [
-        ("run", "play-circle"),
-        ("memory", "brain"),
-        ("data", "folder"),
-        ("consolidate", "moon"),
-        ("dashboard", "bar-chart"),
-        ("prompts", "pencil-square"),
-        ("admin", "gear"),
+    NAV_KEYS = [
+        "run", "memory", "data", "consolidate",
+        "dashboard", "prompts", "admin",
     ]
-    nav_keys = [k for k, _ in NAV_ITEMS]
-    nav_labels = [t(f"mode.{k}") for k in nav_keys]
-    nav_icons = [icon for _, icon in NAV_ITEMS]
+    if "praxia_mode" not in st.session_state:
+        st.session_state["praxia_mode"] = NAV_KEYS[0]
 
     if HAS_OPTION_MENU:
+        # Icon-driven nav via streamlit-option-menu (optional dep).
+        ICON_MAP = {
+            "run": "play-circle", "memory": "brain", "data": "folder",
+            "consolidate": "moon", "dashboard": "bar-chart",
+            "prompts": "pencil-square", "admin": "gear",
+        }
+        labels = [t(f"mode.{k}") for k in NAV_KEYS]
         selected_label = option_menu(
             menu_title=None,
-            options=nav_labels,
-            icons=nav_icons,
-            default_index=0,
+            options=labels,
+            icons=[ICON_MAP[k] for k in NAV_KEYS],
+            default_index=NAV_KEYS.index(st.session_state["praxia_mode"]),
             styles={
-                "container": {
-                    "padding": "0",
-                    "background-color": "transparent",
-                },
+                "container": {"padding": "0", "background-color": "transparent"},
                 "icon": {"font-size": "16px"},
                 "nav-link": {
-                    "font-size": "14px",
-                    "padding": "10px 12px",
-                    "margin": "2px 0",
+                    "font-size": "14px", "padding": "10px 12px",
+                    "margin": "2px 0", "border-radius": "8px",
                     "--hover-color": "rgba(201,164,86,0.08)",
-                    "border-radius": "8px",
                 },
                 "nav-link-selected": {
                     "background-color": "rgba(201,164,86,0.18)",
-                    "color": "inherit",
-                    "font-weight": "600",
+                    "color": "inherit", "font-weight": "600",
                 },
             },
-            key="praxia_nav",
+            key="praxia_nav_om",
         )
-        mode = nav_keys[nav_labels.index(selected_label)]
+        st.session_state["praxia_mode"] = NAV_KEYS[labels.index(selected_label)]
     else:
-        mode = st.selectbox(
-            t("sidebar.view"),
-            options=nav_keys,
-            format_func=lambda k: t(f"mode.{k}"),
-            key="praxia_mode",
-        )
+        # Stacked vertical buttons — always-available fallback that doesn't
+        # depend on streamlit-option-menu. Active item is rendered as
+        # primary; others as secondary.
+        for key in NAV_KEYS:
+            label = t(f"mode.{key}")
+            is_active = st.session_state["praxia_mode"] == key
+            if st.button(
+                label,
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+                key=f"nav_btn_{key}",
+            ):
+                st.session_state["praxia_mode"] = key
+                st.rerun()
+
+    mode = st.session_state["praxia_mode"]
 
 
 # =====================================================================
@@ -904,56 +909,213 @@ elif mode == "dashboard":
 
 elif mode == "prompts":
     st.header(t("prompts.h"))
+    st.caption(t("prompts.intro"))
     from praxia.skills.prompts import PromptStore
 
     store = PromptStore(storage_dir=loom.config.memory_dir / "prompts")
-    sub_create, sub_browse, sub_distribute = st.tabs(
-        ["Create / edit", "Browse", "Admin: distribute"]
-    )
+    sub_generate, sub_browse, sub_distribute = st.tabs([
+        t("prompts.tab.generate"),
+        t("prompts.tab.browse"),
+        t("prompts.tab.distribute"),
+    ])
 
-    with sub_create:
-        with st.form("prompt_create_form"):
-            name = st.text_input("Name", placeholder="my_sales_qualifier")
-            description = st.text_input("Description")
-            tags = st.text_input("Tags (comma-separated)")
-            body = st.text_area("Prompt body", height=240)
-            submit = st.form_submit_button("Save")
-            if submit and name and body:
-                store.save_personal(
-                    user_id=user_id, name=name, body=body,
-                    description=description,
-                    tags=[s.strip() for s in tags.split(",") if s.strip()],
+    # ---- Generate (PromptDesigner) ---------------------------------
+    with sub_generate:
+        st.markdown(t("prompts.generate.intro"))
+
+        with st.form("prompt_designer_form"):
+            pd_task = st.text_area(
+                t("prompts.generate.task_label"),
+                placeholder=t("prompts.generate.task_placeholder"),
+                height=120,
+            )
+            pd_col1, pd_col2 = st.columns(2)
+            with pd_col1:
+                pd_target_llm = st.selectbox(
+                    t("prompts.generate.target_llm"),
+                    options=["", "claude", "gpt-5", "gpt-4o", "gemini",
+                             "deepseek-r1", "deepseek", "mistral",
+                             "codestral", "grok", "llama", "phi", "qwen",
+                             "gemma", "command-r", "perplexity"],
+                    format_func=lambda x: t("prompts.generate.target_llm_auto") if x == "" else x,
+                    key="pd_target_llm",
                 )
-                st.success(f"Saved {name}")
+                pd_output_format = st.selectbox(
+                    t("prompts.generate.output_format"),
+                    options=["text", "json", "markdown", "xml"],
+                    index=1,
+                    key="pd_output_format",
+                )
+            with pd_col2:
+                pd_include_examples = st.checkbox(
+                    t("prompts.generate.include_examples"),
+                    value=True, key="pd_include_examples",
+                )
+                pd_constraint = st.selectbox(
+                    t("prompts.generate.constraint"),
+                    options=["strict", "loose"],
+                    key="pd_constraint",
+                )
+            generate_clicked = st.form_submit_button(
+                t("prompts.generate.btn"), type="primary",
+            )
 
+        if generate_clicked:
+            if not pd_task.strip():
+                st.warning(t("prompts.generate.task_required"))
+            else:
+                from praxia.skills import PromptDesignerSkill
+                designer = PromptDesignerSkill(llm=LLM(model_choice))
+                with st.spinner(t("prompts.generate.designing")):
+                    try:
+                        result = designer.design(
+                            task=pd_task,
+                            target_llm=pd_target_llm,
+                            output_format=pd_output_format,
+                            include_examples=pd_include_examples,
+                            constraint_level=pd_constraint,
+                        )
+                        st.session_state["pd_result"] = result
+                        st.session_state["pd_task"] = pd_task
+                        st.session_state["pd_target_llm"] = pd_target_llm
+                    except Exception as e:
+                        st.error(f"Generation failed: {e}")
+
+        if "pd_result" in st.session_state:
+            from praxia.skills import PromptDesignerSkill
+            st.divider()
+            result = st.session_state["pd_result"]
+            primary = result.prompts[0] if hasattr(result, "prompts") and result.prompts else result
+            md = PromptDesignerSkill().format_markdown(primary)
+            st.markdown(md)
+
+            with st.expander(t("prompts.generate.save_h"), expanded=True):
+                save_name = st.text_input(
+                    t("prompts.generate.save_name"), key="pd_save_name",
+                    placeholder="my_contract_risk_v1",
+                )
+                save_desc = st.text_input(
+                    t("prompts.generate.save_desc"),
+                    value=f"Generated for: {st.session_state['pd_task'][:80]}",
+                    key="pd_save_desc",
+                )
+                col_save_btn, col_clear_btn = st.columns(2)
+                if col_save_btn.button(
+                    t("prompts.generate.save_btn"),
+                    key="pd_save_btn", type="primary",
+                    disabled=not save_name,
+                ):
+                    store.save_personal(
+                        user_id=user_id, name=save_name, body=md,
+                        description=save_desc,
+                        tags=["generated", st.session_state.get("pd_target_llm") or "auto"],
+                    )
+                    st.success(t("prompts.generate.saved").format(name=save_name))
+                    for k in ("pd_result", "pd_task", "pd_target_llm"):
+                        st.session_state.pop(k, None)
+                    st.rerun()
+                if col_clear_btn.button(t("prompts.generate.discard_btn"), key="pd_discard_btn"):
+                    for k in ("pd_result", "pd_task", "pd_target_llm"):
+                        st.session_state.pop(k, None)
+                    st.rerun()
+
+    # ---- Browse & edit (with Create-new at bottom) ------------------
     with sub_browse:
         prompts = store.list_for_user(user_id=user_id, role="member")
-        for p in prompts:
-            with st.expander(f"📄 {p.name} [{p.scope}]", expanded=False):
-                st.caption(p.description)
-                st.text(p.body[:1000] + ("…" if len(p.body) > 1000 else ""))
-                st.caption(f"tags: {', '.join(p.tags) or '—'} | owner: {p.owner}")
+        if prompts:
+            for p in prompts:
+                with st.expander(f"📄 {p.name} [{p.scope}]", expanded=False):
+                    st.caption(p.description or "—")
+                    st.caption(f"tags: {', '.join(p.tags) or '—'}  ·  owner: {p.owner}")
 
+                    if p.scope == "personal" and p.owner == user_id:
+                        # Editable: render fields + save/delete
+                        new_body = st.text_area(
+                            t("prompts.edit.body_label"),
+                            value=p.body, height=240,
+                            key=f"edit_body_{p.name}",
+                        )
+                        new_desc = st.text_input(
+                            t("prompts.edit.desc_label"),
+                            value=p.description or "",
+                            key=f"edit_desc_{p.name}",
+                        )
+                        new_tags = st.text_input(
+                            t("prompts.edit.tags_label"),
+                            value=", ".join(p.tags),
+                            key=f"edit_tags_{p.name}",
+                        )
+                        col_s, col_d = st.columns(2)
+                        if col_s.button(
+                            t("prompts.edit.save_btn"),
+                            key=f"save_{p.name}", type="primary",
+                        ):
+                            store.save_personal(
+                                user_id=user_id, name=p.name,
+                                body=new_body, description=new_desc,
+                                tags=[s.strip() for s in new_tags.split(",") if s.strip()],
+                            )
+                            st.success(t("prompts.edit.saved"))
+                            st.rerun()
+                        if col_d.button(
+                            t("prompts.edit.delete_btn"),
+                            key=f"del_{p.name}", type="secondary",
+                        ):
+                            store.delete_personal(user_id, p.name)
+                            st.success(t("prompts.edit.deleted"))
+                            st.rerun()
+                    else:
+                        # Read-only for org / distributed scopes
+                        st.text(
+                            p.body[:1000] + ("…" if len(p.body) > 1000 else "")
+                        )
+                        st.caption(t("prompts.edit.readonly_hint").format(scope=p.scope))
+        else:
+            st.info(t("prompts.browse.empty"))
+
+        st.divider()
+        with st.expander(t("prompts.create.h"), expanded=False):
+            with st.form("prompt_create_form"):
+                name = st.text_input(
+                    t("prompts.create.name"),
+                    placeholder="my_sales_qualifier",
+                )
+                description = st.text_input(t("prompts.create.desc"))
+                tags = st.text_input(t("prompts.create.tags"))
+                body = st.text_area(t("prompts.create.body"), height=240)
+                if st.form_submit_button(t("prompts.create.btn"), type="primary"):
+                    if name and body:
+                        store.save_personal(
+                            user_id=user_id, name=name, body=body,
+                            description=description,
+                            tags=[s.strip() for s in tags.split(",") if s.strip()],
+                        )
+                        st.success(t("prompts.create.saved").format(name=name))
+                        st.rerun()
+                    else:
+                        st.warning(t("prompts.create.required"))
+
+    # ---- Distribute (admin) -----------------------------------------
     with sub_distribute:
-        st.markdown("**Admin only.** Push a curated prompt to specific users or roles.")
+        st.markdown(t("prompts.distribute.intro"))
         with st.form("prompt_distribute_form"):
-            d_name = st.text_input("Name", key="dn")
-            d_body = st.text_area("Body", height=200, key="db")
+            d_name = st.text_input(t("prompts.create.name"), key="dn")
+            d_body = st.text_area(t("prompts.create.body"), height=200, key="db")
             d_target_users = st.text_input(
-                "Target user IDs (comma-separated)", key="dtu",
+                t("prompts.distribute.target_users"), key="dtu",
             )
             d_target_roles = st.multiselect(
-                "Target roles", ["admin", "operator", "member", "viewer"],
-                key="dtr",
+                t("prompts.distribute.target_roles"),
+                ["admin", "operator", "member", "viewer"], key="dtr",
             )
-            submit = st.form_submit_button("Distribute")
+            submit = st.form_submit_button(t("prompts.distribute.btn"), type="primary")
             if submit and d_name and d_body and (d_target_users or d_target_roles):
                 saved = store.distribute(
                     name=d_name, body=d_body,
                     target_users=[u.strip() for u in d_target_users.split(",") if u.strip()] or None,
                     target_roles=d_target_roles or None,
                 )
-                st.success(f"Distributed to {len(saved)} target(s)")
+                st.success(t("prompts.distribute.saved").format(n=len(saved)))
 
 
 # =====================================================================
