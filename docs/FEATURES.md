@@ -1474,3 +1474,97 @@ The agent is also exposed as a single MCP meta-tool named `autonomous_agent`
 so remote clients (Claude Desktop, Cursor, etc.) can delegate an entire
 investigation rather than orchestrating individual memory/skill/connector
 tools by hand. See `praxia.mcp.server.build_tools` for the schema.
+
+---
+
+## 39. Prompt Designer (intent → polished template)
+
+`praxia.skills.PromptDesignerSkill` turns a one-line task description into a
+production-grade prompt design. Composes with the rest of Praxia: results
+can be persisted to `PromptStore` for personal/org sharing, or A/B-tested
+through `praxia.experiments` when `variants > 1`.
+
+### What you get back
+
+For each variant the skill produces a `DesignedPrompt`:
+
+- **`system_prompt`** — polished system message, tuned for the target LLM
+- **`user_template`** — `${variable}`-style template the caller substitutes
+- **`variables`** — list of placeholder names found in the template
+- **`examples`** — 2-3 few-shot `(input, output, note)` triples (or empty)
+- **`rubric`** — 5 evaluation criteria for grading future runs
+- **`output_format`** — `text` / `json` / `markdown` / `xml`
+- **`notes`** — one sentence explaining the design choice
+
+### Per-LLM tuning
+
+The same task description yields different idioms depending on `target_llm`:
+
+| LLM | Tuning applied |
+|---|---|
+| Claude (`claude` / `claude-sonnet` / `claude-haiku`) | XML tags, `<thinking>` sections |
+| OpenAI (`chatgpt` / `gpt-4o` / `o1`) | Role-segmented, JSON-mode-friendly schemas |
+| Gemini | Front-loaded instructions in first ~2k tokens |
+| DeepSeek-V3 (`deepseek`) | OpenAI-style |
+| **DeepSeek-R1 (`deepseek-reasoner`)** | **Short system, no forced `<thinking>`** (R1 has its own reasoning channel) |
+| Mistral (`mistral` / `mistral-small`) | Concise (<300 token system) |
+| Codestral (`codestral`) | Code-task focused |
+| xAI Grok (`grok`) | Direct, no preamble |
+| Cohere Command R+ (`command-r`) | `<Documents>` + `<Question>` for RAG |
+| Perplexity Sonar (`perplexity`) | Search-augmented framing |
+| Llama via Groq (`llama`) | Numbered step lists |
+| Local Ollama (`llama-local` / `gemma` / `phi`) | Trim long system prompts |
+
+### CLI
+
+```bash
+praxia skill run prompt_designer "社内法務に契約書のリスクを 5 段階で評価させたい"
+# → outputs Markdown: system / user / examples / rubric
+```
+
+### SDK
+
+```python
+from praxia.skills import PromptDesignerSkill
+from praxia.core.llm import LLM
+
+designer = PromptDesignerSkill(llm=LLM("claude"))
+result = designer.design(
+    task="Score contract risk 1-5 with JSON output",
+    target_llm="claude",
+    output_format="json",
+    include_examples=True,
+    constraint_level="strict",
+    variants=2,            # generate two candidates for A/B testing
+)
+
+# Use the primary design directly
+p = result.primary
+print(p.system_prompt)
+print(p.user_template)        # contains ${contract_text}
+for ex in p.examples:
+    print(ex.input, "→", ex.output)
+print(p.rubric)               # 5 evaluation criteria
+
+# Or hand variants to praxia.experiments for live A/B testing
+```
+
+### Persistence + cycling
+
+Save the design to `PromptStore` so it participates in the same
+personal-to-org promotion pipeline as everything else in Praxia:
+
+```python
+from praxia.skills.prompts import PromptStore
+
+PromptStore().save_personal(
+    user_id="alice",
+    name="legal_risk_eval",
+    body=designer.format_markdown(p),
+    description="Legal contract risk eval (Claude-tuned)",
+    tags=["legal", "risk-eval"],
+)
+```
+
+Effective prompts auto-promote to the org catalog through the same
+frequency / outcome / LLM-self-eval scoring as the memory layer.

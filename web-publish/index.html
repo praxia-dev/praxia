@@ -108,6 +108,7 @@
         <span data-i18n="chip.conn20">🔗 20 connectors (Box / Notion / Slack / Jira / GitHub / S3 / …)</span>
         <span data-i18n="chip.responsive">📱 Mobile-responsive</span>
         <span data-i18n="chip.agent">🤖 Autonomous agent (LLM-driven tool-use loop)</span>
+        <span data-i18n="chip.designer">✨ Prompt Designer (intent → polished template)</span>
         <span data-i18n="chip.tests">✅ Hermetic test harness (stubs &amp; drivers)</span>
       </div>
     </div>
@@ -124,6 +125,11 @@
           <div class="card-icon">🤖</div>
           <h3 data-i18n="feat.autonomous_agent">Autonomous agent — LLM-driven tool-use loop</h3>
           <p data-i18n="feat.autonomous_agent.body">An LLM-driven tool-use loop over your full Praxia stack — personal memory, org memory, frozen layer, skills, connectors. The agent picks tools on its own (search → run skill → pull connector → answer) with ACL gates and audit logging. Ships as <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code>, and an MCP meta-tool for remote clients.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">✨</div>
+          <h3 data-i18n="feat.prompt_designer">Prompt Designer — turn intent into a polished template</h3>
+          <p data-i18n="feat.prompt_designer.body">Describe the task in one line ("score contract risk 1-5 in JSON") → get a production-grade prompt design back: tuned system message, <code>${variable}</code> user template, 2-3 few-shot examples, 5-criterion evaluation rubric. Per-LLM idioms applied automatically (Claude XML / OpenAI JSON-mode / DeepSeek-R1 reasoning channel / Mistral concise / Llama numbered steps). Save to <code>PromptStore</code>, A/B-test multiple variants via the experiments framework.</p>
         </article>
         <article class="card">
           <div class="card-icon">🧠</div>
