@@ -190,6 +190,18 @@ without orchestrating individual tools by hand. See
 
 Each skill serializes to Claude-Skills / MCP-compatible `SKILL.md`.
 
+Plus two **utility** skills:
+
+| Skill | What it does |
+|---|---|
+| **`PromptDesignerSkill`** | Take a one-line task description → produce a production-grade prompt template (system + user + 2-3 few-shot examples + 5-criterion rubric) tuned for the target LLM (Claude / OpenAI / DeepSeek / Mistral / Llama / …). Save to `PromptStore`, A/B-test via `praxia.experiments`. |
+| **`OutputFormatSkill`** | Detect "PowerPoint で出して" / "as Word doc" / etc. in natural language and dispatch to the matching exporter (PPTX / DOCX / HTML / MD / JSON). |
+
+```bash
+# Generate a prompt template for any task
+praxia skill run prompt_designer "社内法務に契約書のリスクを 5 段階で評価させたい"
+```
+
 ### All Major LLMs
 
 LiteLLM-powered single-line provider switching:

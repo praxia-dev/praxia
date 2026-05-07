@@ -39,6 +39,10 @@ FLOW_REGISTRY: dict[str, type] = {
 
 SKILL_REGISTRY: dict[str, type] = {s.manifest.name: s for s in BUSINESS_SKILLS}
 SKILL_REGISTRY.update({s.manifest.domain: s for s in BUSINESS_SKILLS})
+# Utility skills are not in BUSINESS_SKILLS but are runnable via `praxia skill run`.
+from praxia.skills import OutputFormatSkill, PromptDesignerSkill  # noqa: E402
+SKILL_REGISTRY["output_format"] = OutputFormatSkill
+SKILL_REGISTRY["prompt_designer"] = PromptDesignerSkill
 
 
 @app.command()
