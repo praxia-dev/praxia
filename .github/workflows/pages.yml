@@ -1,0 +1,49 @@
+name: Deploy landing page to GitHub Pages
+
+# GitHub Pages "Deploy from a branch" mode only allows / or /docs as
+# the publish folder. Our landing lives in /web-publish/, so we use the
+# GitHub Actions mode and upload that directory directly.
+#
+# Cloudflare Pages remains the primary mirror (https://praxia.tools/);
+# this workflow keeps GitHub Pages in sync as a fallback at
+# https://praxia-dev.github.io/praxia/.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web-publish/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, but let an in-progress run finish
+# rather than cancelling it (so a half-deployed site is never left live).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload web-publish/ as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web-publish
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
