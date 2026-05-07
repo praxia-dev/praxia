@@ -216,29 +216,83 @@ if theme_choice == "dark":
   .stApp { background-color: #0a0a0f !important; color: #ecedf0 !important; }
   [data-testid="stSidebar"] { background-color: #15171f !important; }
   [data-testid="stHeader"] { background-color: transparent !important; }
+
+  /* Generic text */
   .stMarkdown, .stText, p, span, label, h1, h2, h3, h4, h5, h6 { color: #ecedf0 !important; }
+  [data-testid="stCaption"], small { color: #a8acb8 !important; }
+  code { background-color: rgba(255,255,255,0.08) !important; color: #e9c378 !important; }
+
+  /* Inputs */
   [data-testid="stTextInput"] input,
   [data-testid="stTextArea"] textarea,
-  [data-testid="stSelectbox"] div[role="combobox"] {
+  [data-testid="stSelectbox"] div[role="combobox"],
+  [data-testid="stNumberInput"] input,
+  [data-testid="stDateInput"] input {
     background-color: #1a1d28 !important; color: #ecedf0 !important;
+    border-color: rgba(255,255,255,0.1) !important;
   }
-  [data-testid="stExpander"] { background-color: rgba(255,255,255,0.02) !important; }
+  [data-testid="stTextInput"] input::placeholder,
+  [data-testid="stTextArea"] textarea::placeholder { color: #6c7080 !important; }
+
+  /* Buttons — readable contrast on dark bg */
+  .stButton button,
+  .stDownloadButton button,
+  [data-testid="stFormSubmitButton"] button {
+    background-color: #1a1d28 !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  .stButton button:hover,
+  .stDownloadButton button:hover,
+  [data-testid="stFormSubmitButton"] button:hover {
+    background-color: #252834 !important;
+    border-color: rgba(255,255,255,0.2) !important;
+  }
+  /* Primary action — gold-on-dark for high contrast */
+  .stButton button[kind="primary"],
+  .stDownloadButton button[kind="primary"],
+  [data-testid="stFormSubmitButton"] button[kind="primary"] {
+    background-color: #c9a456 !important;
+    color: #0a0a0f !important;
+    border-color: #c9a456 !important;
+    font-weight: 600 !important;
+  }
+  .stButton button[kind="primary"]:hover,
+  .stDownloadButton button[kind="primary"]:hover,
+  [data-testid="stFormSubmitButton"] button[kind="primary"]:hover {
+    background-color: #d8b466 !important;
+    color: #0a0a0f !important;
+  }
+  /* Secondary buttons */
+  .stButton button[kind="secondary"],
+  .stDownloadButton button[kind="secondary"] {
+    background-color: rgba(255,255,255,0.05) !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+  }
+  .stButton button[kind="secondary"]:hover,
+  .stDownloadButton button[kind="secondary"]:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+  }
+
+  /* Containers / structure */
+  [data-testid="stExpander"] { background-color: rgba(255,255,255,0.02) !important; border-color: rgba(255,255,255,0.06) !important; }
+  [data-testid="stTabs"] [data-testid="stMarkdownContainer"] { color: #ecedf0 !important; }
+  [data-testid="stTabs"] button[role="tab"] { color: #a8acb8 !important; }
+  [data-testid="stTabs"] button[role="tab"][aria-selected="true"] { color: #c9a456 !important; border-color: #c9a456 !important; }
+  [data-testid="stForm"] { background-color: rgba(255,255,255,0.02) !important; border: 1px solid rgba(255,255,255,0.06) !important; }
+  [data-testid="stMetric"] { background-color: rgba(255,255,255,0.03) !important; padding: 0.5rem; border-radius: 6px; }
   hr { border-color: rgba(255,255,255,0.08) !important; }
+
+  /* Alerts */
+  [data-testid="stAlert"] { background-color: rgba(255,255,255,0.04) !important; }
 </style>
         """,
         unsafe_allow_html=True,
     )
 elif theme_choice == "light":
-    st.markdown(
-        """
-<style>
-  .stApp { background-color: #ffffff !important; color: #1a1a22 !important; }
-  [data-testid="stSidebar"] { background-color: #f5f6f8 !important; }
-  [data-testid="stHeader"] { background-color: transparent !important; }
-</style>
-        """,
-        unsafe_allow_html=True,
-    )
+    # No overrides needed — Streamlit's default light is fine.
+    pass
 # theme_choice == "auto" → no override; Streamlit's default follows OS pref.
 
 
@@ -826,81 +880,41 @@ elif mode == "data":
 
 elif mode == "preferences":
     st.header(t("preferences.h"))
-    st.caption(t("preferences.intro"))
 
-    # ---- Language ----
-    st.subheader(t("preferences.language_h"))
-    st.caption(t("preferences.language_intro"))
+    # Language
     current_lang = st.session_state.get("praxia_lang", detect_language())
     if current_lang not in SUPPORTED:
         current_lang = "en"
     new_lang = st.selectbox(
-        t("preferences.language_label"),
+        t("preferences.language_h"),
         options=SUPPORTED,
         index=SUPPORTED.index(current_lang),
         format_func=lambda c: LANG_DISPLAY[c],
         key="pref_lang_pick",
+        help=t("preferences.language_intro"),
     )
     if new_lang != current_lang:
         st.session_state["praxia_lang"] = new_lang
         save_user_pref(user_id, "praxia_lang", new_lang)
         st.rerun()
 
-    st.divider()
-
-    # ---- Color theme ----
-    st.subheader(t("preferences.theme_h"))
-    st.caption(t("preferences.theme_intro"))
+    # Color theme
     current_theme = st.session_state.get("praxia_theme", "auto")
     THEME_OPTIONS = ["auto", "light", "dark"]
     new_theme = st.selectbox(
-        t("preferences.theme_label"),
+        t("preferences.theme_h"),
         options=THEME_OPTIONS,
         index=THEME_OPTIONS.index(current_theme) if current_theme in THEME_OPTIONS else 0,
         format_func=lambda c: t(f"preferences.theme.{c}"),
         key="pref_theme_pick",
+        help=t("preferences.theme_intro"),
     )
     if new_theme != current_theme:
         st.session_state["praxia_theme"] = new_theme
         save_user_pref(user_id, "praxia_theme", new_theme)
         st.rerun()
 
-    st.divider()
-
-    # ---- Default LLM model ----
-    st.subheader(t("preferences.llm_h"))
-    st.caption(t("preferences.llm_intro"))
-    pref_model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
-    pref_current_model = st.session_state.get("praxia_model", _default_model)
-    pref_preset_index = (
-        pref_model_options.index(pref_current_model)
-        if pref_current_model in DEFAULT_ALIASES
-        else len(pref_model_options) - 1
-    )
-    pref_picked_model = st.selectbox(
-        t("preferences.model_label"),
-        options=pref_model_options,
-        index=pref_preset_index,
-        key="pref_model_pick",
-    )
-    if pref_picked_model == "custom":
-        pref_picked_model = st.text_input(
-            t("preferences.model_custom"),
-            value=(
-                pref_current_model if pref_current_model not in DEFAULT_ALIASES
-                else "anthropic/claude-opus-4-7"
-            ),
-            key="pref_model_custom_input",
-        )
-    if st.button(t("preferences.apply_btn"), type="primary", key="pref_apply"):
-        st.session_state["praxia_model"] = pref_picked_model
-        save_user_pref(user_id, "praxia_model", pref_picked_model)
-        try:
-            st.cache_resource.clear()
-        except Exception:
-            pass
-        st.success(t("preferences.applied"))
-        st.rerun()
+    st.caption(t("preferences.llm_moved_hint"))
 
 
 # =====================================================================
@@ -1237,24 +1251,50 @@ elif mode == "admin":
                 user=user_id, role=actor_role,
             ))
 
-        # Tenant memory backend (admin-controlled tenant default)
-        st.subheader(t("admin.settings.backend_h"))
-        st.caption(t("admin.settings.backend_intro"))
-        backend_options = ["json", "mem0", "langmem", "letta", "zep"]
-        current_backend = st.session_state.get("praxia_backend", "json")
-        picked_backend = st.selectbox(
-            t("admin.settings.backend_label"),
-            options=backend_options,
-            index=(
-                backend_options.index(current_backend)
-                if current_backend in backend_options else 0
-            ),
-            key="settings_backend_pick",
-        )
+        # Tenant runtime: LLM model + memory backend (admin-only,
+        # because the LLM choice depends on which API key is configured).
+        st.subheader(t("admin.settings.runtime_h"))
+        col_m, col_b = st.columns(2)
+        with col_m:
+            model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
+            current_model = st.session_state.get("praxia_model", _default_model)
+            preset_index = (
+                model_options.index(current_model)
+                if current_model in DEFAULT_ALIASES
+                else len(model_options) - 1
+            )
+            picked_model = st.selectbox(
+                t("admin.settings.model_label"),
+                options=model_options,
+                index=preset_index,
+                key="settings_model_pick",
+            )
+            if picked_model == "custom":
+                picked_model = st.text_input(
+                    t("admin.settings.model_custom"),
+                    value=(
+                        current_model if current_model not in DEFAULT_ALIASES
+                        else "anthropic/claude-opus-4-7"
+                    ),
+                    key="settings_model_custom_input",
+                )
+        with col_b:
+            backend_options = ["json", "mem0", "langmem", "letta", "zep"]
+            current_backend = st.session_state.get("praxia_backend", "json")
+            picked_backend = st.selectbox(
+                t("admin.settings.backend_label"),
+                options=backend_options,
+                index=(
+                    backend_options.index(current_backend)
+                    if current_backend in backend_options else 0
+                ),
+                key="settings_backend_pick",
+            )
         if st.button(
-            t("admin.settings.backend_apply"), type="primary",
-            key="settings_backend_apply",
+            t("admin.settings.runtime_apply"), type="primary",
+            key="settings_runtime_apply",
         ):
+            st.session_state["praxia_model"] = picked_model
             st.session_state["praxia_backend"] = picked_backend
             try:
                 st.cache_resource.clear()

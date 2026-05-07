@@ -399,6 +399,16 @@ _T: dict[str, dict[str, str]] = {
         "de": "🌙 Dunkel",
         "pt-BR": "🌙 Escuro",
     },
+    "preferences.llm_moved_hint": {
+        "en": "ℹ The LLM model picker has moved to **Admin → Settings** — the available models depend on which API keys the admin has configured.",
+        "ja": "ℹ LLM モデルの選択は **Admin → Settings** に移動しました — 利用可能なモデルは管理者が設定した API キーに依存します。",
+        "zh-CN": "ℹ LLM 模型选择已移至 **Admin → Settings** — 可用模型取决于管理员配置的 API 密钥。",
+        "ko": "ℹ LLM 모델 선택은 **Admin → Settings** 로 이동했습니다 — 사용 가능한 모델은 관리자가 설정한 API 키에 따라 다릅니다.",
+        "es": "ℹ La selección del LLM se movió a **Admin → Settings** — los modelos disponibles dependen de las claves API del admin.",
+        "fr": "ℹ Le sélecteur de LLM a été déplacé vers **Admin → Settings** — les modèles disponibles dépendent des clés API de l'admin.",
+        "de": "ℹ Die LLM-Modellauswahl ist nun unter **Admin → Settings** — verfügbare Modelle hängen von den Admin-API-Keys ab.",
+        "pt-BR": "ℹ O seletor de LLM foi movido para **Admin → Settings** — os modelos disponíveis dependem das chaves API do admin.",
+    },
     "preferences.applied": {
         "en": "✅ Preference applied. Reloading…",
         "ja": "✅ 設定を適用しました。再読み込み中…",
@@ -582,58 +592,14 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "🎬 Executar",
     },
     "run.intro": {
-        "en": (
-            "Two ways to invoke Praxia:\n\n"
-            "- **🛠 Skill** — pick a specific domain skill (Investment, Sales, "
-            "Legal, etc.) and ask one question. One call, one answer.\n"
-            "- **🤖 Agent** — describe a goal; the agent decides which skills "
-            "(and workflows, internally) to call, iterating until done.\n\n"
-            "Pick **Skill** for known one-shot questions; pick **Agent** for "
-            "fuzzy goals that need multiple tools. Pre-built workflows are "
-            "still available via SDK / CLI for power users."
-        ),
-        "ja": (
-            "Praxia の呼び出し方は 2 通り:\n\n"
-            "- **🛠 スキル** — 特定ドメイン (投資 / 営業 / 法務など) のスキルを選んで 1 つ質問。1 回の呼出で 1 つの回答。\n"
-            "- **🤖 エージェント** — ゴールを伝えると、エージェントが必要なスキル (内部的にはワークフローも) を選んで満足まで反復。\n\n"
-            "明確な単発質問は **スキル**、ゆるい目標で複数ツールを使いたいなら **エージェント**。事前定義の Workflow は SDK / CLI 経由で利用可能 (上級ユーザ向け)。"
-        ),
-        "zh-CN": (
-            "调用 Praxia 的 2 种方式:\n\n"
-            "- **🛠 技能** — 选特定领域技能(投资/销售/法务等),问一次答一次。\n"
-            "- **🤖 代理** — 给目标,代理选择需要的技能(内部也用工作流)反复执行直到完成。\n\n"
-            "明确单次问题用 **技能**,模糊目标用 **代理**。预建工作流仍可通过 SDK / CLI 使用。"
-        ),
-        "ko": (
-            "Praxia 호출 2 가지:\n\n"
-            "- **🛠 스킬** — 특정 도메인 (투자/영업/법무 등) 스킬을 골라 1 회 질문.\n"
-            "- **🤖 에이전트** — 목표만 주면 필요한 스킬 (내부적으로 워크플로도) 을 골라 반복 수행.\n\n"
-            "명확한 단발 질문은 **스킬**, 모호한 목표는 **에이전트**. 사전 정의 Workflow 는 SDK / CLI 로 사용 가능."
-        ),
-        "es": (
-            "Dos formas de invocar Praxia:\n\n"
-            "- **🛠 Skill** — elige una habilidad de dominio y haz una pregunta.\n"
-            "- **🤖 Agente** — da un objetivo; el agente elige skills (y workflows internamente) hasta terminar.\n\n"
-            "Skill para preguntas únicas claras; Agent para objetivos difusos. Workflows pre-construidos siguen disponibles vía SDK / CLI."
-        ),
-        "fr": (
-            "Deux façons d'utiliser Praxia :\n\n"
-            "- **🛠 Skill** — choisissez une compétence de domaine et posez une question.\n"
-            "- **🤖 Agent** — donnez un objectif ; l'agent choisit skills (et workflows en interne) jusqu'à terminer.\n\n"
-            "Skill pour question ponctuelle ; Agent pour objectif flou. Les workflows pré-construits restent dispo via SDK / CLI."
-        ),
-        "de": (
-            "Zwei Wege, Praxia zu nutzen:\n\n"
-            "- **🛠 Skill** — wähle einen Domain-Skill und stelle eine Frage.\n"
-            "- **🤖 Agent** — gib ein Ziel; der Agent wählt Skills (und intern Workflows), bis fertig.\n\n"
-            "Skill für klare einmalige Fragen; Agent für unklare Ziele. Vordefinierte Workflows weiterhin via SDK / CLI verfügbar."
-        ),
-        "pt-BR": (
-            "Duas formas de invocar Praxia:\n\n"
-            "- **🛠 Skill** — escolha uma habilidade de domínio e faça uma pergunta.\n"
-            "- **🤖 Agente** — dê um objetivo; o agente escolhe skills (e workflows internamente) até concluir.\n\n"
-            "Skill para perguntas únicas; Agent para objetivos difusos. Workflows pré-construídos seguem disponíveis via SDK / CLI."
-        ),
+        "en": "**Skill** = one-shot domain question. **Agent** = goal-driven, decides what to do.",
+        "ja": "**スキル** = ドメイン単発質問。**エージェント** = ゴールから自動判断。",
+        "zh-CN": "**技能** = 单领域问答。**代理** = 目标驱动,自主决定。",
+        "ko": "**스킬** = 단발 질문. **에이전트** = 목표 주도, 자율 결정.",
+        "es": "**Skill** = pregunta única de dominio. **Agent** = guiado por objetivo.",
+        "fr": "**Skill** = question ponctuelle. **Agent** = guidé par objectif.",
+        "de": "**Skill** = Einzelfrage. **Agent** = zielgetrieben.",
+        "pt-BR": "**Skill** = pergunta única. **Agent** = guiado por objetivo.",
     },
     "run.tab.workflow": {
         "en": "📋 Pre-built workflow",
@@ -730,24 +696,24 @@ _T: dict[str, dict[str, str]] = {
         ),
     },
     "run.skill.what": {
-        "en": "**What it is**: a single domain-tuned agent call (Investment / Sales / Design / Purchasing / Patent / Legal).\n\n**Pick this when** one ask = one answer is enough.",
-        "ja": "**これは何**: 1 ドメイン特化のエージェント単発呼出 (投資 / 営業 / 設計 / 購買 / 特許 / 法務)。\n\n**使う場面**: 1 つの依頼を 1 回の応答で済ませたい時。",
-        "zh-CN": "**是什么**: 单一领域调优的代理一次调用(投资/销售/设计/采购/专利/法务)。\n\n**何时使用**: 一次问一次答即可。",
-        "ko": "**무엇**: 단일 도메인 튜닝된 에이전트 1 회 호출 (투자/영업/설계/구매/특허/법무).\n\n**언제**: 한 번의 의뢰로 끝내고 싶을 때.",
-        "es": "**Qué es**: una llamada a un agente especializado por dominio (inversión / ventas / diseño / compras / patentes / legal).\n\n**Cuándo**: una pregunta = una respuesta.",
-        "fr": "**Qu'est-ce**: un appel à un agent spécialisé par domaine (invest / ventes / design / achats / brevets / juridique).\n\n**Quand**: une demande = une réponse.",
-        "de": "**Was ist es**: ein einzelner Domain-Skill-Agent-Aufruf (Invest / Sales / Design / Einkauf / Patent / Legal).\n\n**Wann**: eine Anfrage, eine Antwort genügt.",
-        "pt-BR": "**O que é**: uma chamada a agente especializado por domínio (invest / vendas / design / compras / patentes / jurídico).\n\n**Quando**: uma pergunta = uma resposta.",
+        "en": "Single-call domain skill (investment / sales / design / purchasing / patent / legal).",
+        "ja": "ドメイン単発スキル (投資 / 営業 / 設計 / 購買 / 特許 / 法務)。",
+        "zh-CN": "单次领域技能(投资/销售/设计/采购/专利/法务)。",
+        "ko": "단발 도메인 스킬 (투자/영업/설계/구매/특허/법무).",
+        "es": "Habilidad de dominio de una sola llamada.",
+        "fr": "Compétence de domaine en un seul appel.",
+        "de": "Einzelaufruf-Domain-Skill.",
+        "pt-BR": "Habilidade de domínio em chamada única.",
     },
     "run.agent.what": {
-        "en": "**What it is**: an LLM-driven tool-use loop. You give a goal; the agent decides which tools to call (memory search, connector pulls, skills) until done.\n\n**Pick this when** you want to delegate a goal and let the LLM figure out the steps.",
-        "ja": "**これは何**: LLM 駆動のツール使用ループ。ゴールだけ伝えると、エージェントが自分でツール (メモリ検索 / コネクタ pull / スキル) を選んで実行します。\n\n**使う場面**: ゴールだけ渡して手順は LLM に任せたい時。",
-        "zh-CN": "**是什么**: LLM 驱动的工具使用循环。你给目标,代理自主决定调用哪些工具(记忆检索/连接器/技能)直到完成。\n\n**何时使用**: 想委托目标,让 LLM 决定步骤时。",
-        "ko": "**무엇**: LLM 주도 도구 사용 루프. 목표만 전달하면 에이전트가 도구 (메모리 검색 / 커넥터 / 스킬) 를 직접 선택해 수행.\n\n**언제**: 목표만 위임하고 절차는 LLM 에 맡기고 싶을 때.",
-        "es": "**Qué es**: bucle de uso de herramientas guiado por LLM. Das un objetivo; el agente decide qué herramientas usar (memoria, conectores, skills) hasta terminar.\n\n**Cuándo**: para delegar el objetivo y dejar que el LLM decida pasos.",
-        "fr": "**Qu'est-ce**: boucle d'utilisation d'outils pilotée par LLM. Vous donnez un objectif ; l'agent choisit ses outils (mémoire, connecteurs, compétences) jusqu'à la fin.\n\n**Quand**: pour déléguer l'objectif et laisser le LLM décider des étapes.",
-        "de": "**Was ist es**: LLM-gesteuerte Tool-Use-Schleife. Du gibst ein Ziel vor; der Agent wählt Tools (Speicher, Konnektoren, Skills) selbst.\n\n**Wann**: Ziel delegieren, LLM die Schritte überlassen.",
-        "pt-BR": "**O que é**: loop de uso de ferramentas guiado por LLM. Você dá um objetivo; o agente decide quais ferramentas usar (memória, conectores, skills) até concluir.\n\n**Quando**: para delegar o objetivo e deixar o LLM decidir os passos.",
+        "en": "Goal in, agent picks tools (memory / connectors / skills) and iterates until done.",
+        "ja": "ゴールを伝えると、ツール (メモリ / コネクタ / スキル) を自動選択して反復実行。",
+        "zh-CN": "给目标,代理自主选择工具(记忆/连接器/技能)反复执行。",
+        "ko": "목표만 주면 도구 (메모리/커넥터/스킬) 를 자동 선택해 반복.",
+        "es": "Das un objetivo, el agente elige herramientas e itera.",
+        "fr": "Un objectif, l'agent choisit les outils et itère.",
+        "de": "Ziel rein, Agent wählt Tools und iteriert.",
+        "pt-BR": "Dê um objetivo, o agente escolhe ferramentas e itera.",
     },
     "run.agent.coming_soon": {
         "en": "🚧 Autonomous-agent UI is coming. For now, run from the CLI:",
@@ -924,14 +890,14 @@ _T: dict[str, dict[str, str]] = {
     },
     # ===== Data folder management mode ======================================
     "data.intro": {
-        "en": "Manage **named folders** of data you want to target at execution time. Two kinds: **Local folders** (files you upload here) and **Connector folders** (registered paths in Box / SharePoint / Notion / etc.). Selected folders in the sidebar get auto-injected into Flow / Skill runs as additional context.",
-        "ja": "実行時に対象としたい **名前付きフォルダ** を管理します。2 種類: **ローカルフォルダ** (この UI でアップロードしたファイル群) と **コネクタフォルダ** (Box / SharePoint / Notion 等の特定パス)。サイドバーで選択したフォルダの内容が、Flow / Skill 実行時に追加コンテキストとして自動注入されます。",
-        "zh-CN": "管理你希望在执行时使用的**命名文件夹**。两类: **本地文件夹** (在此上传的文件) 与 **连接器文件夹** (Box / SharePoint / Notion 等的指定路径)。在侧边栏选中的文件夹会作为附加上下文自动注入到 Flow / Skill 运行中。",
-        "ko": "실행 시 대상으로 삼고 싶은 **이름이 있는 폴더** 를 관리합니다. 두 종류: **로컬 폴더** (이 UI 에서 업로드한 파일) 와 **커넥터 폴더** (Box / SharePoint / Notion 등의 특정 경로). 사이드바에서 선택한 폴더가 Flow / Skill 실행 시 추가 컨텍스트로 자동 주입됩니다.",
-        "es": "Administra **carpetas con nombre** que quieras usar al ejecutar. Dos tipos: **Carpetas locales** (archivos que subes aquí) y **Carpetas de conector** (rutas registradas en Box / SharePoint / Notion / etc.). Las carpetas seleccionadas en la barra lateral se inyectan automáticamente como contexto extra en Flow / Skill.",
-        "fr": "Gérez des **dossiers nommés** ciblés à l'exécution. Deux types : **Dossiers locaux** (fichiers téléversés ici) et **Dossiers de connecteur** (chemins enregistrés dans Box / SharePoint / Notion / etc.). Les dossiers cochés dans la sidebar sont injectés automatiquement comme contexte additionnel pendant Flow / Skill.",
-        "de": "Verwalte **benannte Ordner** mit Daten, die du zur Laufzeit nutzen willst. Zwei Arten: **Lokale Ordner** (hier hochgeladene Dateien) und **Konnektor-Ordner** (registrierte Pfade in Box / SharePoint / Notion usw.). In der Sidebar ausgewählte Ordner werden bei Flow / Skill automatisch als Zusatzkontext eingespeist.",
-        "pt-BR": "Gerencie **pastas nomeadas** que você queira usar em runtime. Dois tipos: **Pastas locais** (arquivos enviados aqui) e **Pastas de conector** (caminhos registrados em Box / SharePoint / Notion / etc.). Pastas marcadas na sidebar são injetadas automaticamente como contexto adicional durante Flow / Skill.",
+        "en": "Local folders (your uploads) and Connector folders (Box / SharePoint / Notion paths). Pick scopes in the sidebar to feed them into runs.",
+        "ja": "ローカル (アップロード) と コネクタ (Box / SharePoint / Notion 等のパス) の 2 種類。サイドバーで選択して実行に反映。",
+        "zh-CN": "本地(上传)与连接器(Box / SharePoint / Notion 路径)两类。在侧边栏选择以注入到运行中。",
+        "ko": "로컬 (업로드) 과 커넥터 (Box / SharePoint / Notion 경로) 두 종류. 사이드바에서 선택해 실행에 반영.",
+        "es": "Carpetas locales (subidas) y de conector (rutas Box / SharePoint / Notion). Selecciona en la barra lateral.",
+        "fr": "Dossiers locaux (téléversements) et de connecteur (chemins Box / SharePoint / Notion). Sélectionnez dans la sidebar.",
+        "de": "Lokale Ordner (Uploads) und Konnektor-Ordner (Box / SharePoint / Notion). In der Sidebar auswählen.",
+        "pt-BR": "Pastas locais (uploads) e de conector (Box / SharePoint / Notion). Selecione na sidebar.",
     },
     "data.tab.local": {
         "en": "📁 Local folders",
@@ -1114,89 +1080,14 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "✅ '{name}' criada",
     },
     "data.connector.intro": {
-        "en": (
-            "Register a path inside an external system (Box / SharePoint / "
-            "Notion / etc.) as a named folder you can target at run time.\n\n"
-            "**Permission model**:\n"
-            "- The **admin** must first enable the connector by setting "
-            "`PRAXIA_CONN_<NAME>_*` env vars (CLI: `praxia config set ...`).\n"
-            "- **Anyone** can then register a folder (path) under an enabled "
-            "connector — the registration itself is just metadata.\n"
-            "- At pull time, the connector uses *whatever credentials it was "
-            "configured with*. With **per-user OAuth** providers (Box, Google, "
-            "Microsoft, Dropbox, Salesforce), each Praxia user authorizes "
-            "with their own account, so the external system's native ACL "
-            "applies — alice only sees what alice has access to. With "
-            "service-account / API-key providers, all users share the same "
-            "view (admin-controlled).\n\n"
-            "Connector folders you register here are visible only to you "
-            "and only used when you select them as a Data scope."
-        ),
-        "ja": (
-            "外部システム (Box / SharePoint / Notion 等) の特定パスを、"
-            "実行時に対象指定できる「名前付きフォルダ」として登録します。\n\n"
-            "**権限モデル**:\n"
-            "- 連携は **管理者** が `PRAXIA_CONN_<NAME>_*` 環境変数で有効化 "
-            "(CLI: `praxia config set ...`)。\n"
-            "- 有効化済みの連携先に対して、**全ユーザ** がフォルダ (パス) を登録可能。"
-            "登録自体はメタデータのみ。\n"
-            "- pull 実行時は、**設定済の認証情報** で外部にアクセス。Box / Google / "
-            "Microsoft / Dropbox / Salesforce など **per-user OAuth** 対応の連携先は、"
-            "各 Praxia ユーザが自身のアカウントで認可するため、外部システムの ACL が"
-            "そのまま反映 — alice には alice が見える範囲しか出ません。"
-            "サービスアカウント / API キー方式の連携先は全ユーザが同じビューを共有 "
-            "(管理者管轄)。\n\n"
-            "ここで登録するコネクタフォルダは **あなたにのみ見え**、"
-            "Data scope で選んだ時だけ利用されます。"
-        ),
-        "zh-CN": (
-            "将外部系统(Box / SharePoint / Notion 等)中的路径注册为可在运行时使用的命名文件夹。\n\n"
-            "**权限模型**: 管理员先通过 `PRAXIA_CONN_<NAME>_*` 环境变量启用连接器。"
-            "之后所有用户可在已启用连接器下注册路径(仅元数据)。"
-            "Pull 时使用配置好的凭据。Per-user OAuth 连接器(Box/Google/MS/Dropbox/Salesforce)各用户用自己账号授权,外部 ACL 生效。"
-            "服务账号/API 密钥连接器所有用户共享同一视图。\n\n"
-            "你注册的文件夹仅你自己可见,选作 Data scope 时才使用。"
-        ),
-        "ko": (
-            "외부 시스템 (Box / SharePoint / Notion 등) 의 경로를 실행 시 사용할 이름 있는 폴더로 등록합니다.\n\n"
-            "**권한 모델**: 관리자가 먼저 `PRAXIA_CONN_<NAME>_*` 환경변수로 커넥터를 활성화. "
-            "이후 모든 사용자가 활성 커넥터에 폴더(경로) 등록 가능 (메타데이터만). "
-            "Pull 시 설정된 자격증명으로 접근. Per-user OAuth (Box/Google/MS/Dropbox/Salesforce) 는 각 사용자가 자신의 계정으로 인증, 외부 ACL 적용. "
-            "서비스 계정 / API 키 방식은 모든 사용자가 동일한 뷰 공유.\n\n"
-            "여기서 등록한 폴더는 본인에게만 보이고, Data scope 로 선택할 때만 사용됩니다."
-        ),
-        "es": (
-            "Registra una ruta en un sistema externo (Box / SharePoint / Notion / etc.) como carpeta con nombre que puedes usar en runtime.\n\n"
-            "**Modelo de permisos**: el admin habilita primero el conector vía `PRAXIA_CONN_<NAME>_*`. "
-            "Cualquiera puede registrar carpetas bajo conectores habilitados (solo metadata). "
-            "El pull usa las credenciales configuradas. Conectores con per-user OAuth (Box/Google/MS/Dropbox/Salesforce) usan la cuenta de cada usuario, ACL externo se aplica. "
-            "Conectores con service account / API key comparten una sola vista.\n\n"
-            "Las carpetas que registres aquí solo son visibles para ti, y solo se usan al seleccionarlas como Data scope."
-        ),
-        "fr": (
-            "Enregistrez un chemin dans un système externe (Box / SharePoint / Notion / etc.) comme dossier nommé utilisable à l'exécution.\n\n"
-            "**Modèle de permissions** : l'admin active d'abord le connecteur via `PRAXIA_CONN_<NAME>_*`. "
-            "Tout le monde peut alors enregistrer des dossiers sous les connecteurs activés (métadonnées uniquement). "
-            "Le pull utilise les credentials configurés. Connecteurs per-user OAuth (Box/Google/MS/Dropbox/Salesforce) : chaque utilisateur s'authentifie avec son compte, ACL externe appliqué. "
-            "Connecteurs service-account / API key : vue partagée.\n\n"
-            "Les dossiers enregistrés ici ne sont visibles que par vous, et utilisés uniquement quand vous les sélectionnez comme Data scope."
-        ),
-        "de": (
-            "Registriere einen Pfad in einem externen System (Box / SharePoint / Notion etc.) als benannten Ordner für Laufzeitnutzung.\n\n"
-            "**Berechtigungsmodell**: Der admin aktiviert den Konnektor zuerst via `PRAXIA_CONN_<NAME>_*`. "
-            "Jeder kann dann Ordner unter aktivierten Konnektoren registrieren (nur Metadaten). "
-            "Pull nutzt die konfigurierten Credentials. Per-user-OAuth-Konnektoren (Box/Google/MS/Dropbox/Salesforce): jeder Nutzer authentifiziert sich selbst, externe ACL wird angewendet. "
-            "Service-Account-/API-Key-Konnektoren: gemeinsame Sicht.\n\n"
-            "Hier registrierte Ordner sind nur für dich sichtbar und werden nur als Data Scope genutzt."
-        ),
-        "pt-BR": (
-            "Registre um caminho em sistema externo (Box / SharePoint / Notion / etc.) como pasta nomeada usável em runtime.\n\n"
-            "**Modelo de permissões**: o admin habilita primeiro o conector via `PRAXIA_CONN_<NAME>_*`. "
-            "Qualquer um pode então registrar pastas sob conectores habilitados (só metadata). "
-            "O pull usa as credenciais configuradas. Conectores per-user OAuth (Box/Google/MS/Dropbox/Salesforce) usam a conta do usuário; ACL externo aplicado. "
-            "Conectores service-account / API key: visão compartilhada.\n\n"
-            "As pastas registradas aqui só são visíveis para você, usadas apenas quando selecionadas como Data scope."
-        ),
+        "en": "Register an external path (admin must enable the connector first via env vars). Per-user OAuth = native ACL applied per user.",
+        "ja": "外部パスを登録 (管理者が事前に env で連携先を有効化)。Per-user OAuth は各ユーザの権限が適用されます。",
+        "zh-CN": "注册外部路径(需管理员先通过 env 启用连接器)。Per-user OAuth 各用户按自身权限。",
+        "ko": "외부 경로 등록 (관리자가 env 로 커넥터 사전 활성화). Per-user OAuth 는 사용자별 권한 적용.",
+        "es": "Registra una ruta externa (el admin habilita el conector vía env). Per-user OAuth = ACL nativa por usuario.",
+        "fr": "Enregistrer un chemin externe (l'admin active le connecteur via env). Per-user OAuth = ACL native par utilisateur.",
+        "de": "Externen Pfad registrieren (Admin aktiviert den Konnektor via env). Per-user OAuth = ACL je Nutzer.",
+        "pt-BR": "Registre um caminho externo (admin habilita o conector via env). Per-user OAuth = ACL por usuário.",
     },
     "data.connector.empty": {
         "en": "No connector folders registered yet. Add one below.",
@@ -1774,79 +1665,14 @@ _T: dict[str, dict[str, str]] = {
         "pt-BR": "🌙 Consolidação noturna",
     },
     "consolidate.intro": {
-        "en": (
-            "**What this does**: scans every user's personal-memory entries and "
-            "**automatically promotes** the high-value ones into the org-wide "
-            "shared memory layer. Three signals run in parallel:\n\n"
-            "- **Frequency** — same pattern repeats across N+ users\n"
-            "- **Outcome** — pattern correlated with successful flow runs\n"
-            "- **LLM self-eval** — pattern scored highly for re-use value\n\n"
-            "Items that pass the threshold get promoted. The rest stay personal.\n\n"
-            "**When you'd run this**: typically as a nightly cron job. The button "
-            "below is for manual / on-demand runs (e.g. testing, post-onboarding "
-            "of a new team member).\n\n"
-            "**Dry-run** previews what *would* be promoted without writing — "
-            "recommended on first use."
-        ),
-        "ja": (
-            "**何をするか**: 全ユーザの個人メモリをスキャンし、価値の高い項目を "
-            "**自動的に** 組織共有メモリへ昇格させます。3 つのシグナルを並列評価:\n\n"
-            "- **頻度** — N 人以上のユーザで同じパターンが繰り返される\n"
-            "- **アウトカム** — フロー成功に相関するパターン\n"
-            "- **LLM 自己評価** — 再利用価値のスコアリング\n\n"
-            "閾値を超えた項目だけ昇格、それ以外は個人メモリに留まります。\n\n"
-            "**実行タイミング**: 通常は夜間バッチで定期実行。下のボタンは手動・"
-            "オンデマンド実行用 (テスト・新メンバー受け入れ後など)。\n\n"
-            "**Dry-run** は何が昇格されるかを書込みなしで確認できます — 初回は推奨。"
-        ),
-        "zh-CN": (
-            "**作用**: 扫描所有用户的个人记忆条目,**自动晋升** 高价值条目至组织共享记忆。"
-            "3 个信号并行评估: 频次 (N+ 用户重复)、成果(与成功相关)、LLM 自评分。"
-            "通过阈值的条目被晋升,其余留在个人。\n\n"
-            "通常作为夜间定时任务,下方按钮用于手动 / 按需执行。**Dry-run** 不写入预览。"
-        ),
-        "ko": (
-            "**무엇**: 모든 사용자의 개인 메모리 항목을 스캔하여 가치 있는 항목을 "
-            "**자동으로** 조직 공유 메모리로 승격. 3 가지 시그널 병렬 평가: "
-            "빈도 (N 명 이상에서 반복) / 성과 (성공과 상관) / LLM 자가 평가. "
-            "임계값 통과한 항목만 승격, 나머지는 개인 메모리에 유지.\n\n"
-            "보통 야간 배치로 운영. 아래 버튼은 수동 실행. **Dry-run** 은 쓰기 없이 미리보기."
-        ),
-        "es": (
-            "**Qué hace**: escanea las entradas de memoria personal de todos los usuarios "
-            "y **promueve automáticamente** las de alto valor a la memoria compartida org. "
-            "3 señales en paralelo: frecuencia (repetida en N+ usuarios), outcome "
-            "(correlación con éxito), auto-evaluación LLM. Los ítems que superan el "
-            "umbral se promueven; el resto se queda personal.\n\n"
-            "Típicamente se ejecuta como cron nocturno. El botón es para runs manuales. "
-            "**Dry-run** previsualiza sin escribir."
-        ),
-        "fr": (
-            "**Ce que cela fait** : scanne toutes les mémoires personnelles et "
-            "**promeut automatiquement** les entrées à forte valeur vers la mémoire "
-            "partagée de l'org. 3 signaux en parallèle : fréquence (répétée chez N+ "
-            "utilisateurs), résultat (corrélé au succès), auto-éval LLM. Les éléments "
-            "au-dessus du seuil sont promus.\n\n"
-            "Typiquement lancé en cron nocturne. Le bouton ci-dessous sert aux runs "
-            "manuels. **Dry-run** : aperçu sans écriture."
-        ),
-        "de": (
-            "**Was es tut**: scannt die persönlichen Speicher aller Nutzer und "
-            "**befördert hochwertige Einträge automatisch** in den geteilten Org-Speicher. "
-            "3 Signale parallel: Frequenz (wiederholt sich bei N+ Nutzern), Outcome "
-            "(korreliert mit Erfolg), LLM-Selbstbewertung. Einträge über der Schwelle "
-            "werden befördert.\n\n"
-            "Typisch als nächtlicher Cron-Job. Der Button startet manuell. "
-            "**Dry-run**: Vorschau ohne Schreibzugriff."
-        ),
-        "pt-BR": (
-            "**O que faz**: varre as memórias pessoais de todos os usuários e "
-            "**promove automaticamente** entradas valiosas para a memória compartilhada "
-            "da org. 3 sinais paralelos: frequência (repetido em N+ usuários), outcome "
-            "(correlacionado com sucesso), auto-avaliação LLM.\n\n"
-            "Tipicamente roda como cron noturno. Botão abaixo: execução manual. "
-            "**Dry-run** prévia sem gravar."
-        ),
+        "en": "Promote high-value personal-memory entries into shared org memory. Usually a nightly cron — this button is for manual / dry-run.",
+        "ja": "個人メモリの高価値項目を組織共有メモリへ昇格。通常は夜間バッチ — このボタンは手動 / dry-run 用。",
+        "zh-CN": "将高价值的个人记忆条目晋升至组织共享记忆。通常是夜间定时任务 — 此按钮用于手动 / dry-run。",
+        "ko": "개인 메모리의 가치 있는 항목을 조직 공유 메모리로 승격. 보통 야간 배치 — 이 버튼은 수동 / dry-run 용.",
+        "es": "Promueve entradas valiosas de memoria personal a la memoria compartida. Normalmente cron nocturno — este botón es manual / dry-run.",
+        "fr": "Promeut les entrées de valeur de la mémoire personnelle vers la mémoire partagée. Généralement cron nocturne — bouton manuel / dry-run.",
+        "de": "Befördert wertvolle persönliche Memory-Einträge in den geteilten Org-Speicher. Üblicherweise nächtlicher Cron — Button für manuell / Dry-Run.",
+        "pt-BR": "Promove entradas valiosas da memória pessoal para a memória compartilhada. Normalmente cron noturno — botão para manual / dry-run.",
     },
     "consolidate.threshold": {
         "en": "Auto-promote threshold",
