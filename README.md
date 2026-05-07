@@ -16,7 +16,6 @@
 [![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
 [![MCP: stdio + HTTP/SSE](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP%2FSSE-orange.svg)]()
 
-> 🇯🇵 日本語版の各業務別記事 (Zenn): [zenn-publish/](zenn-publish/)
 > 🔍 Complete feature reference: [docs/FEATURES.md](docs/FEATURES.md)
 > 📊 Concrete Before/After tables: [docs/use-cases.md](docs/use-cases.md)
 
