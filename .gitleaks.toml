@@ -1,0 +1,54 @@
+# gitleaks configuration for praxia-dev/praxia
+#
+# Spec: https://github.com/gitleaks/gitleaks#configuration
+# Schema: gitleaks v8.22+ ([[allowlists]] plural, with targetRules)
+#
+# CI scans for accidentally-committed credentials. The repository contains
+# documentation that *deliberately* shows what an API key / JWT looks like
+# in usage examples — those are placeholders, not secrets. Allowlist them
+# by path so the doc surfaces don't trip the gate, while keeping source
+# code, tests, and configs under full scan.
+
+title = "praxia-gitleaks-config"
+
+# Inherit gitleaks' default ruleset (recommended; do not redefine rules here).
+[extend]
+useDefault = true
+
+# 1. Global allowlist — applies to every rule.
+[[allowlists]]
+description = "Documentation paths: placeholder credential shapes shown for teaching."
+# Match anywhere in the relative path. No anchors — gitleaks uses Go regexp
+# with substring semantics for paths.
+paths = [
+  '''docs/''',                # all of docs/ (specs, OAUTH, quickstart, etc.)
+  '''zenn-publish/''',        # long-form Zenn articles
+  '''web-publish/''',         # static landing page (HTML / JS / CSS)
+  '''examples/''',            # sample-only scripts
+  '''README\.md''',
+  '''CONTRIBUTING\.md''',
+  '''SECURITY\.md''',
+  '''PUBLISH\.md''',
+  '''\.env\.example''',
+]
+
+# 2. Allowlist by secret content — catches the specific placeholder
+#    strings even if they ever appear outside the doc paths above.
+[[allowlists]]
+description = "Documented placeholder secrets (visibly fake)."
+regexes = [
+  '''praxia_[A-Za-z0-9]+\.\.\.''',     # praxia_aBc123xYz... / praxia_AbcDef123...
+  '''praxia_[A-Za-z0-9]{6,32}''',      # praxia_aBc123xYz (no trailing ...)
+  '''eyJhbGciOi[A-Za-z0-9._-]*\.\.\.''',# truncated JWT prefix used in docs
+  '''<your-(api-key|token|secret|jwt|client-id|client-secret|subdomain|app)>''',
+  '''YOUR_(API_KEY|TOKEN|SECRET)_HERE''',
+  '''sk-ant-(\.\.\.|xxx)''',           # Anthropic-style truncation
+  '''sk-(\.\.\.|xxx)''',                # OpenAI-style truncation
+  '''ghp_(\.\.\.|xxx)''',               # GitHub PAT-style truncation
+]
+
+# 3. If you ever need to allow a scan finding for one specific commit,
+#    add its short hash here (use sparingly — prefer fixing the real cause).
+[[allowlists]]
+description = "Commit allowlist (empty)."
+commits = []
