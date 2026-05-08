@@ -902,6 +902,69 @@ import streamlit.components.v1 as _components
 # JS context, and it survives every iframe lifecycle. We attach to
 # both `document` and `window` capture phase to win against whatever
 # target Streamlit uses.
+# Topnav button-width pinner. CSS flex / grid have repeatedly failed
+# to keep all 7 nav buttons inside the available `100vw - 15rem` strip
+# — Streamlit emits stacked wrapper divs (stElementContainer →
+# stButton → button) and per-revision intrinsic widths that beat any
+# stylesheet-level rule. Bypass the cascade entirely: measure the
+# topnav width with JS, divide by the number of children, and write
+# `width: Npx; flex: 0 0 Npx` directly on each child as an inline
+# !important style. Inline + !important wins over everything.
+#
+# Re-runs on window resize, Streamlit reruns (MutationObserver on
+# the topnav itself), and a 250ms grace timer for late DOM mounts.
+_components.html(
+    """
+<script>
+(function() {
+  try {
+    var pdoc = (window.parent && window.parent.document) ? window.parent.document : null;
+    if (!pdoc) return;
+    if (pdoc.__praxiaTopnavFitterInstalled) return;
+    pdoc.__praxiaTopnavFitterInstalled = true;
+    var s = pdoc.createElement('script');
+    s.textContent =
+      "(function(){" +
+        "var fit=function(){" +
+          "var nav=document.querySelector('.st-key-praxia_topnav');" +
+          "if(!nav)return;" +
+          "var kids=Array.prototype.filter.call(nav.children,function(c){return c.offsetParent!==null||c.tagName;});" +
+          "var n=kids.length;" +
+          "if(n<2)return;" +
+          "var w=nav.clientWidth;" +
+          "if(w<50)return;" +  // pre-mount, skip
+          "var each=Math.floor(w/n);" +
+          "kids.forEach(function(c){" +
+            "c.style.setProperty('width',each+'px','important');" +
+            "c.style.setProperty('min-width','0','important');" +
+            "c.style.setProperty('max-width',each+'px','important');" +
+            "c.style.setProperty('flex','0 0 '+each+'px','important');" +
+            "c.style.setProperty('box-sizing','border-box','important');" +
+          "});" +
+        "};" +
+        // initial fit + retries while mount is still happening
+        "var tries=0;" +
+        "var poke=function(){fit();if(++tries<20)setTimeout(poke,150);};" +
+        "poke();" +
+        // re-fit on resize
+        "window.addEventListener('resize',fit);" +
+        // re-fit whenever Streamlit rebuilds the DOM (mode switch,
+        // session_state change, rerun). Watch the entire body subtree
+        // because the topnav itself is replaced wholesale on rerun.
+        "var mo=new MutationObserver(function(){fit();});" +
+        "mo.observe(document.body||document.documentElement,{childList:true,subtree:true});" +
+        "console.log('praxia: topnav fitter active');" +
+      "})();";
+    pdoc.head.appendChild(s);
+  } catch(err) { console.error('praxia: topnav fitter install failed', err); }
+})();
+</script>
+    """,
+    height=0,
+    width=0,
+)
+
+
 _components.html(
     """
 <script>
