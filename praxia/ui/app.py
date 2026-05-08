@@ -722,7 +722,27 @@ def get_loom(_user_id: str, _org_id: str, _model: str) -> Praxia:
     return Praxia(user_id=_user_id, org_id=_org_id, default_model=_model)
 
 
-loom = get_loom(user_id, org_id, model_choice)
+# Construct the orchestrator. Most failures here mean a misconfigured
+# backend (e.g. mem0 picked but OPENAI_API_KEY missing — Mem0 defaults
+# its embedder to OpenAI). Surface a clean message + offer a one-click
+# fallback to the safe JSON backend instead of dumping a traceback.
+try:
+    loom = get_loom(user_id, org_id, model_choice)
+except Exception as _loom_exc:
+    st.error(t("loom.init_failed").format(
+        backend=backend_choice,
+        error=str(_loom_exc),
+    ))
+    st.caption(t("loom.init_failed_hint"))
+    if st.button(t("loom.fallback_to_json"), type="primary", key="_loom_fallback_json"):
+        st.session_state["praxia_backend"] = "json"
+        os.environ["PRAXIA_MEMORY_BACKEND"] = "json"
+        try:
+            st.cache_resource.clear()
+        except Exception:
+            pass
+        st.rerun()
+    st.stop()
 
 
 # =====================================================================
@@ -2310,14 +2330,44 @@ elif mode == "admin":
             t("admin.settings.runtime_apply"), type="primary",
             key="settings_runtime_apply",
         ):
-            st.session_state["praxia_model"] = picked_model
-            st.session_state["praxia_backend"] = picked_backend
-            try:
-                st.cache_resource.clear()
-            except Exception:
-                pass
-            st.success(t("admin.settings.runtime_saved"))
-            st.rerun()
+            # Pre-flight probe: try to construct the chosen backend
+            # before committing. Catches "mem0 picked but OPENAI_API_KEY
+            # missing" up-front instead of crashing the whole UI on the
+            # next rerun (mem0 defaults its embedder to OpenAI).
+            _probe_ok = True
+            _probe_err: str = ""
+            if picked_backend != backend_choice:
+                try:
+                    from praxia.memory.backends import load_backend
+                    _probe = load_backend(
+                        picked_backend,
+                        user_id=user_id,
+                        storage_dir=loom.config.memory_dir / "personal",
+                    )
+                    # Some backends defer init to first call — touch one
+                    # cheap method so failures surface here.
+                    try:
+                        _probe.search(user_id=user_id, query="praxia probe", limit=1)
+                    except Exception:
+                        # search-time errors are tolerable (e.g. empty
+                        # store); construction-time errors are not.
+                        pass
+                except Exception as exc:
+                    _probe_ok = False
+                    _probe_err = str(exc)
+            if not _probe_ok:
+                st.error(t("admin.settings.backend_probe_failed").format(
+                    backend=picked_backend, error=_probe_err,
+                ))
+            else:
+                st.session_state["praxia_model"] = picked_model
+                st.session_state["praxia_backend"] = picked_backend
+                try:
+                    st.cache_resource.clear()
+                except Exception:
+                    pass
+                st.success(t("admin.settings.runtime_saved"))
+                st.rerun()
 
         st.divider()
 
