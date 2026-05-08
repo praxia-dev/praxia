@@ -35,6 +35,12 @@ class DataScope:
     # Only meaningful for kind == 'local' currently; connector folders
     # stay flat (their hierarchy lives in the external system).
     parent_id: str | None = None
+    # Sharing — list of OTHER user_ids that should see this scope as
+    # read-accessible. The owner (user_id field above) is always
+    # implicit; shared_with NEVER contains the owner. Empty list ==
+    # private to owner. The list applies to a single scope; sub-folder
+    # sharing is independent (a child must explicitly opt-in).
+    shared_with: list[str] = field(default_factory=list)
     # metadata
     created_at: float = field(default_factory=time.time)
 
@@ -58,7 +64,14 @@ class ScopeRegistry:
         try:
             with p.open("r", encoding="utf-8") as f:
                 data = json.load(f)
-            return [DataScope(**d) for d in data]
+            # Filter unknown keys so legacy index files (pre `shared_with`)
+            # don't blow up on dataclass construction.
+            _fields = {f.name for f in DataScope.__dataclass_fields__.values()}
+            return [
+                DataScope(**{k: v for k, v in d.items() if k in _fields})
+                for d in data
+                if isinstance(d, dict)
+            ]
         except (json.JSONDecodeError, TypeError):
             return []
 
@@ -68,13 +81,101 @@ class ScopeRegistry:
         with p.open("w", encoding="utf-8") as f:
             json.dump([asdict(s) for s in scopes], f, ensure_ascii=False, indent=2)
 
+    def _all_owners(self) -> list[str]:
+        """Return every user-id directory that has a scopes.json file."""
+        if not self.data_dir.exists():
+            return []
+        out: list[str] = []
+        for d in self.data_dir.iterdir():
+            if d.is_dir() and (d / "scopes.json").exists():
+                out.append(d.name)
+        return out
+
     # ---------- public CRUD -----------------------------------------------
 
     def list_for_user(self, user_id: str) -> list[DataScope]:
+        """Return all scopes the user can see — their own plus any
+        scope where ``user_id in scope.shared_with``."""
+        own = self._load(user_id)
+        own_ids = {s.id for s in own}
+        shared: list[DataScope] = []
+        for owner in self._all_owners():
+            if owner == user_id:
+                continue
+            for s in self._load(owner):
+                if user_id in (s.shared_with or []) and s.id not in own_ids:
+                    shared.append(s)
+        return own + shared
+
+    def list_owned(self, user_id: str) -> list[DataScope]:
+        """Owner-scoped variant — does NOT include shared-in scopes.
+        Used by the share-management UI so admins manipulate only
+        their own folders."""
         return self._load(user_id)
 
     def get(self, user_id: str, scope_id: str) -> DataScope | None:
-        return next((s for s in self._load(user_id) if s.id == scope_id), None)
+        # Search the user's own scopes first; fall back to scopes
+        # shared in from other owners. Owner-resolution lets the
+        # caller pass the *viewer's* user_id without knowing who
+        # actually owns the scope.
+        own = next((s for s in self._load(user_id) if s.id == scope_id), None)
+        if own is not None:
+            return own
+        for owner in self._all_owners():
+            if owner == user_id:
+                continue
+            cand = next((s for s in self._load(owner) if s.id == scope_id), None)
+            if cand is not None and user_id in (cand.shared_with or []):
+                return cand
+        return None
+
+    # ---------- sharing ---------------------------------------------------
+
+    def share(self, owner_id: str, scope_id: str, with_user_ids: list[str]) -> bool:
+        """Add ``with_user_ids`` to a scope's ``shared_with`` list.
+        Owner-only operation. Returns True if any change was made.
+        Does NOT validate that the target user_ids exist — the
+        UserStore is the source of truth for that."""
+        scopes = self._load(owner_id)
+        target = next((s for s in scopes if s.id == scope_id), None)
+        if target is None:
+            return False
+        existing = set(target.shared_with or [])
+        owner_self = {owner_id}
+        new = sorted((existing | set(with_user_ids)) - owner_self)
+        if new == sorted(existing):
+            return False
+        target.shared_with = new
+        self._save(owner_id, scopes)
+        return True
+
+    def unshare(self, owner_id: str, scope_id: str, user_ids: list[str]) -> bool:
+        """Remove ``user_ids`` from a scope's ``shared_with`` list."""
+        scopes = self._load(owner_id)
+        target = next((s for s in scopes if s.id == scope_id), None)
+        if target is None:
+            return False
+        existing = set(target.shared_with or [])
+        new = sorted(existing - set(user_ids))
+        if new == sorted(existing):
+            return False
+        target.shared_with = new
+        self._save(owner_id, scopes)
+        return True
+
+    def set_shared_with(self, owner_id: str, scope_id: str, user_ids: list[str]) -> bool:
+        """Replace the scope's ``shared_with`` list verbatim. Filters
+        out the owner_id itself (never shares with self)."""
+        scopes = self._load(owner_id)
+        target = next((s for s in scopes if s.id == scope_id), None)
+        if target is None:
+            return False
+        new = sorted(uid for uid in set(user_ids) if uid != owner_id)
+        if new == sorted(target.shared_with or []):
+            return False
+        target.shared_with = new
+        self._save(owner_id, scopes)
+        return True
 
     def create_local(
         self,

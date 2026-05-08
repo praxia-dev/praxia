@@ -1762,53 +1762,150 @@ elif mode == "data":
     with sub_local:
         st.caption(t("data.local.intro"))
 
-        # Build a quick lookup: scope_id → list of children (only locals)
+        # Build a quick lookup: scope_id → list of children (only
+        # visible local scopes — owned + shared-in). A shared-in scope
+        # whose parent isn't visible to the viewer (because the parent
+        # wasn't shared) becomes a root in the viewer's tree.
+        _visible_ids = {s.id for s in local_scopes}
         children_of: dict[str | None, list[DataScope]] = {}
         for s in local_scopes:
-            children_of.setdefault(s.parent_id, []).append(s)
+            effective_parent = s.parent_id if s.parent_id in _visible_ids else None
+            children_of.setdefault(effective_parent, []).append(s)
 
         def _render_local_node(s: DataScope, depth: int = 0) -> None:
             indent = "　" * depth  # full-width space gives visible indent
             files = scope_registry.list_local_files(s)
             kid_count = len(children_of.get(s.id, []))
-            label = f"{indent}📁 {s.name}  ·  {len(files)} files"
+            is_owned = (s.user_id == user_id)
+            owner_badge = "" if is_owned else f"  ·  🤝 {t('data.local.shared_by').format(owner=s.user_id)}"
+            share_count = len(s.shared_with or [])
+            share_badge = f"  ·  👥 {share_count}" if (is_owned and share_count) else ""
+            label = f"{indent}📁 {s.name}  ·  {len(files)} files{share_badge}{owner_badge}"
             if kid_count:
                 label += f"  ·  {kid_count} sub"
             with st.expander(label, expanded=False):
                 if s.description:
                     st.caption(s.description)
                 st.caption(f"id: `{s.id}`  ·  path: `{s.path}`")
+                if not is_owned:
+                    st.info(
+                        t("data.local.shared_in_notice").format(owner=s.user_id)
+                    )
 
                 for f in files:
                     col_n, col_s, col_d = st.columns([6, 2, 1])
                     col_n.text(f.name)
                     col_s.caption(f"{f.stat().st_size:,} B")
-                    if col_d.button("🗑", key=f"delf_{s.id}_{f.name}"):
+                    # Read-only when viewing a folder shared from another
+                    # owner — only the owner can mutate files.
+                    if is_owned and col_d.button("🗑", key=f"delf_{s.id}_{f.name}"):
                         scope_registry.delete_file(s, f.name)
                         st.rerun()
 
-                st.divider()
-                from praxia.io.parsers import supported_extensions as _data_exts
-                new_files = st.file_uploader(
-                    t("data.local.add_files"),
-                    accept_multiple_files=True,
-                    type=_data_exts(),
-                    key=f"upload_more_{s.id}",
-                )
-                col_save, col_del = st.columns(2)
-                if col_save.button(t("data.local.save_uploads"),
-                                   key=f"save_{s.id}"):
-                    if new_files:
-                        saved = scope_registry.save_uploaded_files(s, new_files)
-                        st.success(t("data.local.saved").format(n=len(saved)))
+                if is_owned:
+                    st.divider()
+                    from praxia.io.parsers import supported_extensions as _data_exts
+                    new_files = st.file_uploader(
+                        t("data.local.add_files"),
+                        accept_multiple_files=True,
+                        type=_data_exts(),
+                        key=f"upload_more_{s.id}",
+                    )
+                    col_save, col_del = st.columns(2)
+                    if col_save.button(t("data.local.save_uploads"),
+                                       key=f"save_{s.id}"):
+                        if new_files:
+                            saved = scope_registry.save_uploaded_files(s, new_files)
+                            st.success(t("data.local.saved").format(n=len(saved)))
+                            st.rerun()
+                        else:
+                            st.warning(t("data.local.no_files_to_save"))
+                    if col_del.button(t("data.local.delete_folder"),
+                                      type="secondary", key=f"delfol_{s.id}"):
+                        scope_registry.delete(user_id, s.id)
+                        st.success(t("data.local.folder_deleted").format(name=s.name))
                         st.rerun()
-                    else:
-                        st.warning(t("data.local.no_files_to_save"))
-                if col_del.button(t("data.local.delete_folder"),
-                                  type="secondary", key=f"delfol_{s.id}"):
-                    scope_registry.delete(user_id, s.id)
-                    st.success(t("data.local.folder_deleted").format(name=s.name))
-                    st.rerun()
+
+                    # ---- Share / unshare section (owner-only) ----
+                    st.divider()
+                    st.markdown(f"**{t('data.local.share_h')}**")
+                    st.caption(t("data.local.share_intro"))
+                    # Build user picker. The auth UserStore is authoritative
+                    # for valid user_ids; we deliberately exclude the owner
+                    # and inactive users.
+                    _picker_options: list[str] = []
+                    try:
+                        if auth is not None:
+                            for u in auth.users.list_all():
+                                if u.username == user_id:
+                                    continue
+                                if not getattr(u, "is_active", True):
+                                    continue
+                                _picker_options.append(u.username)
+                    except Exception:
+                        pass
+                    # Fallback for dev mode (no users registered yet) — let
+                    # the admin still type a user_id by hand below.
+                    selected = st.multiselect(
+                        t("data.local.share_select_label"),
+                        options=sorted(set(_picker_options + (s.shared_with or []))),
+                        default=s.shared_with or [],
+                        key=f"share_pick_{s.id}",
+                        help=t("data.local.share_select_help"),
+                    )
+                    extra_uid = st.text_input(
+                        t("data.local.share_addhoc_label"),
+                        value="",
+                        key=f"share_extra_{s.id}",
+                        placeholder=t("data.local.share_addhoc_placeholder"),
+                    )
+                    final = list(selected)
+                    if extra_uid.strip():
+                        final.append(extra_uid.strip())
+                    col_apply, col_clear = st.columns(2)
+                    if col_apply.button(
+                        t("data.local.share_apply"),
+                        type="primary",
+                        key=f"share_apply_{s.id}",
+                    ):
+                        if scope_registry.set_shared_with(user_id, s.id, final):
+                            try:
+                                if auth is not None:
+                                    auth.audit.record(
+                                        actor_id=user_id,
+                                        actor_role=actor_role,
+                                        action="data.share",
+                                        resource=f"scope:{s.id}",
+                                        metadata={
+                                            "scope_name": s.name,
+                                            "shared_with": final,
+                                        },
+                                    )
+                            except Exception:
+                                pass
+                            st.success(t("data.local.share_saved"))
+                            st.rerun()
+                        else:
+                            st.info(t("data.local.share_no_changes"))
+                    if (s.shared_with or []) and col_clear.button(
+                        t("data.local.share_clear"),
+                        type="secondary",
+                        key=f"share_clear_{s.id}",
+                    ):
+                        if scope_registry.set_shared_with(user_id, s.id, []):
+                            try:
+                                if auth is not None:
+                                    auth.audit.record(
+                                        actor_id=user_id,
+                                        actor_role=actor_role,
+                                        action="data.unshare_all",
+                                        resource=f"scope:{s.id}",
+                                        metadata={"scope_name": s.name},
+                                    )
+                            except Exception:
+                                pass
+                            st.success(t("data.local.share_cleared"))
+                            st.rerun()
 
             # Recurse into sub-folders (after parent's expander closes)
             for child in children_of.get(s.id, []):
