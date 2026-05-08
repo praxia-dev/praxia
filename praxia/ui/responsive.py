@@ -162,11 +162,28 @@ hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; }
 }
 
 /* --- Praxia UI: hide Streamlit's default chrome that's irrelevant to the
-       app user (Deploy button, hamburger menu, "Made with Streamlit" footer).
-       These are dev-time conveniences — Praxia is the product, not Streamlit. */
-[data-testid="stToolbar"] { visibility: hidden !important; height: 0 !important; position: fixed !important; }
+       app user (Deploy button, hamburger menu, "Made with Streamlit" footer,
+       and the floating "Running... STOP" indicator that pops over our nav
+       during a rerun). These are dev-time conveniences — Praxia is the
+       product, not Streamlit. Use display:none not visibility:hidden so
+       that no descendant `visibility: visible` rule (Streamlit ships
+       several) can leak the widget back into view. */
+[data-testid="stToolbar"],
+[data-testid="stStatusWidget"],
+[data-testid="stAppRunningIcon"],
+[data-testid="stAppRunningMan"],
+[data-testid*="unning" i],
+[class*="StatusWidget"],
+[class*="RunningMan"],
+button[title*="Stop" i][kind="header"],
+button[aria-label*="Stop" i][kind="header"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+}
 [data-testid="stDecoration"] { display: none !important; }
-[data-testid="stStatusWidget"] { visibility: hidden !important; height: 0 !important; position: fixed !important; }
 .stDeployButton { display: none !important; }
 #MainMenu { visibility: hidden !important; height: 0 !important; }
 /* stHeader handling — DO NOT display:none it, otherwise the
@@ -320,6 +337,38 @@ body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav 
     border-top-right-radius: 3px !important;
     border-bottom-right-radius: 3px !important;
     border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
+}
+
+/* Force the nav columns to shrink instead of pushing the rightmost
+   button (Admin) off the viewport when the sidebar opens. Streamlit's
+   default column flexbox uses min-width based on content, which keeps
+   the row at ~7×min-button-width even when the available width is
+   smaller than that — so Admin overflows behind the right edge. The
+   fixes layered together:
+     1. min-width: 0 on the row + columns lets flex actually shrink them
+     2. flex: 1 1 0 on each column distributes space evenly, never below 0
+     3. overflow-x: auto on the row is a safety net if shrinking still
+        isn't enough at very narrow widths
+     4. tighter button padding + ellipsis on label so labels don't
+        force min-content width back up
+*/
+.st-key-praxia_topnav [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin;
+}
+.st-key-praxia_topnav [data-testid="stHorizontalBlock"] [data-testid="column"] {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+}
+.st-key-praxia_topnav .stButton button {
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 /* --- Praxia UI mobile / responsive overrides --- */
