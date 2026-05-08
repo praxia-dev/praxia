@@ -90,6 +90,16 @@ KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     "GROQ_API_KEY":                   ("LLM", True),
     "TOGETHERAI_API_KEY":             ("LLM", True),
     "OPENROUTER_API_KEY":             ("LLM", True),
+    # Azure OpenAI (different from OpenAI: requires deployment name +
+    # endpoint + API version; the AZURE_API_KEY is from Azure portal,
+    # not platform.openai.com)
+    "AZURE_API_KEY":                  ("LLM", True),
+    "AZURE_API_BASE":                 ("LLM", False),  # https://<resource>.openai.azure.com/
+    "AZURE_API_VERSION":              ("LLM", False),  # e.g. 2024-08-01-preview
+    # Azure AI Foundry / Inference (separate endpoint flavor — uses
+    # OpenAI-compatible API but lives under foundry.azure.com)
+    "AZURE_AI_API_KEY":               ("LLM", True),
+    "AZURE_AI_API_BASE":              ("LLM", False),
     "OLLAMA_API_BASE":                ("LLM", False),
     "PRAXIA_LOCAL_MODEL":             ("LLM", False),
 

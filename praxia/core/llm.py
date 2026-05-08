@@ -147,6 +147,19 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         ("o3 mini (reasoning, cheap)", "openai/o3-mini"),
         ("o1 (reasoning)", "openai/o1"),
     ],
+    "Azure OpenAI / AI Foundry": [
+        # Deployment names are user-defined per Azure resource — no
+        # canonical list. These templates assume a deployment named
+        # like the model. Override via Custom + your real deployment
+        # name. Requires AZURE_API_KEY + AZURE_API_BASE + AZURE_API_VERSION
+        # (or AZURE_AI_* for Foundry endpoints).
+        ("Azure deployment: gpt-5.1", "azure/gpt-5.1"),
+        ("Azure deployment: gpt-5", "azure/gpt-5"),
+        ("Azure deployment: gpt-4o", "azure/gpt-4o"),
+        ("Azure deployment: gpt-4o-mini", "azure/gpt-4o-mini"),
+        ("Azure deployment: o3", "azure/o3"),
+        ("Azure deployment: o4-mini", "azure/o4-mini"),
+    ],
     "Google": [
         ("Gemini 2.5 Pro (most capable)", "gemini/gemini-2.5-pro"),
         ("Gemini 2.5 Flash (fast)", "gemini/gemini-2.5-flash"),
