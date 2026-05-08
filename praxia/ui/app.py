@@ -63,6 +63,22 @@ try:
             _cv = _PraxiaConfig.get(_ck)
             if _cv:
                 os.environ[_ck] = _cv
+
+    # Some LLM providers (notably Azure OpenAI via LiteLLM → openai
+    # SDK) read *different* env-var names than what we expose in
+    # KNOWN_KEYS. The openai SDK strictly requires
+    #   AZURE_OPENAI_API_KEY / AZURE_OPENAI_ENDPOINT / OPENAI_API_VERSION
+    # whereas LiteLLM's docs use AZURE_API_KEY / AZURE_API_BASE /
+    # AZURE_API_VERSION. Mirror them so the user only configures one
+    # set in the UI and either path resolves.
+    _ENV_MIRRORS = {
+        "AZURE_API_KEY":     "AZURE_OPENAI_API_KEY",
+        "AZURE_API_BASE":    "AZURE_OPENAI_ENDPOINT",
+        "AZURE_API_VERSION": "OPENAI_API_VERSION",
+    }
+    for _src, _dst in _ENV_MIRRORS.items():
+        if os.environ.get(_src) and not os.environ.get(_dst):
+            os.environ[_dst] = os.environ[_src]
 except Exception:
     pass
 
@@ -772,9 +788,41 @@ _components.html(
             "e.stopPropagation();e.stopImmediatePropagation();e.preventDefault();" +
           "}" +
         "};" +
-        "document.addEventListener('keydown',handler,true);" +
-        "window.addEventListener('keydown',handler,true);" +
-        "console.log('praxia: shortcut guard active');" +
+        // Bind on every conceivable target: window, document, body,
+        // documentElement, both capture and bubble phases. Streamlit
+        // 1.57's listener target isn't documented and varies between
+        // releases.
+        "var attach=function(t){if(!t)return;" +
+          "t.addEventListener('keydown',handler,true);" +
+          "t.addEventListener('keydown',handler,false);" +
+          "t.addEventListener('keypress',handler,true);" +
+          "t.addEventListener('keyup',handler,true);" +
+        "};" +
+        "attach(window);attach(document);" +
+        "attach(document.documentElement);attach(document.body);" +
+        // Also remove the modal if it slips through — MutationObserver
+        // watches for any dialog containing 'Clear caches' and clicks
+        // its Cancel/No button (or remove()s it).
+        "var killModal=function(){" +
+          "var dialogs=document.querySelectorAll('div[role=\\\"dialog\\\"], [data-testid=\\\"stDialog\\\"]');" +
+          "for(var i=0;i<dialogs.length;i++){" +
+            "var d=dialogs[i];" +
+            "if(d&&/Clear caches|Rerun/i.test(d.textContent||'')){" +
+              "var btns=d.querySelectorAll('button');" +
+              "var clicked=false;" +
+              "for(var j=0;j<btns.length;j++){" +
+                "var lbl=(btns[j].textContent||'').trim().toLowerCase();" +
+                "if(lbl==='cancel'||lbl==='no'||lbl==='close'){btns[j].click();clicked=true;break;}" +
+              "}" +
+              "if(!clicked)d.remove();" +
+            "}" +
+          "}" +
+        "};" +
+        "var mo=new MutationObserver(function(){killModal();});" +
+        "mo.observe(document.body||document.documentElement,{childList:true,subtree:true});" +
+        // First-pass kill in case the modal is already there.
+        "killModal();" +
+        "console.log('praxia: shortcut guard active (multi-target + modal observer)');" +
       "})();";
     pdoc.head.appendChild(s);
   } catch(err) { console.error('praxia: shortcut guard install failed', err); }
@@ -2694,9 +2742,19 @@ elif mode == "admin":
                             elif not pending and not delete_keys:
                                 st.info(t("admin.settings.no_changes"))
                             else:
+                                _AZURE_MIRRORS = {
+                                    "AZURE_API_KEY":     "AZURE_OPENAI_API_KEY",
+                                    "AZURE_API_BASE":    "AZURE_OPENAI_ENDPOINT",
+                                    "AZURE_API_VERSION": "OPENAI_API_VERSION",
+                                }
                                 for k, v in pending.items():
                                     PraxiaConfig.set_persistent(k, v)
                                     os.environ[k] = v
+                                    # Mirror Azure-OpenAI-canonical env
+                                    # vars so the openai SDK underneath
+                                    # LiteLLM finds the credentials.
+                                    if k in _AZURE_MIRRORS:
+                                        os.environ[_AZURE_MIRRORS[k]] = v
                                     if auth is not None:
                                         auth.audit.record(
                                             actor_id=user_id,

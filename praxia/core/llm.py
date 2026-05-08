@@ -195,12 +195,13 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         ("o3 mini (reasoning, cheap)", "openai/o3-mini"),
         ("o1 (reasoning)", "openai/o1"),
     ],
-    "Azure OpenAI / AI Foundry": [
-        # Deployment names are user-defined per Azure resource — no
-        # canonical list. These templates assume a deployment named
-        # like the model. Override via Custom + your real deployment
-        # name. Requires AZURE_API_KEY + AZURE_API_BASE + AZURE_API_VERSION
-        # (or AZURE_AI_* for Foundry endpoints).
+    "Azure OpenAI Service": [
+        # 'azure/<deployment-name>' uses AZURE_API_KEY +
+        # AZURE_API_BASE + AZURE_API_VERSION (we also mirror to the
+        # AZURE_OPENAI_* names so the openai SDK is happy).
+        # Deployment names are user-defined per Azure resource —
+        # these templates assume a deployment named like the model.
+        # Pick Provider=Custom if your deployment is named differently.
         ("Azure deployment: gpt-5.5", "azure/gpt-5.5"),
         ("Azure deployment: gpt-5.4", "azure/gpt-5.4"),
         ("Azure deployment: gpt-5.1", "azure/gpt-5.1"),
@@ -209,6 +210,20 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         ("Azure deployment: gpt-4o-mini", "azure/gpt-4o-mini"),
         ("Azure deployment: o4-mini", "azure/o4-mini"),
         ("Azure deployment: o3", "azure/o3"),
+    ],
+    "Azure AI Foundry (Inference)": [
+        # 'azure_ai/<model-name>' uses AZURE_AI_API_KEY +
+        # AZURE_AI_API_BASE — completely separate from Azure OpenAI
+        # Service above. Use this when your Foundry endpoint hosts
+        # non-OpenAI models (Mistral / Llama / Phi / Cohere /
+        # DeepSeek / your own custom deployment). The model name
+        # must match what's deployed at your Foundry endpoint —
+        # check Foundry Studio → your endpoint → 'Deployment name'.
+        ("Foundry: Mistral Large", "azure_ai/Mistral-large"),
+        ("Foundry: Llama 3.3 70B", "azure_ai/Llama-3.3-70B-Instruct"),
+        ("Foundry: Phi-3 medium 128k", "azure_ai/Phi-3-medium-128k-instruct"),
+        ("Foundry: Cohere Command R+", "azure_ai/Cohere-command-r-plus"),
+        ("Foundry: DeepSeek-V3", "azure_ai/DeepSeek-V3"),
     ],
     "AWS Bedrock (Anthropic Claude)": [
         # Bedrock uses anthropic.<model>-<version> prefix and AWS auth
