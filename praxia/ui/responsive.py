@@ -211,13 +211,16 @@ button[data-testid*="idebarCollapse" i] {
     display: none !important;
 }
 /* Belt-and-suspenders: prevent Streamlit from EVER rendering the
-   sidebar at width 0. Even if a stale localStorage entry tries to
-   restore a collapsed state, the user can't end up stranded without
-   navigation. */
-[data-testid="stSidebar"] {
+   sidebar at width 0, AND tighten its width to 15rem so the main
+   content has more room — Streamlit's default 21rem leaves a lot of
+   wasted whitespace below the sidebar widgets. */
+[data-testid="stSidebar"],
+[data-testid="stSidebarContent"] {
     transform: none !important;
     visibility: visible !important;
-    min-width: 21rem !important;
+    min-width: 15rem !important;
+    max-width: 15rem !important;
+    width: 15rem !important;
 }
 [data-testid="stSidebar"][aria-expanded="false"] {
     transform: none !important;
@@ -249,10 +252,10 @@ footer { visibility: hidden !important; height: 0 !important; }
 section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 
 /* --- Top-bar nav: locked to the viewport top via position: fixed,
-   permanently offset by 21rem on the left to clear the always-visible
-   sidebar. The sidebar can no longer be collapsed (chevron is hidden,
-   initial_sidebar_state="expanded" + min-width: 21rem on stSidebar),
-   so we don't need :has() to swap left between 0 and 21rem.
+   permanently offset by 15rem on the left to match the (now narrower)
+   always-visible sidebar. The sidebar can no longer be collapsed
+   (chevron is hidden, initial_sidebar_state="expanded" + width: 15rem
+   on stSidebar), so we don't need :has() to swap left.
    Sticky was unreliable across Streamlit DOM revisions because
    intermediate containers occasionally apply overflow rules that
    break the sticky's scroll context. Fixed is brute-force but
@@ -260,11 +263,11 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 .st-key-praxia_topnav {
     position: fixed !important;
     top: 0 !important;
-    left: 21rem !important;
+    left: 15rem !important;
     right: 0 !important;
     z-index: 9999 !important;
     background-color: #ffffff;  /* light; dark overrides below */
-    padding: 0.5rem 1rem !important;
+    padding: 0.5rem 0.5rem !important;
     margin: 0 !important;
     border-bottom: 1px solid rgba(127, 127, 127, 0.18);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -280,7 +283,7 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 }
 
 /* Pin the chat input to the viewport bottom, offset to the right of
-   the always-visible 21rem sidebar so it doesn't slide underneath it.
+   the always-visible 15rem sidebar so it doesn't slide underneath it.
    Streamlit's default "stick to container bottom" behavior pins it to
    the active tab/container, not the viewport, which means the input
    would scroll off-screen during long conversations. */
@@ -288,7 +291,7 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 [data-testid="stBottomBlockContainer"] {
     position: fixed !important;
     bottom: 0 !important;
-    left: 21rem !important;
+    left: 15rem !important;
     right: 0 !important;
     z-index: 9000 !important;
     background-color: var(--background-color, #ffffff) !important;
@@ -298,15 +301,17 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 }
 
 /* The topnav itself is a horizontal flex container (st.container with
-   horizontal=True). The buttons are direct flex children — no per-column
-   percentage widths to fight with. We just need to:
-     1. Force the flex row to never wrap and to fill its parent's width
-     2. Make every stButton flex item share the row equally and shrink to 0
-     3. Tighten button padding + ellipsize labels so long Japanese / German
-        labels don't push their stButton above min-content width
-   `min-width: 0` is critical — without it flex items refuse to shrink
-   below their content's intrinsic width, which is what was making Admin
-   overflow the right edge before. */
+   horizontal=True). Each st.button() inside is wrapped by Streamlit
+   in an stElementContainer div, so the flex children of the topnav
+   are 7 (or 6 for non-admins) stElementContainer divs, each holding
+   one .stButton > button.
+
+   Force EVERY direct child of the topnav to flex: 1 1 0; min-width: 0
+   regardless of what testid / class it has — this is the only way to
+   reliably catch whatever wrapper element Streamlit emits across DOM
+   revisions. min-width: 0 is critical: without it flex items refuse
+   to shrink below their content's intrinsic width, which was making
+   the rightmost button (Admin) overflow before. */
 .st-key-praxia_topnav {
     display: flex !important;
     flex-direction: row !important;
@@ -316,9 +321,7 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     column-gap: 0 !important;
     overflow: hidden !important;
 }
-.st-key-praxia_topnav > .stButton,
-.st-key-praxia_topnav .stElementContainer:has(> .stButton),
-.st-key-praxia_topnav [data-testid="stElementContainer"]:has(> .stButton) {
+.st-key-praxia_topnav > * {
     flex: 1 1 0 !important;
     min-width: 0 !important;
     width: auto !important;
@@ -333,8 +336,9 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 .st-key-praxia_topnav .stButton button {
     width: 100% !important;
     min-width: 0 !important;
-    padding-left: 0.4rem !important;
-    padding-right: 0.4rem !important;
+    padding-left: 0.3rem !important;
+    padding-right: 0.3rem !important;
+    font-size: 0.85rem !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -342,14 +346,11 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     border-right: none !important;
     margin: 0 !important;
 }
-/* First / last button rounded ends so the strip reads as one piece. */
-.st-key-praxia_topnav > *:first-child .stButton button,
-.st-key-praxia_topnav .stButton:first-child button {
+.st-key-praxia_topnav > *:first-child .stButton button {
     border-top-left-radius: 3px !important;
     border-bottom-left-radius: 3px !important;
 }
-.st-key-praxia_topnav > *:last-child .stButton button,
-.st-key-praxia_topnav .stButton:last-child button {
+.st-key-praxia_topnav > *:last-child .stButton button {
     border-top-right-radius: 3px !important;
     border-bottom-right-radius: 3px !important;
     border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
