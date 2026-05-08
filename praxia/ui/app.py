@@ -742,11 +742,49 @@ _components.html(
 # =====================================================================
 # Resolve runtime LLM + memory backend
 # =====================================================================
+# The LLM model is persisted to `.praxia/admin/runtime.json` so the
+# choice applies to every user/session, not just the admin's browser.
+# Memory backend is no longer set here — it lives entirely under the
+# Memory policy section (.praxia/admin/memory_policy.json) which has
+# the same persistence + per-process precedence.
 
-_default_model = list(DEFAULT_ALIASES.keys())[0]
+_RUNTIME_CONFIG_PATH = Path(".praxia") / "admin" / "runtime.json"
+
+
+def _load_runtime_default_model() -> str | None:
+    try:
+        if _RUNTIME_CONFIG_PATH.exists():
+            data = json.loads(_RUNTIME_CONFIG_PATH.read_text(encoding="utf-8"))
+            v = data.get("default_model")
+            if isinstance(v, str) and v.strip():
+                return v
+    except Exception:
+        pass
+    return None
+
+
+def _save_runtime_default_model(model: str) -> None:
+    _RUNTIME_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = {}
+    if _RUNTIME_CONFIG_PATH.exists():
+        try:
+            payload = json.loads(_RUNTIME_CONFIG_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            payload = {}
+    payload["default_model"] = model
+    _RUNTIME_CONFIG_PATH.write_text(
+        json.dumps(payload, indent=2), encoding="utf-8",
+    )
+
+
+_persistent_default_model = _load_runtime_default_model()
+_default_model = _persistent_default_model or list(DEFAULT_ALIASES.keys())[0]
 model_choice: str = st.session_state.get("praxia_model", _default_model)
-backend_choice: str = st.session_state.get("praxia_backend", "json")
-os.environ["PRAXIA_MEMORY_BACKEND"] = backend_choice
+# Memory backend resolution now flows entirely through admin policy +
+# Personal/Shared memory's own resolver. We don't override env here —
+# previously this line clobbered admin policy with whatever the
+# session had picked, which was wrong now that it's not user-pickable.
+backend_choice: str = os.getenv("PRAXIA_MEMORY_BACKEND", "json")
 
 
 @st.cache_resource(show_spinner=False)
@@ -2319,11 +2357,13 @@ elif mode == "admin":
                 user=user_id, role=actor_role,
             ))
 
-        # Tenant runtime: LLM model + memory backend (admin-only,
-        # because the LLM choice depends on which API key is configured).
+        # Default LLM model — persisted to .praxia/admin/runtime.json
+        # so it applies to every user and survives Streamlit restarts.
+        # Memory backend used to live here too but now belongs entirely
+        # under the Memory policy section below (one source of truth).
         st.subheader(t("admin.settings.runtime_h"))
         st.caption(t("admin.settings.runtime_intro"))
-        col_p, col_m, col_b = st.columns(3)
+        col_p, col_m = st.columns(2)
         current_model = st.session_state.get("praxia_model", _default_model)
         # Resolve alias to full model id for matching against the provider map.
         _resolved_current = DEFAULT_ALIASES.get(current_model, current_model)
@@ -2364,67 +2404,18 @@ elif mode == "admin":
                     key="settings_model_pick",
                 )
                 picked_model = ids[labels.index(picked_label)]
-        with col_b:
-            backend_options = ["json", "mem0", "langmem", "letta", "zep"]
-            current_backend = st.session_state.get("praxia_backend", "json")
-            picked_backend = st.selectbox(
-                t("admin.settings.backend_label"),
-                options=backend_options,
-                index=(
-                    backend_options.index(current_backend)
-                    if current_backend in backend_options else 0
-                ),
-                key="settings_backend_pick",
-            )
         if st.button(
             t("admin.settings.runtime_apply"), type="primary",
             key="settings_runtime_apply",
         ):
-            # Pre-flight probe: try to construct the chosen backend
-            # before committing. Catches "mem0 picked but OPENAI_API_KEY
-            # missing" up-front instead of crashing the whole UI on the
-            # next rerun (mem0 defaults its embedder to OpenAI).
-            #
-            # Use PersonalMemory rather than load_backend() directly —
-            # PersonalMemory knows which kwargs each backend accepts
-            # (e.g. storage_dir for json, nothing for mem0). Going
-            # through load_backend bypasses that filtering and would
-            # blow up on backends whose constructors don't accept
-            # user_id / storage_dir.
-            _probe_ok = True
-            _probe_err: str = ""
-            if picked_backend != backend_choice:
-                try:
-                    from praxia.memory.personal import PersonalMemory
-                    _probe = PersonalMemory(
-                        user_id=user_id,
-                        backend=picked_backend,
-                        storage_dir=loom.config.memory_dir / "personal",
-                    )
-                    # Some backends defer init to first call — touch one
-                    # cheap method so failures surface here.
-                    try:
-                        _probe.search("praxia probe", limit=1)
-                    except Exception:
-                        # search-time errors are tolerable (empty store
-                        # etc); construction-time errors are not.
-                        pass
-                except Exception as exc:
-                    _probe_ok = False
-                    _probe_err = str(exc)
-            if not _probe_ok:
-                st.error(t("admin.settings.backend_probe_failed").format(
-                    backend=picked_backend, error=_probe_err,
-                ))
-            else:
+            try:
+                _save_runtime_default_model(picked_model)
                 st.session_state["praxia_model"] = picked_model
-                st.session_state["praxia_backend"] = picked_backend
-                try:
-                    st.cache_resource.clear()
-                except Exception:
-                    pass
+                st.cache_resource.clear()
                 st.success(t("admin.settings.runtime_saved"))
                 st.rerun()
+            except Exception as exc:
+                st.error(f"Save failed: {exc}")
 
         st.divider()
 
@@ -2513,9 +2504,11 @@ elif mode == "admin":
         st.subheader(t("admin.settings.persistent_h"))
 
         def _mask_for_display(value: str) -> str:
-            if len(value) <= 12:
-                return "****"
-            return f"{value[:4]}…{value[-4:]}"
+            # Full mask. Showing first/last chars (e.g. "50b6…e652")
+            # leaks information that helps an attacker confirm a stolen
+            # key fragment — also fails common password-policy reviews
+            # for "no partial token display". Always render `****`.
+            return "****"
 
         from collections import OrderedDict
         grouped: "OrderedDict[str, list[tuple[str, bool]]]" = OrderedDict()
@@ -2535,27 +2528,31 @@ elif mode == "admin":
                     pending: dict[str, str] = {}
                     for key, is_secret in keys:
                         current = PraxiaConfig.get(key)
-                        # Visible per-field "already set" indicator: ✓
-                        # prefix on the label + masked or full value
-                        # appended in parentheses. Makes it obvious
-                        # without needing to hover the help icon.
+                        # ✓ prefix when set; placeholder shows '****' so
+                        # the user can SEE that a value is on file
+                        # without leaking any of its characters. Help
+                        # tooltip keeps the same no-leak message.
                         if current is None:
                             label = key
                             help_text = t("admin.settings.help.unset")
+                            placeholder = t("admin.settings.placeholder.unchanged")
                         elif is_secret:
-                            label = f"✓ {key}  ({_mask_for_display(current)})"
-                            help_text = t("admin.settings.help.secret_set").format(
-                                masked=_mask_for_display(current)
-                            )
+                            label = f"✓ {key}"
+                            help_text = t("admin.settings.help.secret_set_masked")
+                            placeholder = "********"
                         else:
+                            # Non-secret values are still safe to show —
+                            # they're things like URLs / timezones, no
+                            # leak risk.
                             label = f"✓ {key}  ({current})"
                             help_text = t("admin.settings.help.value_set").format(
                                 value=current
                             )
+                            placeholder = current
                         new_val = st.text_input(
                             label, value="",
                             type="password" if is_secret else "default",
-                            placeholder=t("admin.settings.placeholder.unchanged"),
+                            placeholder=placeholder,
                             help=help_text,
                             key=f"setting_input_{category}_{key}",
                         )
