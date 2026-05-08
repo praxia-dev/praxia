@@ -1354,7 +1354,7 @@ with st.sidebar:
 # Top-bar navigation (horizontal, role-aware)
 # =====================================================================
 
-BASE_NAV = ["run", "memory", "prompts", "data", "dashboard", "preferences"]
+BASE_NAV = ["run", "prompts", "data", "memory", "dashboard", "preferences"]
 ADMIN_NAV = ["admin"]  # Consolidate moved into Admin's sub-tabs.
 NAV_KEYS = (
     BASE_NAV + ADMIN_NAV

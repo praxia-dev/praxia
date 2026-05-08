@@ -181,17 +181,51 @@ footer { visibility: hidden !important; height: 0 !important; }
 }
 section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 
-/* --- Top-bar nav: pinned to the top via st.container(key="praxia_topnav")
-       which Streamlit renders with the class .st-key-praxia_topnav. */
+/* --- Top-bar nav: locked to the viewport top via position: fixed.
+   Sticky was unreliable across Streamlit DOM revisions because
+   intermediate containers occasionally apply overflow rules that
+   break the sticky's scroll context. Fixed is brute-force but
+   bullet-proof. The sidebar's higher z-index naturally overlays the
+   left edge of our bar, so the user never sees the bar bleed under
+   the sidebar even though we span the full viewport width. */
 .st-key-praxia_topnav {
-    position: sticky !important;
+    position: fixed !important;
     top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     z-index: 9999 !important;
     background-color: #ffffff;  /* light; dark overrides below */
     padding: 0.5rem 1rem !important;
-    margin: 0 -1rem 1rem -1rem !important;
+    margin: 0 !important;
     border-bottom: 1px solid rgba(127, 127, 127, 0.18);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Reserve clearance at top + bottom of the main content so the
+   fixed top-nav doesn't cover the first item, and the fixed chat
+   input doesn't cover the last message. ~3.5rem matches the nav
+   height; ~8rem is generous for the chat input + attached files. */
+[data-testid="stMain"] [data-testid="stMainBlockContainer"] {
+    padding-top: 3.5rem !important;
+    padding-bottom: 8rem !important;
+}
+
+/* Pin the chat input to the viewport bottom. st.chat_input's
+   default behavior is "stick to the bottom of its container," but
+   inside a tab it pins to the tab's bottom rather than the
+   viewport's. Force viewport-fixed positioning so the user always
+   has the input visible. */
+[data-testid="stChatInput"],
+[data-testid="stBottomBlockContainer"] {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 9000 !important;
+    background-color: var(--background-color, #ffffff) !important;
+    padding: 0.5rem 1rem !important;
+    border-top: 1px solid rgba(127, 127, 127, 0.18);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* No gaps between buttons + flush button radii so the bar reads as
@@ -210,14 +244,6 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     border-top-right-radius: 3px !important;
     border-bottom-right-radius: 3px !important;
     border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
-}
-
-/* Sticky requires no clip on the inner block containers (but the main
-   scroll area MUST keep its overflow: auto, otherwise the page can't
-   scroll at all and sticky has nothing to stick to). */
-.main .block-container, [data-testid="stMainBlockContainer"],
-[data-testid="stVerticalBlock"] {
-    overflow: visible !important;
 }
 
 /* --- Praxia UI mobile / responsive overrides --- */
