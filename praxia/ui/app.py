@@ -488,6 +488,58 @@ if theme_choice == "dark":
     color: #ecedf0 !important;
   }
 
+  /* Chat-input file uploader (📎 attach in st.chat_input) — separate
+     DOM tree from stFileUploader, so the rules above don't reach it.
+     "Upload or drag and drop files (PNG, JPG, GIF, WEBP)" text was
+     rendering white-on-white in dark mode. */
+  [data-testid="stChatInput"],
+  [data-testid="stChatInputContainer"],
+  [data-testid="stChatInputFileUploadDropzone"],
+  [data-testid="stChatInputFileUploadDropzoneInstructions"] {
+    background-color: #1a1d28 !important;
+    color: #ecedf0 !important;
+    border-color: rgba(255,255,255,0.12) !important;
+  }
+  [data-testid="stChatInput"] *,
+  [data-testid="stChatInputFileUploadDropzone"] *,
+  [data-testid="stChatInputFileUploadDropzoneInstructions"] * {
+    color: #ecedf0 !important;
+  }
+  [data-testid="stChatInput"] small,
+  [data-testid="stChatInputFileUploadDropzoneInstructions"] small {
+    color: #a8acb8 !important;
+  }
+  /* The 📎 / send buttons */
+  [data-testid="stChatInputFileUploadButton"],
+  [data-testid="stChatInputSubmitButton"],
+  [data-testid="stChatInput"] button {
+    background-color: rgba(255,255,255,0.06) !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  [data-testid="stChatInputFileUploadButton"]:hover,
+  [data-testid="stChatInputSubmitButton"]:hover,
+  [data-testid="stChatInput"] button:hover {
+    background-color: rgba(255,255,255,0.12) !important;
+  }
+  /* Already-attached file pill in the chat input */
+  [data-testid="stChatInputFile"],
+  [data-testid="stChatInputFileName"],
+  [data-testid="stChatInputDeleteBtn"] {
+    color: #ecedf0 !important;
+    background-color: rgba(147,197,253,0.12) !important;
+  }
+  /* Chat input textarea itself */
+  [data-testid="stChatInput"] textarea,
+  [data-testid="stChatInputTextArea"] {
+    background-color: #0f111a !important;
+    color: #ecedf0 !important;
+    border-color: rgba(255,255,255,0.1) !important;
+  }
+  [data-testid="stChatInput"] textarea::placeholder {
+    color: #6c7080 !important;
+  }
+
   /* Popover trigger ("会話履歴 (N)" button) — Streamlit's popover button
      uses a different DOM than .stButton, so override explicitly. */
   [data-testid="stPopover"] > div > button,
