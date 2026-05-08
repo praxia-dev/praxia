@@ -49,11 +49,31 @@ code, pre, [data-testid="stCode"], .stCode {
     font-size: 0.825rem !important;
 }
 
-/* Calm heading hierarchy — slightly smaller across the board. */
-.stMarkdown h1, h1 { font-size: 1.6rem !important; font-weight: 600 !important; letter-spacing: -0.005em !important; line-height: 1.25 !important; }
-.stMarkdown h2, h2 { font-size: 1.3rem !important; font-weight: 600 !important; letter-spacing: -0.003em !important; line-height: 1.3 !important; }
-.stMarkdown h3, h3 { font-size: 1.1rem !important; font-weight: 600 !important; }
-.stMarkdown h4, h4 { font-size: 1rem !important; font-weight: 600 !important; }
+/* Calm heading hierarchy — slightly smaller across the board, with
+   tightened top/bottom margins so the page header sits close to the
+   first content row instead of leaving the browser's default ~0.83em
+   gap. */
+.stMarkdown h1, h1 { font-size: 1.6rem !important; font-weight: 600 !important; letter-spacing: -0.005em !important; line-height: 1.25 !important; margin: 0.25rem 0 0.5rem 0 !important; padding: 0 !important; }
+.stMarkdown h2, h2 { font-size: 1.3rem !important; font-weight: 600 !important; letter-spacing: -0.003em !important; line-height: 1.3 !important; margin: 0.5rem 0 0.4rem 0 !important; padding: 0 !important; }
+.stMarkdown h3, h3 { font-size: 1.1rem !important; font-weight: 600 !important; margin: 0.5rem 0 0.35rem 0 !important; padding: 0 !important; }
+.stMarkdown h4, h4 { font-size: 1rem !important; font-weight: 600 !important; margin: 0.4rem 0 0.3rem 0 !important; padding: 0 !important; }
+/* Streamlit wraps headings in [data-testid="stHeading"] which has its
+   own padding-bottom — zero it out so our margin rules above are the
+   single source of truth for vertical rhythm under a heading. */
+[data-testid="stHeading"] {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+/* The very first heading on each page (right after the fixed topnav)
+   shouldn't have a top margin — the topnav clearance padding already
+   gives enough breathing room. */
+[data-testid="stMainBlockContainer"] [data-testid="stHeading"]:first-child h1,
+[data-testid="stMainBlockContainer"] [data-testid="stHeading"]:first-child h2,
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:first-child h1,
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:first-child h2 {
+    margin-top: 0 !important;
+}
 
 /* Captions — denser. */
 [data-testid="stCaptionContainer"], .stCaption,
@@ -275,11 +295,19 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 
 /* Reserve clearance at top + bottom of the main content so the
    fixed top-nav doesn't cover the first item, and the fixed chat
-   input doesn't cover the last message. ~3.5rem matches the nav
-   height; ~8rem is generous for the chat input + attached files. */
+   input doesn't cover the last message. 2.75rem is just enough to
+   clear the nav (the buttons are ~2rem tall + 0.5rem padding); ~8rem
+   is generous for the chat input + attached files. */
 [data-testid="stMain"] [data-testid="stMainBlockContainer"] {
-    padding-top: 3.5rem !important;
+    padding-top: 2.75rem !important;
     padding-bottom: 8rem !important;
+}
+/* Tighten the gap that Streamlit's stVerticalBlock leaves between
+   the page header and its first content row. The default is ~1rem
+   per child gap, which compounds with the heading margin and looks
+   like wasted whitespace below the page title. */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {
+    gap: 0.5rem !important;
 }
 
 /* Pin the chat input to the viewport bottom, offset to the right of
