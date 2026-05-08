@@ -56,6 +56,14 @@ PARSERS.register("pptx", lazy("praxia.io.parsers.pptx_parser:PptxParser"))
 PARSERS.register("xlsx", lazy("praxia.io.parsers.xlsx_parser:XlsxParser"))
 PARSERS.register("xlsm", lazy("praxia.io.parsers.xlsx_parser:XlsxParser"))
 
+# Image formats — content is a placeholder, metadata["image"] holds the
+# base64 + mime so vision-capable agents can pick them up.
+PARSERS.register("png", lazy("praxia.io.parsers.image_parser:ImageParser"))
+PARSERS.register("jpg", lazy("praxia.io.parsers.image_parser:ImageParser"))
+PARSERS.register("jpeg", lazy("praxia.io.parsers.image_parser:ImageParser"))
+PARSERS.register("gif", lazy("praxia.io.parsers.image_parser:ImageParser"))
+PARSERS.register("webp", lazy("praxia.io.parsers.image_parser:ImageParser"))
+
 
 def parse_file(
     source: str | Path | BinaryIO,
