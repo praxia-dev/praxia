@@ -2563,36 +2563,82 @@ elif mode == "admin":
         for _key, (_cat, _is_secret) in KNOWN_KEYS.items():
             grouped.setdefault(_cat, []).append((_key, _is_secret))
 
+        from praxia.ui.settings_guide import category_meta
+
         for category, keys in grouped.items():
-            # Show category header with set/total count so users see at
-            # a glance how many keys in this group are already populated.
-            _set_count = sum(1 for k, _ in keys if PraxiaConfig.get(k) is not None)
-            _hdr = (
-                f"**{category}**  ·  {_set_count}/{len(keys)} "
-                + t("admin.settings.keys_set_label")
-            )
-            # Auto-expand groups that already have something set so admins
-            # can see what's there at a glance; collapse empty groups.
-            with st.expander(_hdr, expanded=(_set_count > 0)):
+            _meta = category_meta(category)
+            _required = set(_meta.get("required") or [])
+            _key_help_map = _meta.get("key_help") or {}
+            _intro_key = _meta.get("intro")
+            _cross_refs = _meta.get("cross_refs") or []
+
+            # Header: set/required progress for multi-key groups.
+            # 'X/Y required set' is more meaningful than 'X/Y total set'
+            # because optional keys (e.g. AWS_SESSION_TOKEN) shouldn't
+            # ding the progress count.
+            if _required:
+                _set_required = sum(
+                    1 for k, _ in keys
+                    if k in _required and PraxiaConfig.get(k) is not None
+                )
+                _progress = f"{_set_required}/{len(_required)} " + t("admin.settings.keys_required_label")
+                _all_required_set = (_set_required == len(_required))
+                _icon = "✅" if _all_required_set else ("⚠️" if _set_required else "")
+            else:
+                _set_count = sum(1 for k, _ in keys if PraxiaConfig.get(k) is not None)
+                _progress = f"{_set_count}/{len(keys)} " + t("admin.settings.keys_set_label")
+                _all_required_set = True
+                _icon = "✅" if _set_count else ""
+            _hdr = f"{_icon} **{category}**  ·  {_progress}".strip()
+
+            # Auto-expand groups that have anything set OR are missing
+            # required keys (so admins immediately see what's incomplete).
+            with st.expander(_hdr, expanded=(_set_count > 0 if not _required else not _all_required_set or _set_required > 0)):
+                # Per-category intro: explains what this provider is and
+                # which keys belong to a working set.
+                if _intro_key:
+                    st.markdown(t(_intro_key))
+                if _required:
+                    _required_md = ", ".join(f"`{k}`" for k in _required)
+                    st.caption(
+                        t("admin.settings.required_label") + ": " + _required_md
+                    )
+                if _cross_refs:
+                    _cross_md = ", ".join(f"`{k}`" for k in _cross_refs)
+                    st.caption(
+                        "ℹ️ " + t("admin.settings.cross_ref_label").format(keys=_cross_md)
+                    )
+
                 with st.form(f"settings_form_{category}", clear_on_submit=True):
                     pending: dict[str, str] = {}
                     delete_keys: list[str] = []
                     for key, is_secret in keys:
                         current = PraxiaConfig.get(key)
+                        is_required = key in _required
+                        # Resolve per-key help: prefer category-specific
+                        # text; fall back to generic set/unset wording.
+                        specific_help_key = _key_help_map.get(key)
                         if current is None:
-                            label = key
-                            help_text = t("admin.settings.help.unset")
+                            label = (("✱ " if is_required else "") + key)
+                            help_text = (
+                                t(specific_help_key) if specific_help_key
+                                else t("admin.settings.help.unset")
+                            )
                             placeholder = t("admin.settings.placeholder.unchanged")
                         elif is_secret:
                             label = f"✓ {key}"
-                            help_text = t("admin.settings.help.secret_set_masked")
+                            help_text = (
+                                t(specific_help_key) if specific_help_key
+                                else t("admin.settings.help.secret_set_masked")
+                            )
                             placeholder = "********"
                         else:
-                            # Non-secret values are still safe to show —
-                            # they're things like URLs / timezones.
                             label = f"✓ {key}  ({current})"
-                            help_text = t("admin.settings.help.value_set").format(
-                                value=current
+                            help_text = (
+                                t(specific_help_key) if specific_help_key
+                                else t("admin.settings.help.value_set").format(
+                                    value=current
+                                )
                             )
                             placeholder = current
                         col_in, col_del = st.columns([5, 1])
