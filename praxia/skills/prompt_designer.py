@@ -211,9 +211,8 @@ For EACH of the {variants} variant(s), return a JSON object with these fields:
                       (2-3 entries; empty if include_examples=false)
     rubric            list of 5 short evaluation criteria, each one line, suitable
                       for grading future outputs against this prompt
-    output_format     one of "markdown" / "text" / "json" / "xml" / "html" /
-                      "docx" / "pptx" (matching what you encoded into
-                      system_prompt)
+    output_format     one of "markdown" / "text" / "json" / "xml" / "html"
+                      (matching what you encoded into system_prompt)
     notes             one sentence explaining the design choice for this variant
 
 Wrap the array of variants in: {{"variants": [...]}}.
@@ -231,14 +230,6 @@ Do NOT include commentary outside the JSON object.
   proper heading hierarchy (#, ##, ###) and to keep prose tight + scannable.
 - For html output_format, the system_prompt should instruct the model to produce
   semantic HTML (h1/h2/p/ul/li/table) — no inline styles, no <script>.
-- For docx output_format, the system_prompt should instruct the model to
-  produce structured Markdown with a clear `# Title`, `## Section`, `### Subsection`
-  hierarchy plus tables (Markdown pipe syntax) where data is tabular. Praxia's
-  exporter converts this Markdown into a Word document.
-- For pptx output_format, the system_prompt should instruct the model to produce
-  Markdown structured as a slide deck: a top `# Deck Title` line, then one
-  `## Slide N — <slide title>` per slide, with 3-6 bullet points per slide
-  (no paragraphs). Praxia's pptx exporter splits on `##` headings.
 - The user_template MUST use ${{variable}}-style placeholders only — no f-string, no {{}}.
 
 Begin.
@@ -292,10 +283,11 @@ class PromptDesignerSkill(Skill):
             target_llm: alias or `provider/model` hint (e.g. "claude", "openai/gpt-4o").
                 Defaults to whatever `self.llm` is configured for.
             output_format: "markdown" (default) / "text" / "json" / "xml" /
-                "html" / "docx" / "pptx". The latter three hint that the
-                downstream LLM should produce structured Markdown that
-                converts cleanly to that target document format via Praxia's
-                exporter pipeline.
+                "html". These are formats an LLM can natively emit at
+                inference time. For design-rich pptx / docx deliverables
+                use `praxia.skills.PptxDesignerSkill` /
+                `DocxDesignerSkill` instead — those run a separate
+                code-generation + sandbox pipeline.
             include_examples: when True, generate 2-3 few-shot examples.
             constraint_level: "strict" (anti-hallucination) or "loose" (creativity).
             variants: how many candidate prompts to generate (>=1).

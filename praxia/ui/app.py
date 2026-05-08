@@ -2899,16 +2899,16 @@ elif mode == "prompts":
             with pd_col2:
                 pd_output_format = st.selectbox(
                     t("prompts.generate.output_format"),
-                    # Order: human-readable / deliverable formats first
-                    # (markdown / html / pptx / docx — what most users want),
-                    # then plain text, then machine-targeted (json / xml).
-                    # PDF intentionally omitted — Praxia's OSS doesn't ship a
-                    # PDF generator, so offering it as an output format would
-                    # be misleading.
-                    options=[
-                        "markdown", "html", "pptx", "docx",
-                        "text", "json", "xml",
-                    ],
+                    # Only formats an LLM can natively produce *as text*
+                    # at inference time. pptx / docx were briefly in this
+                    # list, but they're binary and a custom prompt can't
+                    # actually make the downstream LLM emit one — the user
+                    # would still have to round-trip through OutputFormatSkill
+                    # to get a (bare-styled) deck. For real design-rich
+                    # decks / docs, use Run → pptx_designer / docx_designer
+                    # which is a different pipeline entirely (LLM writes
+                    # python-pptx code in a sandbox).
+                    options=["markdown", "html", "text", "json", "xml"],
                     index=0, key="pd_output_format",
                 )
             with pd_col3:
