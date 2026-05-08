@@ -282,6 +282,17 @@ if not st.session_state.get("_session_purge_done"):
 # Login gate
 # =====================================================================
 
+def _build_sso_provider():
+    """Return an SSO provider instance if env vars are configured, else None."""
+    if not os.getenv("PRAXIA_SSO_PROVIDER"):
+        return None
+    try:
+        from praxia.auth.sso import provider_from_env
+        return provider_from_env("PRAXIA_SSO")
+    except Exception:
+        return None
+
+
 def _render_login() -> None:
     st.markdown(
         "<div style='max-width:480px; margin:6vh auto 0;'>",
@@ -301,6 +312,55 @@ def _render_login() -> None:
         users_exist = bool(_probe_auth.users.list_all())
     except Exception:
         pass
+
+    # ---- SSO button ----
+    # If PRAXIA_SSO_PROVIDER (+ client id/secret/redirect) is set, mint a
+    # PKCE state, persist verifier to disk so the callback can recover it
+    # after the IdP redirect, and present a "Sign in with <provider>" CTA
+    # above the API-key form. The form below remains for service accounts
+    # / CLI-issued keys.
+    _sso = _build_sso_provider()
+    if _sso is not None:
+        from praxia.auth.sso_state import SSOPendingStore
+        import secrets as _sec
+        _sso_store = SSOPendingStore(Path(".praxia") / "sso_pending")
+        _sso_store.purge_expired()
+        _provider_label = (_sso.config.provider_name or "SSO").title()
+        if st.button(
+            t("login.sso_button").format(provider=_provider_label),
+            type="primary",
+            use_container_width=True,
+            key="login_sso_btn",
+        ):
+            try:
+                _state = _sec.token_urlsafe(24)
+                _auth_url = _sso.authorization_url(state=_state)
+                # The provider stashes the verifier in its in-memory dict
+                # — pull it out and put it on disk so the callback (which
+                # may run in a fresh process) can recover.
+                _verifier = _sso._pkce_store.pop(_state, "")
+                if _verifier:
+                    _sso_store.put(
+                        _state, _verifier,
+                        _sso.config.redirect_uri,
+                        _sso.config.provider_name,
+                    )
+                # Streamlit doesn't expose a server-side redirect, so
+                # bounce via meta-refresh (works without JS execution).
+                st.markdown(
+                    f"<meta http-equiv='refresh' content='0; url={_auth_url}'>",
+                    unsafe_allow_html=True,
+                )
+                st.info(t("login.sso_redirecting"))
+                st.stop()
+            except Exception as e:
+                st.error(t("login.sso_failed").format(error=str(e)))
+        st.markdown(
+            "<div style='text-align:center; margin:0.6rem 0; opacity:0.6;'>"
+            f"— {t('login.sso_or')} —"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
     if users_exist:
         st.info(t("login.users_exist_hint"))
@@ -401,11 +461,81 @@ def _render_login() -> None:
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def _handle_sso_callback() -> bool:
+    """If the URL has ?code=... &state=... query params and a matching
+    pending PKCE record exists, complete the SSO exchange and log the
+    user in. Returns True iff a session was created."""
+    try:
+        params = st.query_params  # Streamlit 1.30+
+    except Exception:
+        return False
+    code = params.get("code")
+    state = params.get("state")
+    if not code or not state:
+        return False
+    # Streamlit returns lists for some query-param values; flatten.
+    if isinstance(code, list):
+        code = code[0] if code else ""
+    if isinstance(state, list):
+        state = state[0] if state else ""
+    if not code or not state:
+        return False
+    try:
+        from praxia.auth.sso_state import SSOPendingStore
+        from praxia.auth import AuthManager
+        _sso = _build_sso_provider()
+        if _sso is None:
+            return False
+        _store = SSOPendingStore(Path(".praxia") / "sso_pending")
+        rec = _store.consume(state)
+        if rec is None:
+            st.error(t("login.sso_invalid_state"))
+            return False
+        # Re-prime the provider's PKCE dict so exchange_code finds the
+        # verifier (it pops it back out internally).
+        _sso._pkce_store[state] = rec.verifier
+        info = _sso.exchange_code(code, state=state)
+        if not info.email:
+            st.error(t("login.sso_no_email"))
+            return False
+        _auth = AuthManager()
+        _auth.attach_sso(_sso)
+        user = _auth.upsert_sso_user(info, provider_name=_sso.config.provider_name)
+
+        # Populate session_state — same shape as the API-key path.
+        st.session_state["logged_in"] = True
+        st.session_state["user_id"] = user.username
+        st.session_state["org_id"] = "default-org"
+        st.session_state["actor_role"] = user.role
+        for k, v in _load_user_prefs(user.username).items():
+            if k not in st.session_state:
+                st.session_state[k] = v
+        try:
+            _new_token = _session_store.create(
+                user_id=user.username,
+                org_id=st.session_state["org_id"],
+                role=user.role,
+            )
+            st.session_state["_praxia_session_token"] = _new_token
+        except Exception:
+            pass
+        # Drop the OAuth params from the URL so a refresh doesn't try to
+        # re-exchange the (now consumed) code.
+        try:
+            st.query_params.clear()
+        except Exception:
+            pass
+        return True
+    except Exception as exc:
+        st.error(t("login.sso_callback_failed").format(error=str(exc)))
+        return False
+
+
 if not st.session_state.get("logged_in"):
-    # Try to rehydrate from a previous browser cookie before showing
-    # the login form. If the cookie resolves to a live session, the
-    # user keeps going as if the reload never happened.
-    if not _restore_session_from_cookie():
+    # 1) IdP redirect with ?code=...&state=... → finish SSO login.
+    # 2) Browser cookie from a previous session → rehydrate.
+    # 3) Otherwise show the login form.
+    if not _handle_sso_callback() and not _restore_session_from_cookie():
         _render_login()
         st.stop()
 
