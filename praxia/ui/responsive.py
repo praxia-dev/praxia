@@ -162,26 +162,33 @@ hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; }
 }
 
 /* --- Praxia UI: hide Streamlit's default chrome that's irrelevant to the
-       app user (Deploy button, hamburger menu, "Made with Streamlit" footer,
-       and the floating "Running... STOP" indicator that pops over our nav
-       during a rerun). These are dev-time conveniences — Praxia is the
-       product, not Streamlit. Use display:none not visibility:hidden so
-       that no descendant `visibility: visible` rule (Streamlit ships
-       several) can leak the widget back into view. */
-[data-testid="stToolbar"],
+       app user (Deploy button, hamburger menu, "Made with Streamlit" footer).
+       These are dev-time conveniences — Praxia is the product, not Streamlit.
+
+       NOTE: stToolbar uses `visibility: hidden`, not `display: none`. The
+       sidebar reopen chevron is rendered as a descendant of either stToolbar
+       or stHeader depending on Streamlit version, and `visibility: visible`
+       on a descendant CAN override `visibility: hidden` on an ancestor — but
+       it CANNOT override `display: none` on an ancestor. Using display:none
+       here would make the chevron unreachable when the sidebar is collapsed.
+       The chevron's explicit re-show rule lives further down. */
+[data-testid="stToolbar"] {
+    visibility: hidden !important;
+    height: 0 !important;
+    position: fixed !important;
+}
+/* The "Running... STOP" indicator that pops over the top-nav during a
+   rerun. Unlike stToolbar this has no children we want to keep visible,
+   so we can safely use `display: none` to prevent any leak-through. */
 [data-testid="stStatusWidget"],
 [data-testid="stAppRunningIcon"],
 [data-testid="stAppRunningMan"],
-[data-testid*="unning" i],
 [class*="StatusWidget"],
-[class*="RunningMan"],
-button[title*="Stop" i][kind="header"],
-button[aria-label*="Stop" i][kind="header"] {
+[class*="RunningMan"] {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
     width: 0 !important;
-    overflow: hidden !important;
 }
 [data-testid="stDecoration"] { display: none !important; }
 .stDeployButton { display: none !important; }
@@ -214,12 +221,15 @@ header[data-testid="stHeader"] {
 header[data-testid="stHeader"] [data-testid*="ollapse"],
 header[data-testid="stHeader"] [data-testid*="idebar" i],
 header[data-testid="stHeader"] button[kind="header"] {
+    display: block !important;        /* defeat any ancestor display:none */
     visibility: visible !important;
     pointer-events: auto !important;
     z-index: 100001 !important;
     position: fixed !important;
     top: 0.75rem !important;
     left: 0.6rem !important;
+    width: auto !important;           /* defeat the width:0 width-clobber */
+    height: auto !important;          /* same for height */
     margin: 0 !important;
     transform: none !important;       /* defeat any Streamlit translate */
 }
