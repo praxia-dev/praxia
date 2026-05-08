@@ -565,90 +565,185 @@ if theme_choice == "dark":
     st.markdown(
         """
 <style>
+  /* Color tokens — picked for readability over aesthetic darkness.
+     Body raised from near-black (#0a0a0f) to #15181f so that white
+     text doesn't sit directly on pure black (which causes halo /
+     vibration on most monitors). Cards step up to #1d212a so form,
+     expander, metric panels visibly separate from body. Borders
+     bumped from rgba(.06-.12) to rgba(.16-.24) so element edges
+     are actually visible. */
   :root {
-    --background-color: #0a0a0f;
-    --secondary-background-color: #15171f;
-    --text-color: #ecedf0;
+    --background-color: #15181f;
+    --secondary-background-color: #1d212a;
+    --text-color: #f4f5f7;
   }
-  .stApp { background-color: #0a0a0f !important; color: #ecedf0 !important; }
-  [data-testid="stSidebar"] { background-color: #15171f !important; }
+  .stApp { background-color: #15181f !important; color: #f4f5f7 !important; }
+  [data-testid="stSidebar"] { background-color: #1d212a !important; border-right: 1px solid rgba(255,255,255,0.08) !important; }
   [data-testid="stHeader"] { background-color: transparent !important; }
 
-  /* Generic text */
-  .stMarkdown, .stText, p, span, label, h1, h2, h3, h4, h5, h6 { color: #ecedf0 !important; }
-  [data-testid="stCaption"], small { color: #a8acb8 !important; }
-  code { background-color: rgba(255,255,255,0.08) !important; color: #e9c378 !important; }
+  /* Generic text — brighter primary, more readable secondary */
+  .stMarkdown, .stText, p, span, label, h1, h2, h3, h4, h5, h6, li, td, th { color: #f4f5f7 !important; }
+  [data-testid="stCaption"], small, .stCaption { color: #c1c5d0 !important; }
+  code { background-color: rgba(255,200,120,0.12) !important; color: #fbbf24 !important; padding: 0.05rem 0.3rem !important; border-radius: 3px !important; }
+  pre code { background-color: transparent !important; padding: 0 !important; color: #f4f5f7 !important; }
+  pre { background-color: #0f1218 !important; border: 1px solid rgba(255,255,255,0.12) !important; padding: 0.75rem !important; border-radius: 4px !important; }
+  a, a:visited { color: #93c5fd !important; }
+  a:hover { color: #bfdbfe !important; }
+  /* Disabled labels (e.g. on disabled buttons) need a tint that's
+     darker than primary text but still readable on dark bg. */
+  [disabled] label, [aria-disabled="true"], button[disabled] { color: #8b919f !important; }
+  hr { border-color: rgba(255,255,255,0.14) !important; }
 
-  /* Inputs */
+  /* Inputs — clearly elevated above body, with stronger border */
   [data-testid="stTextInput"] input,
   [data-testid="stTextArea"] textarea,
   [data-testid="stSelectbox"] div[role="combobox"],
   [data-testid="stNumberInput"] input,
   [data-testid="stDateInput"] input {
-    background-color: #1a1d28 !important; color: #ecedf0 !important;
-    border-color: rgba(255,255,255,0.1) !important;
+    background-color: #23272f !important; color: #f4f5f7 !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
   }
   [data-testid="stTextInput"] input::placeholder,
-  [data-testid="stTextArea"] textarea::placeholder { color: #6c7080 !important; }
+  [data-testid="stTextArea"] textarea::placeholder { color: #8b919f !important; }
+  [data-testid="stTextInput"] input:focus,
+  [data-testid="stTextArea"] textarea:focus,
+  [data-testid="stSelectbox"] div[role="combobox"]:focus-within {
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 2px rgba(147,197,253,0.18) !important;
+  }
 
   /* Buttons — readable contrast on dark bg */
   .stButton button,
   .stDownloadButton button,
   [data-testid="stFormSubmitButton"] button {
-    background-color: #1a1d28 !important;
-    color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    background-color: #23272f !important;
+    color: #f4f5f7 !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
   }
   .stButton button:hover,
   .stDownloadButton button:hover,
   [data-testid="stFormSubmitButton"] button:hover {
-    background-color: #252834 !important;
-    border-color: rgba(255,255,255,0.2) !important;
+    background-color: #2d323d !important;
+    border-color: rgba(255,255,255,0.34) !important;
   }
-  /* Primary action — restrained navy on dark, white text. */
+  /* Primary action — brighter blue so it pops against the lighter body */
   .stButton button[kind="primary"],
   .stDownloadButton button[kind="primary"],
   [data-testid="stFormSubmitButton"] button[kind="primary"] {
-    background-color: #1e3a8a !important;
+    background-color: #2563eb !important;
     color: #ffffff !important;
-    border-color: #1e3a8a !important;
+    border-color: #3b82f6 !important;
     font-weight: 600 !important;
   }
   .stButton button[kind="primary"]:hover,
   .stDownloadButton button[kind="primary"]:hover,
   [data-testid="stFormSubmitButton"] button[kind="primary"]:hover {
-    background-color: #2547a8 !important;
-    color: #ffffff !important;
+    background-color: #3b82f6 !important;
+    border-color: #60a5fa !important;
   }
   /* Secondary buttons */
   .stButton button[kind="secondary"],
   .stDownloadButton button[kind="secondary"] {
-    background-color: rgba(255,255,255,0.05) !important;
-    color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    background-color: rgba(255,255,255,0.07) !important;
+    color: #f4f5f7 !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
   }
   .stButton button[kind="secondary"]:hover,
   .stDownloadButton button[kind="secondary"]:hover {
-    background-color: rgba(255,255,255,0.1) !important;
+    background-color: rgba(255,255,255,0.13) !important;
+    border-color: rgba(255,255,255,0.34) !important;
   }
 
-  /* Containers / structure */
-  [data-testid="stExpander"] { background-color: rgba(255,255,255,0.02) !important; border-color: rgba(255,255,255,0.06) !important; }
-  [data-testid="stTabs"] [data-testid="stMarkdownContainer"] { color: #ecedf0 !important; }
-  [data-testid="stTabs"] button[role="tab"] { color: #a8acb8 !important; }
+  /* Containers / structure — visible borders + clearer panel bg */
+  [data-testid="stExpander"] {
+    background-color: #1d212a !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    border-radius: 6px !important;
+  }
+  [data-testid="stExpander"] summary { color: #f4f5f7 !important; }
+  [data-testid="stExpander"] summary:hover { color: #bfdbfe !important; }
+  [data-testid="stTabs"] [data-testid="stMarkdownContainer"] { color: #f4f5f7 !important; }
+  [data-testid="stTabs"] button[role="tab"] { color: #c1c5d0 !important; }
+  [data-testid="stTabs"] button[role="tab"]:hover { color: #f4f5f7 !important; }
   [data-testid="stTabs"] button[role="tab"][aria-selected="true"] { color: #93c5fd !important; border-color: #93c5fd !important; }
-  [data-testid="stForm"] { background-color: rgba(255,255,255,0.02) !important; border: 1px solid rgba(255,255,255,0.06) !important; }
-  [data-testid="stMetric"] { background-color: rgba(255,255,255,0.03) !important; padding: 0.5rem; border-radius: 6px; }
-  hr { border-color: rgba(255,255,255,0.08) !important; }
+  [data-testid="stForm"] {
+    background-color: #1d212a !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    border-radius: 6px !important;
+    padding: 1rem !important;
+  }
+  [data-testid="stMetric"] {
+    background-color: #1d212a !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+    padding: 0.6rem 0.8rem !important;
+    border-radius: 6px !important;
+  }
+  [data-testid="stMetricLabel"] { color: #c1c5d0 !important; }
+  [data-testid="stMetricValue"] { color: #f4f5f7 !important; }
+  [data-testid="stMetricDelta"] { color: #93c5fd !important; }
+  /* Dataframes / tables */
+  [data-testid="stDataFrame"], [data-testid="stTable"] {
+    background-color: #1d212a !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+  }
+  [data-testid="stDataFrame"] th, [data-testid="stTable"] th {
+    background-color: #23272f !important;
+    color: #f4f5f7 !important;
+    border-color: rgba(255,255,255,0.14) !important;
+  }
+  [data-testid="stDataFrame"] td, [data-testid="stTable"] td {
+    color: #f4f5f7 !important;
+    border-color: rgba(255,255,255,0.08) !important;
+  }
+  [data-testid="stChatMessage"] {
+    background-color: #1d212a !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  [data-testid="stChatMessage"] * { color: #f4f5f7 !important; }
+  /* Dividers */
+  [data-testid="stHorizontalRule"], hr { border-color: rgba(255,255,255,0.14) !important; }
 
-  /* Alerts */
-  [data-testid="stAlert"] { background-color: rgba(255,255,255,0.04) !important; }
+  /* Alerts — distinct backgrounds + borders by severity */
+  [data-testid="stAlert"] {
+    border-width: 1px !important;
+    border-style: solid !important;
+  }
+  [data-testid="stAlert"][data-baseweb="notification"] { color: #f4f5f7 !important; }
+  /* info (blue) */
+  [data-testid="stAlertContentInfo"], div[data-baseweb="notification"][kind="info"] {
+    background-color: rgba(59,130,246,0.12) !important;
+    border-color: rgba(59,130,246,0.45) !important;
+  }
+  /* success (green) */
+  [data-testid="stAlertContentSuccess"], div[data-baseweb="notification"][kind="positive"] {
+    background-color: rgba(34,197,94,0.12) !important;
+    border-color: rgba(34,197,94,0.45) !important;
+  }
+  /* warning (amber) */
+  [data-testid="stAlertContentWarning"], div[data-baseweb="notification"][kind="warning"] {
+    background-color: rgba(251,191,36,0.12) !important;
+    border-color: rgba(251,191,36,0.45) !important;
+  }
+  /* error (red) */
+  [data-testid="stAlertContentError"], div[data-baseweb="notification"][kind="negative"] {
+    background-color: rgba(239,68,68,0.14) !important;
+    border-color: rgba(239,68,68,0.5) !important;
+  }
+  [data-testid="stAlert"] *, div[data-baseweb="notification"] * { color: #f4f5f7 !important; }
 
-  /* Sticky top nav — solid dark bg with subtle navy underline */
+  /* Sticky top nav */
   .st-key-praxia_topnav {
-    background-color: #15171f !important;
-    border-bottom: 1px solid rgba(147,197,253,0.22) !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    background-color: #1d212a !important;
+    border-bottom: 1px solid rgba(147,197,253,0.28) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
+  }
+  .st-key-praxia_topnav .stButton button {
+    background-color: transparent !important;
+    border-color: rgba(255,255,255,0.12) !important;
+  }
+  .st-key-praxia_topnav .stButton button[kind="primary"] {
+    background-color: rgba(37,99,235,0.85) !important;
+    border-color: #3b82f6 !important;
   }
 
   /* File uploader — dropzone background + instruction text + size limit
@@ -1929,7 +2024,12 @@ if mode == "run":
             skill_obj = skill_cls(llm=llm)
             with st.spinner(f"Running {skill_obj.manifest.name}…"):
                 output = skill_obj.run(user_input)
-            st.markdown(output)
+            # Persist the output across reruns so the download buttons
+            # below keep working after their first click (each download
+            # click triggers a Streamlit rerun, which would otherwise
+            # blow away the local `output` variable).
+            st.session_state["skill_run_output"] = output
+            st.session_state["skill_run_name"] = skill_obj.manifest.name
             # Ephemeral mode: skip the skill_registry usage log + the
             # promotion-engine signals it feeds. Default mode logs as usual.
             if loom.skill_registry and not ephemeral:
@@ -1943,9 +2043,94 @@ if mode == "run":
                         audio_bytes = TTS().synthesize(
                             output[:4000], voice="alloy", format="mp3",
                         )
-                    st.audio(audio_bytes, format="audio/mp3")
+                    st.session_state["skill_run_tts_bytes"] = audio_bytes
                 except Exception as e:
                     st.warning(f"TTS unavailable: {e}")
+
+        # --- Persistent output panel (survives reruns triggered by
+        # download_button clicks). The output is the skill's last result;
+        # we offer Markdown, HTML, DOCX, and PPTX exports via Praxia's
+        # exporter pipeline. PDF export isn't shipped in the OSS yet —
+        # users can save DOCX and convert via Word / LibreOffice.
+        if "skill_run_output" in st.session_state:
+            _output = st.session_state["skill_run_output"]
+            _skill_name = st.session_state.get("skill_run_name", "skill")
+            st.markdown(_output)
+            if st.session_state.get("skill_run_tts_bytes"):
+                st.audio(st.session_state["skill_run_tts_bytes"], format="audio/mp3")
+            with st.expander(t("skill.download_h"), expanded=False):
+                from praxia.io.exporters import export_as
+                _stem = _skill_name.replace(" ", "_").lower()
+                _dl_cols = st.columns(4)
+                # Markdown — no extra dep, always works
+                with _dl_cols[0]:
+                    try:
+                        _md = export_as(_output, format="md")
+                        st.download_button(
+                            "📄 Markdown",
+                            data=_md.bytes,
+                            file_name=f"{_stem}.md",
+                            mime="text/markdown",
+                            key="skill_dl_md",
+                            use_container_width=True,
+                        )
+                    except Exception as e:
+                        st.caption(f"md: {e}")
+                # HTML — no extra dep
+                with _dl_cols[1]:
+                    try:
+                        _html = export_as(_output, format="html")
+                        st.download_button(
+                            "🌐 HTML",
+                            data=_html.bytes,
+                            file_name=f"{_stem}.html",
+                            mime="text/html",
+                            key="skill_dl_html",
+                            use_container_width=True,
+                        )
+                    except Exception as e:
+                        st.caption(f"html: {e}")
+                # DOCX — needs python-docx (the [office] extra)
+                with _dl_cols[2]:
+                    try:
+                        _docx = export_as(_output, format="docx")
+                        st.download_button(
+                            "📝 Word",
+                            data=_docx.bytes,
+                            file_name=f"{_stem}.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            key="skill_dl_docx",
+                            use_container_width=True,
+                        )
+                    except ImportError:
+                        st.caption(t("skill.download_office_missing"))
+                    except Exception as e:
+                        st.caption(f"docx: {e}")
+                # PPTX — needs python-pptx (the [office] extra)
+                with _dl_cols[3]:
+                    try:
+                        _pptx = export_as(_output, format="pptx")
+                        st.download_button(
+                            "📊 PowerPoint",
+                            data=_pptx.bytes,
+                            file_name=f"{_stem}.pptx",
+                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            key="skill_dl_pptx",
+                            use_container_width=True,
+                        )
+                    except ImportError:
+                        st.caption(t("skill.download_office_missing"))
+                    except Exception as e:
+                        st.caption(f"pptx: {e}")
+                if st.button(
+                    t("skill.clear_output"), key="skill_clear_output",
+                    type="secondary",
+                ):
+                    for _k in (
+                        "skill_run_output", "skill_run_name", "skill_run_tts_bytes",
+                    ):
+                        st.session_state.pop(_k, None)
+                    st.rerun()
 
 
 # =====================================================================
@@ -2549,8 +2734,15 @@ elif mode == "prompts":
             with pd_col2:
                 pd_output_format = st.selectbox(
                     t("prompts.generate.output_format"),
-                    options=["text", "json", "markdown", "xml"],
-                    index=1, key="pd_output_format",
+                    # markdown first so it's the default — most prompts produce
+                    # markdown content that exports cleanly to all downstream
+                    # formats. docx / pptx / pdf hints make the meta-prompt
+                    # add structure-conversion guidance to the system_prompt.
+                    options=[
+                        "markdown", "text", "json", "xml",
+                        "html", "docx", "pptx", "pdf",
+                    ],
+                    index=0, key="pd_output_format",
                 )
             with pd_col3:
                 pd_constraint = st.selectbox(
