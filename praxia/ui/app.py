@@ -2756,6 +2756,15 @@ elif mode == "prompts":
                 t("prompts.generate.include_examples"),
                 value=True, key="pd_include_examples",
             )
+            # Output token cap for the meta-prompt. Detailed pptx / docx
+            # specifications can easily exceed the conservative default,
+            # so let the user bump it when needed.
+            pd_max_tokens = st.slider(
+                t("prompts.generate.max_tokens"),
+                min_value=2048, max_value=32768, value=16384, step=1024,
+                key="pd_max_tokens",
+                help=t("prompts.generate.max_tokens_help"),
+            )
             generate_clicked = st.form_submit_button(
                 t("prompts.generate.btn"), type="primary",
             )
@@ -2774,6 +2783,7 @@ elif mode == "prompts":
                             output_format=pd_output_format,
                             include_examples=pd_include_examples,
                             constraint_level=pd_constraint,
+                            max_tokens=pd_max_tokens,
                         )
                         st.session_state["pd_result"] = result
                         st.session_state["pd_task"] = pd_task

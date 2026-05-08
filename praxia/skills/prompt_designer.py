@@ -283,7 +283,7 @@ class PromptDesignerSkill(Skill):
         include_examples: bool = True,
         constraint_level: str = "strict",
         variants: int = 1,
-        max_tokens: int = 4096,
+        max_tokens: int = 16384,
     ) -> DesignerResult:
         """Generate one or more `DesignedPrompt`s for `task`.
 
@@ -300,7 +300,10 @@ class PromptDesignerSkill(Skill):
             constraint_level: "strict" (anti-hallucination) or "loose" (creativity).
             variants: how many candidate prompts to generate (>=1).
                 When >1, feed them to `praxia.experiments` for A/B testing.
-            max_tokens: cap on the meta-prompt's output (default 4096).
+            max_tokens: cap on the meta-prompt's output (default 16384).
+                Complex output_format hints (pptx / docx) often need the
+                higher default because the meta-prompt produces detailed
+                slide-by-slide / section-by-section guidance.
         """
         if not task or not task.strip():
             raise ValueError("`task` must be a non-empty description.")
@@ -418,9 +421,20 @@ class PromptDesignerSkill(Skill):
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
+            # The most common cause of an "Unterminated string" parse
+            # error is the LLM hitting max_tokens mid-response. Detect
+            # that case and surface an actionable hint instead of just
+            # the raw json error.
+            hint = ""
+            if "Unterminated" in str(exc) or "Expecting" in str(exc):
+                hint = (
+                    " — the meta-prompt likely hit the max_tokens cap before "
+                    "finishing. Try a shorter task description, fewer variants, "
+                    "or pass a larger max_tokens (default 16384)."
+                )
             raise ValueError(
-                f"meta-prompt returned invalid JSON: {exc}. Raw output (truncated): "
-                f"{raw[:500]!r}"
+                f"meta-prompt returned invalid JSON: {exc}.{hint} "
+                f"Raw output (truncated): {raw[:500]!r}"
             ) from exc
         variants_data = data.get("variants") if isinstance(data, dict) else None
         if not isinstance(variants_data, list) or not variants_data:
