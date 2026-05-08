@@ -2591,6 +2591,10 @@ elif mode == "admin":
                 _cross_refs = _meta.get("cross_refs") or []
 
                 # Header: set/required progress for multi-key groups.
+                # Sections always start collapsed — the page would
+                # otherwise paint multiple full-screen-tall forms on
+                # first visit. Status icon + count in the header is
+                # enough to show what needs attention.
                 if _required:
                     _set_required = sum(
                         1 for k, _ in keys
@@ -2602,7 +2606,6 @@ elif mode == "admin":
                     )
                     _all_required_set = (_set_required == len(_required))
                     _icon = "✅" if _all_required_set else ("⚠️" if _set_required else "")
-                    _expand = (not _all_required_set) or (_set_required > 0)
                 else:
                     _set_count = sum(
                         1 for k, _ in keys if PraxiaConfig.get(k) is not None
@@ -2612,10 +2615,9 @@ elif mode == "admin":
                         + t("admin.settings.keys_set_label")
                     )
                     _icon = "✅" if _set_count else ""
-                    _expand = _set_count > 0
                 _hdr = f"{_icon} **{category}**  ·  {_progress}".strip()
 
-                with st.expander(_hdr, expanded=_expand):
+                with st.expander(_hdr, expanded=False):
                     if _intro_key:
                         st.markdown(t(_intro_key))
                     if _required:
