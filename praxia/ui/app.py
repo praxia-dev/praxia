@@ -703,29 +703,39 @@ elif theme_choice == "light":
 # phase listener that swallows those bare keys *before* Streamlit sees
 # them, while leaving Ctrl+C / Cmd+C copy and shortcuts inside form
 # inputs untouched.
-st.markdown(
+#
+# Must use components.html() (srcdoc iframe) instead of st.markdown
+# because <script> tags inserted via innerHTML don't execute — same
+# limitation that broke the cookie write earlier. The iframe is
+# same-origin, so attaching the listener to window.parent.document
+# correctly intercepts keys hitting the main Streamlit page.
+import streamlit.components.v1 as _components
+_components.html(
     """
 <script>
 (function() {
-  if (window.__praxiaShortcutGuard) return;
-  window.__praxiaShortcutGuard = true;
-  const SHORTCUT_KEYS = new Set(['c', 'C', 'r', 'R', '?', '/']);
-  document.addEventListener('keydown', function(e) {
-    // Honor real text-editing modifiers (Ctrl/Cmd+C copy, Ctrl+R reload).
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    // Don't interfere when the user is typing in an input/textarea/contenteditable.
-    const tgt = e.target;
-    if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' ||
-                tgt.isContentEditable)) return;
-    if (SHORTCUT_KEYS.has(e.key)) {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }
-  }, true);
+  try {
+    var doc = (window.parent && window.parent.document) ? window.parent.document : document;
+    if (doc.__praxiaShortcutGuard) return;
+    doc.__praxiaShortcutGuard = true;
+    var SHORTCUT_KEYS = new Set(['c', 'C', 'r', 'R', '?', '/']);
+    doc.addEventListener('keydown', function(e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      var tgt = e.target;
+      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' ||
+                  tgt.isContentEditable)) return;
+      if (SHORTCUT_KEYS.has(e.key)) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    }, true);
+  } catch(err) { console.error('praxia: shortcut guard install failed', err); }
 })();
 </script>
     """,
-    unsafe_allow_html=True,
+    height=0,
+    width=0,
 )
 
 
@@ -2549,6 +2559,15 @@ elif mode == "admin":
                         else:
                             for k, v in pending.items():
                                 PraxiaConfig.set_persistent(k, v)
+                                # Mirror the value into os.environ for the
+                                # *current* process — TOML writes alone don't
+                                # reach LiteLLM/OpenAI SDK/Mem0 (they all
+                                # read os.environ directly), so without this
+                                # the user has to restart the whole UI just
+                                # to apply a new API key. Hydration at
+                                # startup handles the next restart; this
+                                # handles right-now.
+                                os.environ[k] = v
                                 if auth is not None:
                                     auth.audit.record(
                                         actor_id=user_id,
@@ -2560,8 +2579,14 @@ elif mode == "admin":
                                             "is_secret": KNOWN_KEYS[k][1],
                                         },
                                     )
+                            # Bust LLM caches so cached LiteLLM clients
+                            # rebuild and pick up the new credentials.
+                            try:
+                                st.cache_resource.clear()
+                            except Exception:
+                                pass
                             st.success(t("admin.settings.saved").format(count=len(pending)))
-                            st.info(t("admin.settings.restart_hint"))
+                            st.info(t("admin.settings.applied_immediately"))
 
     with tab_users:
         st.header("👥 User management (admin)")

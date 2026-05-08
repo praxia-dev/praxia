@@ -3454,6 +3454,16 @@ _T: dict[str, dict[str, str]] = {
         "de": "Starte den Streamlit-Server neu (oder lade die Seite neu), damit Änderungen an bereits importierten Modulen wirksam werden.",
         "pt-BR": "Reinicie o servidor Streamlit (ou recarregue a página) para que mudanças em módulos já importados façam efeito.",
     },
+    "admin.settings.applied_immediately": {
+        "en": "Keys are now live in this process — no restart needed. New API keys are visible to LiteLLM, OpenAI SDK, Mem0 etc. on the next call.",
+        "ja": "キーは現在のプロセスに即座に反映されました — 再起動不要。次回の LiteLLM / OpenAI SDK / Mem0 呼出から新しい API キーが使われます。",
+        "zh-CN": "Key 已在当前进程立即生效，无需重启。下次调用 LiteLLM / OpenAI SDK / Mem0 时即使用新 API 密钥。",
+        "ko": "키가 현재 프로세스에 즉시 반영되었습니다 — 재시작 불필요. 다음 LiteLLM / OpenAI SDK / Mem0 호출부터 새 API 키가 사용됩니다.",
+        "es": "Las claves están activas en este proceso — sin reinicio. LiteLLM / OpenAI SDK / Mem0 verán las nuevas claves en la próxima llamada.",
+        "fr": "Les clés sont actives dans ce processus — pas de redémarrage. LiteLLM / OpenAI SDK / Mem0 utiliseront les nouvelles clés à l'appel suivant.",
+        "de": "Schlüssel sind in diesem Prozess sofort aktiv — kein Neustart nötig. LiteLLM / OpenAI SDK / Mem0 sehen die neuen Keys beim nächsten Aufruf.",
+        "pt-BR": "As chaves já estão ativas neste processo — sem reinício. LiteLLM / OpenAI SDK / Mem0 verão as novas chaves na próxima chamada.",
+    },
     "admin.gate.denied": {
         "en": "🚫 Admin access denied for **{user}** (role: `{role}`). Only admin users can open this view.",
         "ja": "🚫 **{user}** (ロール: `{role}`) は Admin にアクセスできません。admin ロールのユーザのみ閲覧可能です。",

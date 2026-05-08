@@ -55,17 +55,23 @@ DEFAULT_ALIASES: dict[str, str] = {
     "claude-opus": "anthropic/claude-opus-4-7",
     "claude-sonnet": "anthropic/claude-sonnet-4-6",
     "claude-haiku": "anthropic/claude-haiku-4-5",
-    # OpenAI
-    "chatgpt": "openai/gpt-4o",
+    # OpenAI — GPT-5 family + reasoning (o-series)
+    "chatgpt": "openai/gpt-5",
+    "gpt-5": "openai/gpt-5",
+    "gpt-5-mini": "openai/gpt-5-mini",
+    "gpt-5-nano": "openai/gpt-5-nano",
     "gpt-4o": "openai/gpt-4o",
     "gpt-4o-mini": "openai/gpt-4o-mini",
-    "o1": "openai/o1",
-    "o1-mini": "openai/o1-mini",
+    "o4-mini": "openai/o4-mini",
+    "o3": "openai/o3",
     "o3-mini": "openai/o3-mini",
-    # Google Gemini
-    "gemini": "gemini/gemini-2.0-pro",
-    "gemini-pro": "gemini/gemini-2.0-pro",
-    "gemini-flash": "gemini/gemini-2.0-flash",
+    "o1": "openai/o1",
+    # Google Gemini — 2.5 (latest) and 2.0 series
+    "gemini": "gemini/gemini-2.5-pro",
+    "gemini-pro": "gemini/gemini-2.5-pro",
+    "gemini-flash": "gemini/gemini-2.5-flash",
+    "gemini-2.0-pro": "gemini/gemini-2.0-pro",
+    "gemini-2.0-flash": "gemini/gemini-2.0-flash",
     "gemini-1.5-pro": "gemini/gemini-1.5-pro",
     # Alibaba Qwen
     "qwen": "dashscope/qwen-max",
@@ -86,7 +92,8 @@ DEFAULT_ALIASES: dict[str, str] = {
     "mistral-small": "mistral/mistral-small-latest",
     "codestral": "mistral/codestral-latest",
     # xAI Grok
-    "grok": "xai/grok-3-latest",
+    "grok": "xai/grok-4",
+    "grok-4": "xai/grok-4",
     "grok-3": "xai/grok-3-latest",
     "grok-2": "xai/grok-2-latest",
     # Llama — fastest path is Groq (cloud) or Ollama (local).
@@ -116,15 +123,21 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         ("Claude Haiku 4.5 (fastest, cheapest)", "anthropic/claude-haiku-4-5"),
     ],
     "OpenAI": [
+        ("GPT-5 (most capable)", "openai/gpt-5"),
+        ("GPT-5 mini", "openai/gpt-5-mini"),
+        ("GPT-5 nano (cheapest)", "openai/gpt-5-nano"),
         ("GPT-4o", "openai/gpt-4o"),
         ("GPT-4o mini (cheap)", "openai/gpt-4o-mini"),
+        ("o4 mini (reasoning, latest)", "openai/o4-mini"),
+        ("o3 (reasoning, capable)", "openai/o3"),
+        ("o3 mini (reasoning, cheap)", "openai/o3-mini"),
         ("o1 (reasoning)", "openai/o1"),
-        ("o1 mini (reasoning, cheap)", "openai/o1-mini"),
-        ("o3 mini (reasoning, latest)", "openai/o3-mini"),
     ],
     "Google": [
+        ("Gemini 2.5 Pro (most capable)", "gemini/gemini-2.5-pro"),
+        ("Gemini 2.5 Flash (fast)", "gemini/gemini-2.5-flash"),
         ("Gemini 2.0 Pro", "gemini/gemini-2.0-pro"),
-        ("Gemini 2.0 Flash (fast/cheap)", "gemini/gemini-2.0-flash"),
+        ("Gemini 2.0 Flash (cheap)", "gemini/gemini-2.0-flash"),
         ("Gemini 1.5 Pro (long context)", "gemini/gemini-1.5-pro"),
     ],
     "DeepSeek": [
@@ -137,6 +150,7 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         ("Codestral (code-tuned)", "mistral/codestral-latest"),
     ],
     "xAI": [
+        ("Grok 4 (latest)", "xai/grok-4"),
         ("Grok 3", "xai/grok-3-latest"),
         ("Grok 2", "xai/grok-2-latest"),
     ],
