@@ -59,29 +59,52 @@ def _import_litellm():  # type: ignore[no-untyped-def]
 
 
 # Friendly aliases — users can write "claude" instead of "anthropic/claude-opus-4-7"
+# (Verified against vendor docs / Wikipedia, May 2026.)
 DEFAULT_ALIASES: dict[str, str] = {
-    # Anthropic — Claude 4.x family
+    # Anthropic — Claude 4.x family. Opus 4.7 (Apr 16 2026), Sonnet 4.6
+    # (Feb 17 2026), Haiku 4.5 (Oct 15 2025) are the active stable
+    # releases per Anthropic's lineup page.
     "claude": "anthropic/claude-opus-4-7",
     "claude-opus": "anthropic/claude-opus-4-7",
+    "claude-opus-4-7": "anthropic/claude-opus-4-7",
+    "claude-opus-4-6": "anthropic/claude-opus-4-6",
     "claude-sonnet": "anthropic/claude-sonnet-4-6",
+    "claude-sonnet-4-6": "anthropic/claude-sonnet-4-6",
     "claude-haiku": "anthropic/claude-haiku-4-5",
-    # OpenAI — GPT-5 family + reasoning (o-series)
-    "chatgpt": "openai/gpt-5.1",
+    "claude-haiku-4-5": "anthropic/claude-haiku-4-5",
+    # OpenAI — GPT-5.x family. 5.5 released Apr 23 2026 (codename "Spud")
+    # with Thinking + Pro variants. 5.4 released Mar 5 2026 with mini/nano
+    # added Mar 17. 5.3-Codex is a code-specialised variant. 5.2 / 5.1
+    # remain available.
+    "chatgpt": "openai/gpt-5.5",
+    "gpt-5.5": "openai/gpt-5.5",
+    "gpt-5.5-thinking": "openai/gpt-5.5-thinking",
+    "gpt-5.5-pro": "openai/gpt-5.5-pro",
+    "gpt-5.4": "openai/gpt-5.4",
+    "gpt-5.4-mini": "openai/gpt-5.4-mini",
+    "gpt-5.4-nano": "openai/gpt-5.4-nano",
+    "gpt-5.3-codex": "openai/gpt-5.3-codex",
+    "gpt-5.2": "openai/gpt-5.2",
     "gpt-5.1": "openai/gpt-5.1",
-    "gpt-5.1-mini": "openai/gpt-5.1-mini",
     "gpt-5": "openai/gpt-5",
     "gpt-5-mini": "openai/gpt-5-mini",
     "gpt-5-nano": "openai/gpt-5-nano",
+    "gpt-4.5": "openai/gpt-4.5",
+    "gpt-4.1": "openai/gpt-4.1",
     "gpt-4o": "openai/gpt-4o",
     "gpt-4o-mini": "openai/gpt-4o-mini",
     "o4-mini": "openai/o4-mini",
     "o3": "openai/o3",
     "o3-mini": "openai/o3-mini",
     "o1": "openai/o1",
-    # Google Gemini — 2.5 (latest) and 2.0 series
-    "gemini": "gemini/gemini-2.5-pro",
-    "gemini-pro": "gemini/gemini-2.5-pro",
-    "gemini-flash": "gemini/gemini-2.5-flash",
+    # Google Gemini — Gemini 3.1 Pro (Feb 19 2026) is the current
+    # flagship; 3.1 Flash Lite (Mar 3 2026) is the cheap tier.
+    "gemini": "gemini/gemini-3.1-pro",
+    "gemini-pro": "gemini/gemini-3.1-pro",
+    "gemini-3-pro": "gemini/gemini-3-pro",
+    "gemini-flash-lite": "gemini/gemini-3.1-flash-lite",
+    "gemini-2.5-pro": "gemini/gemini-2.5-pro",
+    "gemini-2.5-flash": "gemini/gemini-2.5-flash",
     "gemini-2.0-pro": "gemini/gemini-2.0-pro",
     "gemini-2.0-flash": "gemini/gemini-2.0-flash",
     "gemini-1.5-pro": "gemini/gemini-1.5-pro",
@@ -96,18 +119,33 @@ DEFAULT_ALIASES: dict[str, str] = {
     "gemma-9b": "ollama/gemma2:9b",        # alias for 9B
     "gemma-27b": "ollama/gemma2:27b",      # local 27B (largest open weight)
     "gemma-cloud": "vertex_ai/google/gemma-2-27b-it",  # via Google Vertex AI
-    # DeepSeek — Chinese SOTA, very low cost. v3 = chat, R1 = reasoning.
-    "deepseek": "deepseek/deepseek-chat",
-    "deepseek-reasoner": "deepseek/deepseek-reasoner",
-    # Mistral — French OSS-leaning. Large for general, small for cheap, codestral for code.
-    "mistral": "mistral/mistral-large-latest",
-    "mistral-small": "mistral/mistral-small-latest",
-    "codestral": "mistral/codestral-latest",
-    # xAI Grok
-    "grok": "xai/grok-4",
+    # DeepSeek — V4 (Pro/Flash) released Apr 24 2026. V3.2 + V3.2-Speciale
+    # (reasoning) still available.
+    "deepseek": "deepseek/deepseek-v4",
+    "deepseek-v4": "deepseek/deepseek-v4",
+    "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
+    "deepseek-v4-flash": "deepseek/deepseek-v4-flash",
+    "deepseek-v3.2": "deepseek/deepseek-v3.2",
+    "deepseek-reasoner": "deepseek/deepseek-v3.2-speciale",
+    # Mistral — Mistral Large 3 (Dec 2 2025), Medium 3.5 (Apr 30 2026),
+    # Small 4 (Mar 2026), Magistral 1.2 (reasoning), Devstral 2 (code).
+    "mistral": "mistral/mistral-large-3",
+    "mistral-large-3": "mistral/mistral-large-3",
+    "mistral-medium-3.5": "mistral/mistral-medium-3.5",
+    "mistral-small-4": "mistral/mistral-small-4",
+    "magistral": "mistral/magistral-medium-1.2",
+    "codestral": "mistral/codestral-2508",
+    "devstral": "mistral/devstral-medium-2",
+    # xAI Grok — 4.1 (Nov 17-18 2025) is current. Grok 4.1 Fast is the
+    # speed variant; Grok Code Fast 1 is for code.
+    "grok": "xai/grok-4.1",
+    "grok-4.1": "xai/grok-4.1",
+    "grok-4.1-fast": "xai/grok-4.1-fast",
+    "grok-4-heavy": "xai/grok-4-heavy",
+    "grok-4-fast": "xai/grok-4-fast",
     "grok-4": "xai/grok-4",
-    "grok-3": "xai/grok-3-latest",
-    "grok-2": "xai/grok-2-latest",
+    "grok-3": "xai/grok-3",
+    "grok-code": "xai/grok-code-fast-1",
     # Llama — fastest path is Groq (cloud) or Ollama (local).
     "llama": "groq/llama-3.3-70b-versatile",
     "llama-local": "ollama/llama3.3:70b",
@@ -130,18 +168,25 @@ DEFAULT_ALIASES: dict[str, str] = {
 # what gets stored in session_state and passed to LiteLLM.
 LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
     "Anthropic": [
-        ("Claude Opus 4.7 (most capable)", "anthropic/claude-opus-4-7"),
+        ("Claude Opus 4.7 (latest, recommended)", "anthropic/claude-opus-4-7"),
+        ("Claude Opus 4.6", "anthropic/claude-opus-4-6"),
         ("Claude Sonnet 4.6 (balanced)", "anthropic/claude-sonnet-4-6"),
+        ("Claude Sonnet 4.5", "anthropic/claude-sonnet-4-5"),
         ("Claude Haiku 4.5 (fastest, cheapest)", "anthropic/claude-haiku-4-5"),
     ],
     "OpenAI": [
-        ("GPT-5.1 (latest, recommended)", "openai/gpt-5.1"),
-        ("GPT-5.1 mini", "openai/gpt-5.1-mini"),
+        ("GPT-5.5 (latest, recommended)", "openai/gpt-5.5"),
+        ("GPT-5.5 Thinking", "openai/gpt-5.5-thinking"),
+        ("GPT-5.5 Pro", "openai/gpt-5.5-pro"),
+        ("GPT-5.4", "openai/gpt-5.4"),
+        ("GPT-5.4 mini", "openai/gpt-5.4-mini"),
+        ("GPT-5.4 nano (cheapest)", "openai/gpt-5.4-nano"),
+        ("GPT-5.3 Codex (code-tuned)", "openai/gpt-5.3-codex"),
+        ("GPT-5.2", "openai/gpt-5.2"),
+        ("GPT-5.1", "openai/gpt-5.1"),
         ("GPT-5", "openai/gpt-5"),
-        ("GPT-5 mini", "openai/gpt-5-mini"),
-        ("GPT-5 nano (cheapest)", "openai/gpt-5-nano"),
         ("GPT-4o", "openai/gpt-4o"),
-        ("GPT-4o mini (cheap)", "openai/gpt-4o-mini"),
+        ("GPT-4o mini", "openai/gpt-4o-mini"),
         ("o4 mini (reasoning)", "openai/o4-mini"),
         ("o3 (reasoning, capable)", "openai/o3"),
         ("o3 mini (reasoning, cheap)", "openai/o3-mini"),
@@ -153,12 +198,14 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         # like the model. Override via Custom + your real deployment
         # name. Requires AZURE_API_KEY + AZURE_API_BASE + AZURE_API_VERSION
         # (or AZURE_AI_* for Foundry endpoints).
+        ("Azure deployment: gpt-5.5", "azure/gpt-5.5"),
+        ("Azure deployment: gpt-5.4", "azure/gpt-5.4"),
         ("Azure deployment: gpt-5.1", "azure/gpt-5.1"),
         ("Azure deployment: gpt-5", "azure/gpt-5"),
         ("Azure deployment: gpt-4o", "azure/gpt-4o"),
         ("Azure deployment: gpt-4o-mini", "azure/gpt-4o-mini"),
-        ("Azure deployment: o3", "azure/o3"),
         ("Azure deployment: o4-mini", "azure/o4-mini"),
+        ("Azure deployment: o3", "azure/o3"),
     ],
     "AWS Bedrock (Anthropic Claude)": [
         # Bedrock uses anthropic.<model>-<version> prefix and AWS auth
@@ -186,31 +233,45 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         # Requires VERTEX_PROJECT + VERTEX_LOCATION +
         # GOOGLE_APPLICATION_CREDENTIALS. Both Gemini and
         # Anthropic-on-Vertex deployments are reachable.
+        ("Gemini 3.1 Pro (Vertex)", "vertex_ai/gemini-3.1-pro"),
+        ("Gemini 3 Pro (Vertex)", "vertex_ai/gemini-3-pro"),
         ("Gemini 2.5 Pro (Vertex)", "vertex_ai/gemini-2.5-pro"),
-        ("Gemini 2.5 Flash (Vertex)", "vertex_ai/gemini-2.5-flash"),
-        ("Claude Opus 4.7 (Vertex)", "vertex_ai/claude-opus-4-7@20250105"),
-        ("Claude Sonnet 4.6 (Vertex)", "vertex_ai/claude-sonnet-4-6@20240620"),
+        ("Claude Opus 4.7 (Vertex)", "vertex_ai/claude-opus-4-7"),
+        ("Claude Sonnet 4.6 (Vertex)", "vertex_ai/claude-sonnet-4-6"),
+        ("Claude Haiku 4.5 (Vertex)", "vertex_ai/claude-haiku-4-5"),
     ],
     "Google": [
-        ("Gemini 2.5 Pro (most capable)", "gemini/gemini-2.5-pro"),
-        ("Gemini 2.5 Flash (fast)", "gemini/gemini-2.5-flash"),
+        ("Gemini 3.1 Pro (latest, recommended)", "gemini/gemini-3.1-pro"),
+        ("Gemini 3 Pro", "gemini/gemini-3-pro"),
+        ("Gemini 3.1 Flash Lite (cheap)", "gemini/gemini-3.1-flash-lite"),
+        ("Gemini 2.5 Pro", "gemini/gemini-2.5-pro"),
+        ("Gemini 2.5 Flash", "gemini/gemini-2.5-flash"),
         ("Gemini 2.0 Pro", "gemini/gemini-2.0-pro"),
-        ("Gemini 2.0 Flash (cheap)", "gemini/gemini-2.0-flash"),
         ("Gemini 1.5 Pro (long context)", "gemini/gemini-1.5-pro"),
     ],
     "DeepSeek": [
-        ("DeepSeek V3 (chat)", "deepseek/deepseek-chat"),
-        ("DeepSeek R1 (reasoning)", "deepseek/deepseek-reasoner"),
+        ("DeepSeek V4 Pro (latest)", "deepseek/deepseek-v4-pro"),
+        ("DeepSeek V4 Flash (fast/cheap)", "deepseek/deepseek-v4-flash"),
+        ("DeepSeek V4", "deepseek/deepseek-v4"),
+        ("DeepSeek V3.2", "deepseek/deepseek-v3.2"),
+        ("DeepSeek V3.2 Speciale (reasoning)", "deepseek/deepseek-v3.2-speciale"),
     ],
     "Mistral": [
-        ("Mistral Large", "mistral/mistral-large-latest"),
-        ("Mistral Small (cheap)", "mistral/mistral-small-latest"),
-        ("Codestral (code-tuned)", "mistral/codestral-latest"),
+        ("Mistral Large 3 (latest)", "mistral/mistral-large-3"),
+        ("Mistral Medium 3.5", "mistral/mistral-medium-3.5"),
+        ("Mistral Small 4 (cheap)", "mistral/mistral-small-4"),
+        ("Magistral Medium 1.2 (reasoning)", "mistral/magistral-medium-1.2"),
+        ("Codestral 25.08 (code)", "mistral/codestral-2508"),
+        ("Devstral 2 (agentic code)", "mistral/devstral-medium-2"),
     ],
     "xAI": [
-        ("Grok 4 (latest)", "xai/grok-4"),
-        ("Grok 3", "xai/grok-3-latest"),
-        ("Grok 2", "xai/grok-2-latest"),
+        ("Grok 4.1 (latest, recommended)", "xai/grok-4.1"),
+        ("Grok 4.1 Fast", "xai/grok-4.1-fast"),
+        ("Grok 4 Heavy", "xai/grok-4-heavy"),
+        ("Grok 4 Fast", "xai/grok-4-fast"),
+        ("Grok 4", "xai/grok-4"),
+        ("Grok 3", "xai/grok-3"),
+        ("Grok Code Fast 1 (code)", "xai/grok-code-fast-1"),
     ],
     "Cohere": [
         ("Command R+", "cohere/command-r-plus"),
