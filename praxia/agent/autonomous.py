@@ -127,6 +127,7 @@ class AutonomousAgent:
         user_input: str,
         *,
         history: list[dict[str, Any]] | None = None,
+        images: list[dict[str, str]] | None = None,
         system_prompt: str | None = None,
     ) -> AgentResult:
         """Run the tool-use loop until completion or `max_steps`.
@@ -134,6 +135,13 @@ class AutonomousAgent:
         Args:
             user_input: the initial user message.
             history: prior messages (will be prepended after the system prompt).
+                Each entry follows the OpenAI/LiteLLM shape — ``content`` may
+                be a plain string or a list of multi-modal parts.
+            images: optional list of vision attachments for *this* turn. Each
+                entry is ``{"data": "<base64>", "mime": "image/png"}``.
+                Forwarded as ``image_url`` parts in the LiteLLM message; the
+                underlying provider must support vision (Claude 3+, GPT-4o,
+                Gemini 1.5+, etc.).
             system_prompt: per-call override of the agent's system prompt.
 
         Returns:
@@ -143,7 +151,25 @@ class AutonomousAgent:
         messages: list[dict[str, Any]] = [{"role": "system", "content": sys_prompt}]
         if history:
             messages.extend(history)
-        messages.append({"role": "user", "content": user_input})
+
+        # Build the current-turn user message. If vision attachments are
+        # present, send the OpenAI/LiteLLM multi-content shape; otherwise
+        # keep the plain-string form so providers without vision support
+        # are unaffected.
+        if images:
+            parts: list[dict[str, Any]] = [{"type": "text", "text": user_input}]
+            for img in images:
+                data = img.get("data", "")
+                mime = img.get("mime", "image/png")
+                if not data:
+                    continue
+                parts.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{data}"},
+                })
+            messages.append({"role": "user", "content": parts})
+        else:
+            messages.append({"role": "user", "content": user_input})
 
         result = AgentResult(final_text="")
         tool_schemas = [t.to_litellm_schema() for t in self.tools.values()]

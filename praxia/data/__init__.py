@@ -15,5 +15,12 @@ Public API:
     from praxia.data.scopes import DataScope, ScopeRegistry
 """
 from praxia.data.scopes import DataScope, ScopeRegistry
+from praxia.data.threads import ChatMessage, ChatThread, ThreadStore
 
-__all__ = ["DataScope", "ScopeRegistry"]
+__all__ = [
+    "ChatMessage",
+    "ChatThread",
+    "DataScope",
+    "ScopeRegistry",
+    "ThreadStore",
+]
