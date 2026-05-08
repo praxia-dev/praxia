@@ -114,8 +114,9 @@ KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     "OLLAMA_API_BASE":                ("LLM · Local (Ollama)", False),
     "PRAXIA_LOCAL_MODEL":             ("LLM · Local (Ollama)", False),
 
-    # Identity (for the agent / multi-tenant scenarios)
-    "PRAXIA_USER_ID":                 ("Identity", False),
+    # Default user_id for CLI / SDK use when no logged-in user is
+    # available. Streamlit UI ignores this — login provides user_id.
+    "PRAXIA_USER_ID":                 ("Identity (CLI / SDK default)", False),
 
     # Memory
     "PRAXIA_MEMORY_BACKEND":          ("Memory", False),

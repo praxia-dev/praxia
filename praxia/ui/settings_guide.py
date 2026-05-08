@@ -24,6 +24,29 @@ in this file.
 from __future__ import annotations
 
 
+# Top-level section headings used by the Settings UI to group related
+# categories under one banner. Order matters — sections appear in the
+# UI in this order. Each entry is (section_label_i18n_key, predicate)
+# where predicate(category) decides whether a category belongs here.
+TOP_LEVEL_SECTIONS: list[tuple[str, callable]] = [
+    ("settings.section.llm",     lambda c: c.startswith("LLM ")),
+    ("settings.section.oauth",   lambda c: c == "OAuth (server)" or c.startswith("OAuth (")),
+    ("settings.section.security", lambda c: c in ("Auth", "KMS", "SSO", "SCIM")),
+    ("settings.section.runtime", lambda c: (
+        c in ("Memory", "MCP", "Audio") or c.startswith("Identity")
+    )),
+]
+
+
+def section_for(category: str) -> str:
+    """Return the i18n key of the top-level section a category belongs
+    to, or ``"settings.section.other"`` if it doesn't match anything."""
+    for label_key, predicate in TOP_LEVEL_SECTIONS:
+        if predicate(category):
+            return label_key
+    return "settings.section.other"
+
+
 # Category-name → guidance metadata.
 # Categories that aren't listed here render with no intro / no required
 # markers — the simple "1 key" case (e.g. ANTHROPIC_API_KEY alone).
@@ -98,6 +121,13 @@ CATEGORY_GUIDE: dict[str, dict] = {
             "VAULT_ADDR":          "settings.guide.kms.VAULT_ADDR",
             "VAULT_TOKEN":         "settings.guide.kms.VAULT_TOKEN",
             "VAULT_TRANSIT_KEY":   "settings.guide.kms.VAULT_TRANSIT_KEY",
+        },
+    },
+    "Identity (CLI / SDK default)": {
+        "intro": "settings.guide.identity.intro",
+        "required": [],
+        "key_help": {
+            "PRAXIA_USER_ID": "settings.guide.identity.PRAXIA_USER_ID",
         },
     },
 }

@@ -2563,166 +2563,172 @@ elif mode == "admin":
         for _key, (_cat, _is_secret) in KNOWN_KEYS.items():
             grouped.setdefault(_cat, []).append((_key, _is_secret))
 
-        from praxia.ui.settings_guide import category_meta
+        from praxia.ui.settings_guide import category_meta, section_for, TOP_LEVEL_SECTIONS
 
-        for category, keys in grouped.items():
-            _meta = category_meta(category)
-            _required = set(_meta.get("required") or [])
-            _key_help_map = _meta.get("key_help") or {}
-            _intro_key = _meta.get("intro")
-            _cross_refs = _meta.get("cross_refs") or []
+        # Bucket the categories by top-level section so the UI can
+        # render section headings ("LLM Providers" / "OAuth" /
+        # "Security" / "Runtime defaults" / "Other") with the
+        # related sub-categories grouped underneath. Order is fixed
+        # by TOP_LEVEL_SECTIONS so the layout is stable.
+        _section_buckets: "OrderedDict[str, list[str]]" = OrderedDict()
+        # Pre-seed with declared sections to keep the order stable
+        for label_key, _pred in TOP_LEVEL_SECTIONS:
+            _section_buckets.setdefault(label_key, [])
+        _section_buckets.setdefault("settings.section.other", [])
+        for category in grouped.keys():
+            _section_buckets[section_for(category)].append(category)
 
-            # Header: set/required progress for multi-key groups.
-            # 'X/Y required set' is more meaningful than 'X/Y total set'
-            # because optional keys (e.g. AWS_SESSION_TOKEN) shouldn't
-            # ding the progress count.
-            if _required:
-                _set_required = sum(
-                    1 for k, _ in keys
-                    if k in _required and PraxiaConfig.get(k) is not None
-                )
-                _progress = f"{_set_required}/{len(_required)} " + t("admin.settings.keys_required_label")
-                _all_required_set = (_set_required == len(_required))
-                _icon = "✅" if _all_required_set else ("⚠️" if _set_required else "")
-            else:
-                _set_count = sum(1 for k, _ in keys if PraxiaConfig.get(k) is not None)
-                _progress = f"{_set_count}/{len(keys)} " + t("admin.settings.keys_set_label")
-                _all_required_set = True
-                _icon = "✅" if _set_count else ""
-            _hdr = f"{_icon} **{category}**  ·  {_progress}".strip()
+        for section_key, cats in _section_buckets.items():
+            if not cats:
+                continue
+            st.markdown(f"#### {t(section_key)}")
+            for category in cats:
+                keys = grouped[category]
+                _meta = category_meta(category)
+                _required = set(_meta.get("required") or [])
+                _key_help_map = _meta.get("key_help") or {}
+                _intro_key = _meta.get("intro")
+                _cross_refs = _meta.get("cross_refs") or []
 
-            # Auto-expand groups that have anything set OR are missing
-            # required keys (so admins immediately see what's incomplete).
-            with st.expander(_hdr, expanded=(_set_count > 0 if not _required else not _all_required_set or _set_required > 0)):
-                # Per-category intro: explains what this provider is and
-                # which keys belong to a working set.
-                if _intro_key:
-                    st.markdown(t(_intro_key))
+                # Header: set/required progress for multi-key groups.
                 if _required:
-                    _required_md = ", ".join(f"`{k}`" for k in _required)
-                    st.caption(
-                        t("admin.settings.required_label") + ": " + _required_md
+                    _set_required = sum(
+                        1 for k, _ in keys
+                        if k in _required and PraxiaConfig.get(k) is not None
                     )
-                if _cross_refs:
-                    _cross_md = ", ".join(f"`{k}`" for k in _cross_refs)
-                    st.caption(
-                        "ℹ️ " + t("admin.settings.cross_ref_label").format(keys=_cross_md)
+                    _progress = (
+                        f"{_set_required}/{len(_required)} "
+                        + t("admin.settings.keys_required_label")
                     )
+                    _all_required_set = (_set_required == len(_required))
+                    _icon = "✅" if _all_required_set else ("⚠️" if _set_required else "")
+                    _expand = (not _all_required_set) or (_set_required > 0)
+                else:
+                    _set_count = sum(
+                        1 for k, _ in keys if PraxiaConfig.get(k) is not None
+                    )
+                    _progress = (
+                        f"{_set_count}/{len(keys)} "
+                        + t("admin.settings.keys_set_label")
+                    )
+                    _icon = "✅" if _set_count else ""
+                    _expand = _set_count > 0
+                _hdr = f"{_icon} **{category}**  ·  {_progress}".strip()
 
-                with st.form(f"settings_form_{category}", clear_on_submit=True):
-                    pending: dict[str, str] = {}
-                    delete_keys: list[str] = []
-                    for key, is_secret in keys:
-                        current = PraxiaConfig.get(key)
-                        is_required = key in _required
-                        # Resolve per-key help: prefer category-specific
-                        # text; fall back to generic set/unset wording.
-                        specific_help_key = _key_help_map.get(key)
-                        if current is None:
-                            label = (("✱ " if is_required else "") + key)
-                            help_text = (
-                                t(specific_help_key) if specific_help_key
-                                else t("admin.settings.help.unset")
-                            )
-                            placeholder = t("admin.settings.placeholder.unchanged")
-                        elif is_secret:
-                            label = f"✓ {key}"
-                            help_text = (
-                                t(specific_help_key) if specific_help_key
-                                else t("admin.settings.help.secret_set_masked")
-                            )
-                            placeholder = "********"
-                        else:
-                            label = f"✓ {key}  ({current})"
-                            help_text = (
-                                t(specific_help_key) if specific_help_key
-                                else t("admin.settings.help.value_set").format(
-                                    value=current
+                with st.expander(_hdr, expanded=_expand):
+                    if _intro_key:
+                        st.markdown(t(_intro_key))
+                    if _required:
+                        _required_md = ", ".join(f"`{k}`" for k in _required)
+                        st.caption(
+                            t("admin.settings.required_label") + ": " + _required_md
+                        )
+                    if _cross_refs:
+                        _cross_md = ", ".join(f"`{k}`" for k in _cross_refs)
+                        st.caption(
+                            "ℹ️ " + t("admin.settings.cross_ref_label").format(keys=_cross_md)
+                        )
+
+                    with st.form(f"settings_form_{category}", clear_on_submit=True):
+                        pending: dict[str, str] = {}
+                        delete_keys: list[str] = []
+                        for key, is_secret in keys:
+                            current = PraxiaConfig.get(key)
+                            is_required = key in _required
+                            specific_help_key = _key_help_map.get(key)
+                            if current is None:
+                                label = (("✱ " if is_required else "") + key)
+                                help_text = (
+                                    t(specific_help_key) if specific_help_key
+                                    else t("admin.settings.help.unset")
                                 )
-                            )
-                            placeholder = current
-                        col_in, col_del = st.columns([5, 1])
-                        with col_in:
-                            new_val = st.text_input(
-                                label, value="",
-                                type="password" if is_secret else "default",
-                                placeholder=placeholder,
-                                help=help_text,
-                                key=f"setting_input_{category}_{key}",
-                            )
-                        with col_del:
-                            # Delete checkbox only renders for keys that
-                            # actually have a stored value — there's
-                            # nothing to delete otherwise.
-                            if current is not None:
-                                # Spacer to align the checkbox with the
-                                # text-input (which has a label row above).
-                                st.markdown("&nbsp;", unsafe_allow_html=True)
-                                if st.checkbox(
-                                    t("admin.settings.delete_checkbox"),
-                                    value=False,
-                                    key=f"setting_del_{category}_{key}",
-                                    help=t("admin.settings.delete_checkbox_help"),
-                                ):
-                                    delete_keys.append(key)
-                        if new_val:
-                            pending[key] = new_val
-                    st.caption(t("admin.settings.save_hint"))
-                    submit = st.form_submit_button(
-                        "💾 " + t("admin.settings.save_btn"),
-                        type="primary",
-                        use_container_width=True,
-                    )
-                    if submit:
-                        if actor_role not in ("admin", "unknown"):
-                            st.error(t("admin.settings.role_required"))
-                        elif not pending and not delete_keys:
-                            st.info(t("admin.settings.no_changes"))
-                        else:
-                            for k, v in pending.items():
-                                PraxiaConfig.set_persistent(k, v)
-                                # Mirror into os.environ so LiteLLM /
-                                # OpenAI SDK / Mem0 (which read
-                                # os.environ directly) see the value
-                                # immediately, no restart needed.
-                                os.environ[k] = v
-                                if auth is not None:
-                                    auth.audit.record(
-                                        actor_id=user_id,
-                                        actor_role=actor_role,
-                                        action="config.set",
-                                        resource=f"config:{k}",
-                                        metadata={
-                                            "category": KNOWN_KEYS[k][0],
-                                            "is_secret": KNOWN_KEYS[k][1],
-                                        },
+                                placeholder = t("admin.settings.placeholder.unchanged")
+                            elif is_secret:
+                                label = f"✓ {key}"
+                                help_text = (
+                                    t(specific_help_key) if specific_help_key
+                                    else t("admin.settings.help.secret_set_masked")
+                                )
+                                placeholder = "********"
+                            else:
+                                label = f"✓ {key}  ({current})"
+                                help_text = (
+                                    t(specific_help_key) if specific_help_key
+                                    else t("admin.settings.help.value_set").format(
+                                        value=current
                                     )
-                            for k in delete_keys:
-                                if PraxiaConfig.delete_persistent(k):
-                                    # Also clear from current process env
-                                    # so reads stop seeing the deleted
-                                    # value mid-session.
-                                    os.environ.pop(k, None)
+                                )
+                                placeholder = current
+                            col_in, col_del = st.columns([5, 1])
+                            with col_in:
+                                new_val = st.text_input(
+                                    label, value="",
+                                    type="password" if is_secret else "default",
+                                    placeholder=placeholder,
+                                    help=help_text,
+                                    key=f"setting_input_{category}_{key}",
+                                )
+                            with col_del:
+                                if current is not None:
+                                    st.markdown("&nbsp;", unsafe_allow_html=True)
+                                    if st.checkbox(
+                                        t("admin.settings.delete_checkbox"),
+                                        value=False,
+                                        key=f"setting_del_{category}_{key}",
+                                        help=t("admin.settings.delete_checkbox_help"),
+                                    ):
+                                        delete_keys.append(key)
+                            if new_val:
+                                pending[key] = new_val
+                        st.caption(t("admin.settings.save_hint"))
+                        submit = st.form_submit_button(
+                            "💾 " + t("admin.settings.save_btn"),
+                            type="primary",
+                            use_container_width=True,
+                        )
+                        if submit:
+                            if actor_role not in ("admin", "unknown"):
+                                st.error(t("admin.settings.role_required"))
+                            elif not pending and not delete_keys:
+                                st.info(t("admin.settings.no_changes"))
+                            else:
+                                for k, v in pending.items():
+                                    PraxiaConfig.set_persistent(k, v)
+                                    os.environ[k] = v
                                     if auth is not None:
                                         auth.audit.record(
                                             actor_id=user_id,
                                             actor_role=actor_role,
-                                            action="config.delete",
+                                            action="config.set",
                                             resource=f"config:{k}",
                                             metadata={
                                                 "category": KNOWN_KEYS[k][0],
                                                 "is_secret": KNOWN_KEYS[k][1],
                                             },
                                         )
-                            try:
-                                st.cache_resource.clear()
-                            except Exception:
-                                pass
-                            if pending:
-                                st.success(t("admin.settings.saved").format(count=len(pending)))
-                            if delete_keys:
-                                st.success(t("admin.settings.deleted").format(count=len(delete_keys)))
-                            st.info(t("admin.settings.applied_immediately"))
+                                for k in delete_keys:
+                                    if PraxiaConfig.delete_persistent(k):
+                                        os.environ.pop(k, None)
+                                        if auth is not None:
+                                            auth.audit.record(
+                                                actor_id=user_id,
+                                                actor_role=actor_role,
+                                                action="config.delete",
+                                                resource=f"config:{k}",
+                                                metadata={
+                                                    "category": KNOWN_KEYS[k][0],
+                                                    "is_secret": KNOWN_KEYS[k][1],
+                                                },
+                                            )
+                                try:
+                                    st.cache_resource.clear()
+                                except Exception:
+                                    pass
+                                if pending:
+                                    st.success(t("admin.settings.saved").format(count=len(pending)))
+                                if delete_keys:
+                                    st.success(t("admin.settings.deleted").format(count=len(delete_keys)))
+                                st.info(t("admin.settings.applied_immediately"))
 
     with tab_users:
         st.header("👥 User management (admin)")
