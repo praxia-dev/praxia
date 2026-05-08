@@ -176,6 +176,18 @@ def _restore_session_from_cookie() -> bool:
     return True
 
 
+def _ensure_session_cookie() -> None:
+    """Re-emit the cookie-set <script> on every render so the JS actually
+    ships to the browser. (st.rerun() *discards* anything queued during
+    the current run, so writing the cookie inline at login + rerunning
+    means the JS never reaches the browser. We instead store the token
+    in session_state at login and let this function paint the cookie on
+    the post-rerun render.)"""
+    token = st.session_state.get("_praxia_session_token")
+    if token:
+        _write_session_cookie(token)
+
+
 # Best-effort housekeeping — run once per process start.
 if not st.session_state.get("_session_purge_done"):
     try:
@@ -286,8 +298,9 @@ def _render_login() -> None:
                 if k not in st.session_state:
                     st.session_state[k] = v
 
-            # Mint a server-side session + drop the cookie so a browser
-            # reload doesn't kick the user back to the login form.
+            # Mint a server-side session token. The cookie itself is
+            # written by `_ensure_session_cookie()` *after* the rerun —
+            # writing it here inline would be discarded by `st.rerun()`.
             try:
                 _new_token = _session_store.create(
                     user_id=resolved_user,
@@ -295,7 +308,6 @@ def _render_login() -> None:
                     role=resolved_role,
                 )
                 st.session_state["_praxia_session_token"] = _new_token
-                _write_session_cookie(_new_token)
             except Exception:
                 # If session minting fails, login still works — just no
                 # cross-reload persistence on this turn.
@@ -315,6 +327,12 @@ if not st.session_state.get("logged_in"):
     if not _restore_session_from_cookie():
         _render_login()
         st.stop()
+
+# Re-emit the session cookie on every authenticated render. Has to be
+# here (not inside _render_login before st.rerun) — st.rerun() discards
+# the current run's output, so an inline cookie write at login never
+# reaches the browser.
+_ensure_session_cookie()
 
 
 user_id: str = st.session_state["user_id"]
