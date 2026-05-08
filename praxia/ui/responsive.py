@@ -169,25 +169,32 @@ hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; }
 [data-testid="stStatusWidget"] { visibility: hidden !important; height: 0 !important; position: fixed !important; }
 .stDeployButton { display: none !important; }
 #MainMenu { visibility: hidden !important; height: 0 !important; }
-/* Keep stHeader rendered (do NOT display:none it) — the sidebar
-   re-open chevron is a child of it, so hiding the header makes the
-   sidebar unclickable once collapsed. Make it transparent and
-   non-blocking instead, and keep it above our fixed top-nav so the
-   chevron stays clickable. */
+/* stHeader handling — DO NOT display:none it, otherwise the
+   sidebar-reopen chevron (a child of stHeader) disappears too.
+   But also DO NOT raise its z-index globally, otherwise it covers
+   our fixed top-nav and hides the Run/Prompts/etc. buttons.
+   Compromise: collapse the header to 0 height + invisible, and
+   selectively un-hide and z-index-bump *only* the controls inside
+   it that we actually need (the sidebar chevron). visibility:
+   visible on a child overrides visibility: hidden on the parent. */
 header[data-testid="stHeader"] {
     background: transparent !important;
-    height: auto !important;
+    height: 0 !important;
     min-height: 0 !important;
-    z-index: 100001 !important;
-    pointer-events: none !important;  /* let clicks fall through to nav */
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
-/* But the controls *inside* the header (the sidebar chevron, etc.)
-   must still receive clicks. */
-header[data-testid="stHeader"] button,
-header[data-testid="stHeader"] [role="button"],
+/* Re-show + boost the sidebar collapse/expand chevron specifically.
+   It needs visibility:visible (overrides parent), pointer-events:
+   auto (overrides parent), and z-index above the top-nav. */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
 header[data-testid="stHeader"] [data-testid*="ollapse"],
-header[data-testid="stHeader"] [data-testid*="sidebar" i] {
+header[data-testid="stHeader"] [data-testid*="idebar" i],
+header[data-testid="stHeader"] button[kind="header"] {
+    visibility: visible !important;
     pointer-events: auto !important;
+    z-index: 100001 !important;
 }
 footer { visibility: hidden !important; height: 0 !important; }
 
@@ -220,22 +227,10 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* The sidebar collapse/expand control (the small chevron button
-   that appears at top-left when the sidebar is collapsed) was sitting
-   *under* our fixed top-nav, so users couldn't re-open the sidebar
-   once it was closed. Bump its z-index above the nav, and force its
-   visibility — Streamlit hides it with display:none when the
-   sidebar is open, but we never want to fully hide it. */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"],
-button[kind="header"][aria-label*="sidebar" i],
-button[data-testid="stExpandSidebarButton"] {
-    z-index: 100000 !important;
-    position: fixed !important;
-    top: 0.5rem !important;
-    left: 0.5rem !important;
-    visibility: visible !important;
-}
+/* (Sidebar chevron z-index/visibility handling moved below into the
+   stHeader block — see further down. Forcing position:fixed + top:0
+   + left:0 here was making the chevron appear over the Run button
+   when the sidebar was open, which is why this rule got removed.) */
 
 /* Reserve clearance at top + bottom of the main content so the
    fixed top-nav doesn't cover the first item, and the fixed chat
