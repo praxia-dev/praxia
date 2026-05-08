@@ -38,9 +38,19 @@ from typing import Any, Literal
 def _import_litellm():  # type: ignore[no-untyped-def]
     """Lazy-load LiteLLM only when an actual completion call is made.
     This lets users browse skills/flows without installing the LLM client.
+
+    Side effect: turn on ``litellm.drop_params`` so per-provider quirks
+    (GPT-5 only allows ``temperature=1``, o-series doesn't accept
+    temperature at all, Anthropic ignores ``response_format``, etc.)
+    don't surface as ``UnsupportedParamsError`` to the user. LiteLLM
+    silently strips the offending field instead.
     """
     try:
         import litellm  # type: ignore[import-untyped]
+        try:
+            litellm.drop_params = True
+        except Exception:
+            pass
         return litellm
     except ImportError as e:  # pragma: no cover - install hint
         raise ImportError(

@@ -2550,7 +2550,12 @@ elif mode == "admin":
                         )
                         if new_val:
                             pending[key] = new_val
-                    submit = st.form_submit_button(t("admin.settings.save_btn"))
+                    st.caption(t("admin.settings.save_hint"))
+                    submit = st.form_submit_button(
+                        "💾 " + t("admin.settings.save_btn"),
+                        type="primary",
+                        use_container_width=True,
+                    )
                     if submit:
                         if actor_role not in ("admin", "unknown"):
                             st.error(t("admin.settings.role_required"))

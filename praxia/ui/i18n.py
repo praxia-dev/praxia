@@ -3424,6 +3424,16 @@ _T: dict[str, dict[str, str]] = {
         "de": "Änderungen speichern",
         "pt-BR": "Salvar alterações",
     },
+    "admin.settings.save_hint": {
+        "en": "Type new values above, then click the button to write them to `.praxia/config.toml` and apply to the running process.",
+        "ja": "上の入力欄に新しい値を入れてからボタンを押すと、`.praxia/config.toml` に保存され、起動中のプロセスにも即時反映されます。",
+        "zh-CN": "在上方输入新值后点击按钮，将写入 `.praxia/config.toml` 并立即应用到当前进程。",
+        "ko": "위에 새 값을 입력한 뒤 버튼을 누르면 `.praxia/config.toml` 에 저장되고 현재 프로세스에도 즉시 반영됩니다.",
+        "es": "Introduce los nuevos valores arriba y haz clic en el botón para guardarlos en `.praxia/config.toml` y aplicarlos al proceso actual.",
+        "fr": "Saisissez les nouvelles valeurs ci-dessus, puis cliquez pour les écrire dans `.praxia/config.toml` et les appliquer au processus en cours.",
+        "de": "Neue Werte oben eingeben, dann den Button drücken — sie werden in `.praxia/config.toml` geschrieben und im laufenden Prozess sofort angewendet.",
+        "pt-BR": "Digite os novos valores acima e clique no botão para gravar em `.praxia/config.toml` e aplicar ao processo atual.",
+    },
     "admin.settings.no_changes": {
         "en": "No fields filled in — nothing was saved.",
         "ja": "入力された項目がないため、保存されませんでした。",
