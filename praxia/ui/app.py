@@ -2383,23 +2383,30 @@ elif mode == "admin":
             # before committing. Catches "mem0 picked but OPENAI_API_KEY
             # missing" up-front instead of crashing the whole UI on the
             # next rerun (mem0 defaults its embedder to OpenAI).
+            #
+            # Use PersonalMemory rather than load_backend() directly —
+            # PersonalMemory knows which kwargs each backend accepts
+            # (e.g. storage_dir for json, nothing for mem0). Going
+            # through load_backend bypasses that filtering and would
+            # blow up on backends whose constructors don't accept
+            # user_id / storage_dir.
             _probe_ok = True
             _probe_err: str = ""
             if picked_backend != backend_choice:
                 try:
-                    from praxia.memory.backends import load_backend
-                    _probe = load_backend(
-                        picked_backend,
+                    from praxia.memory.personal import PersonalMemory
+                    _probe = PersonalMemory(
                         user_id=user_id,
+                        backend=picked_backend,
                         storage_dir=loom.config.memory_dir / "personal",
                     )
                     # Some backends defer init to first call — touch one
                     # cheap method so failures surface here.
                     try:
-                        _probe.search(user_id=user_id, query="praxia probe", limit=1)
+                        _probe.search("praxia probe", limit=1)
                     except Exception:
-                        # search-time errors are tolerable (e.g. empty
-                        # store); construction-time errors are not.
+                        # search-time errors are tolerable (empty store
+                        # etc); construction-time errors are not.
                         pass
                 except Exception as exc:
                     _probe_ok = False
