@@ -289,14 +289,14 @@
       "pt-BR": "Para quem",
     },
     "who.h2": {
-      en: "Four target personas, one platform.",
-      ja: "4 つのターゲットペルソナ、1 つのプラットフォーム。",
-      "zh-CN": "四类目标用户,一个平台。",
-      ko: "4가지 타깃 페르소나, 하나의 플랫폼.",
-      es: "Cuatro personas objetivo, una plataforma.",
-      fr: "Quatre personas cibles, une seule plateforme.",
-      de: "Vier Zielpersonen, eine Plattform.",
-      "pt-BR": "Quatro personas-alvo, uma plataforma.",
+      en: "Seven target personas, one platform.",
+      ja: "7 つのターゲットペルソナ、1 つのプラットフォーム。",
+      "zh-CN": "七类目标用户,一个平台。",
+      ko: "7가지 타깃 페르소나, 하나의 플랫폼.",
+      es: "Siete personas objetivo, una plataforma.",
+      fr: "Sept personas cibles, une seule plateforme.",
+      de: "Sieben Zielpersonen, eine Plattform.",
+      "pt-BR": "Sete personas-alvo, uma plataforma.",
     },
 
     "oss.kicker": {
