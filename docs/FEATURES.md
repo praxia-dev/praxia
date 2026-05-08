@@ -1528,6 +1528,36 @@ for tc in result.tool_calls:
     print(f"- {tc.name}({tc.arguments_text[:60]}) -> ok={tc.ok}")
 ```
 
+### Vision input (image attachments)
+
+The agent accepts image attachments alongside the text prompt. Pass
+each image as `{"data": <base64>, "mime": "image/png"}` — they are
+forwarded to the LLM as standard `image_url` content parts (the
+provider must support vision: Claude 3+, GPT-4o, Gemini 1.5+, etc.).
+
+```python
+import base64
+img_b64 = base64.b64encode(open("chart.png", "rb").read()).decode()
+result = agent.run(
+    "What does this chart suggest about Q3 revenue?",
+    images=[{"data": img_b64, "mime": "image/png"}],
+)
+```
+
+The Streamlit UI exposes the same capability via the chat input's 📎
+attach button (Run → Agent tab). Attachments are persisted with the
+conversation thread and replayed in subsequent turns so the agent can
+keep referring back to them.
+
+### Persistent conversation threads
+
+Run → Agent stores each conversation as a JSON thread under
+`.praxia/chats/<user>/<thread>.json`. The UI shows a `💬 Conversations`
+popover that lists past threads (newest first), lets the user resume
+any of them, rename, or delete. Ephemeral mode skips persistence
+entirely — the conversation lives in session memory only and vanishes
+on reload.
+
 ### MCP integration
 
 The agent is also exposed as a single MCP meta-tool named `autonomous_agent`

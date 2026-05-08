@@ -170,7 +170,7 @@ A sticky top-bar nav (Run / Knowledge / Prompts / Data / Stats / Preferences, pl
 
 | View | What's there |
 |------|------|
-| **🎬 Run** | Two sub-tabs. **🤖 Agent** = chat interface backed by `AutonomousAgent`; goal in, agent picks tools (search, connectors, skills) and iterates. **🛠 Skill** = pick a business skill (investment / sales / design / purchasing / patent / legal), submit input, get one answer. Selected Context folders feed both via grep-relevance filter on large folders. |
+| **🎬 Run** | Two sub-tabs. **🤖 Agent** = chat interface backed by `AutonomousAgent`; goal in, agent picks tools (search, connectors, skills) and iterates. **Image attachments** supported (vision-capable models) — use the 📎 button on the chat input to attach PNG/JPG/GIF/WebP. **Persistent threads**: every conversation is stored at `.praxia/chats/<user>/<id>.json` and listed in the `💬 Conversations` popover so users can resume, rename, or delete past threads. Ephemeral checkbox keeps the conversation in session memory only (no disk writes). **🛠 Skill** = pick a business skill (investment / sales / design / purchasing / patent / legal), submit input, get one answer. Selected Context folders feed both via grep-relevance filter on large folders. |
 | **🧠 Knowledge** | Browse personal + shared memory entries, plus the Skill registry (your skills + org-promoted ones). |
 | **📁 Data** | Manage data folders. Local folders = files you upload here. Connector folders = registered external paths (Box / SharePoint / Notion / etc.). |
 | **📝 Prompts** | Three sub-tabs: Generate (PromptDesigner — task in, polished template back), Browse & edit (CRUD on your prompt library), Distribute (admin only — push curated prompts to specific users / roles). |

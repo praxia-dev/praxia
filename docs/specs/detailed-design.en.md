@@ -274,8 +274,14 @@ class AutonomousAgent:
     max_steps: int = 10
     max_tokens_per_step: int = 4096
 
-    def run(self, user_input, *, history=None, system_prompt=None) -> AgentResult: ...
+    def run(self, user_input, *, history=None, images=None, system_prompt=None) -> AgentResult: ...
 ```
+
+`images` is an optional list of `{"data": <base64>, "mime": "image/png"}`
+attachments. When present, the current user message is built as the OpenAI/
+LiteLLM multi-content `image_url` shape; otherwise the plain-string form is
+preserved (no impact on non-vision models). `history` entries may already be in
+multi-content shape if prior turns carried attachments.
 
 **Loop invariants** (one iteration = one step):
 
@@ -445,6 +451,8 @@ User    CLI/UI    OAuthFlow    Provider    OAuthTokenStore    Connector
 │   └── <org_id>/blocks.json
 ├── frozen/                       # Layer-4 Markdown
 │   └── instructions/
+├── chats/                        # ThreadStore — Agent conversation history
+│   └── <user_id>/<thread_id>.json
 ├── oauth/                        # Encrypted per-user tokens
 │   └── <user_id>/
 │       └── <provider>.json       # encrypted blob

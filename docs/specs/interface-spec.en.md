@@ -242,9 +242,16 @@ result: AgentResult = agent.run(
     user_input: str,
     *,
     history: list[dict] | None = None,
+    images: list[dict[str, str]] | None = None,
     system_prompt: str | None = None,
 )
 ```
+
+`images` — optional vision attachments for the current turn. Each entry is
+`{"data": "<base64>", "mime": "image/png"}` and is forwarded as an OpenAI/LiteLLM
+`image_url` content part on the user message; the underlying model must support
+vision (Claude 3+, GPT-4o, Gemini 1.5+, etc.). History entries may already be in
+multi-content shape if they carry attachments from prior turns.
 
 `AgentResult`:
 - `final_text: str`
@@ -257,6 +264,30 @@ result: AgentResult = agent.run(
 - `step: int`, `name: str`, `arguments: dict`, `arguments_text: str`
 - `result: Any`, `result_text: str`
 - `ok: bool`, `error: str`
+
+**Conversation persistence (`praxia.data.threads`):**
+
+`ThreadStore` saves each Agent conversation as JSON at
+`.praxia/chats/<user_id>/<thread_id>.json`. The Streamlit UI uses it via the
+`💬 Conversations` popover to list / resume / rename / delete past threads;
+ephemeral mode bypasses persistence entirely.
+
+```python
+from praxia.data.threads import ChatMessage, ChatThread, ThreadStore
+
+store = ThreadStore(memory_dir / "chats")
+thread = store.create("alice")                              # empty thread
+thread.messages.append(ChatMessage(role="user",
+                                   content="What is in this chart?",
+                                   images=[{"data": b64, "mime": "image/png"}]))
+store.save(thread)                                          # auto-titles on first user msg
+threads = store.list_for_user("alice")                      # newest-updated first
+store.rename("alice", thread.id, "Q3 chart review")
+store.delete("alice", thread.id)
+```
+
+`ChatMessage` fields: `role` / `content` / `timestamp` / `trace` (tool-use trace
+from `AgentResult.tool_calls`) / `images` (list of base64+mime dicts).
 
 **Built-in tools** (`praxia.agent.tools.builtin_tools()` returns the dict):
 
@@ -517,6 +548,8 @@ All commands accept `--help` for full args. Categories below.
 - `praxia memory show --user-id ID [--role ROLE]`
 - `praxia admin memory-policy-show`
 - `praxia admin memory-policy-set [--enforced-backend B] [--default-backend B] [--allowed B1,B2] [--default-mode M] [--mode-locked] [--accumulate-locked-roles R1,R2]`
+
+The Streamlit UI also exposes the same `MemoryAdminPolicy` (`.praxia/admin/memory_policy.json`) under **Admin → Settings → 🧠 Memory policy** as a form. There is intentionally **no user-facing memory-preference UI** — memory backend / mode is an admin-only concern. The `MemoryUserPreference` SDK class remains available for programmatic use but no UI writes to it.
 
 ### 2.10 Output exporters
 - `praxia export <input.md> <output.html|.pptx|.docx|.json> [--format] [--title]`

@@ -28,6 +28,8 @@ The system is designed to be:
 | File parsers (PDF / Office / CSV / HTML / TXT / MD) | |
 | Output exporters (HTML / PPTX / DOCX / MD / JSON) | |
 | Audio I/O (STT + TTS) | |
+| Vision / image input on chat + autonomous agent | |
+| Persistent conversation threads (resume / rename / delete) | |
 | Optional FastAPI HTTP server (`praxia serve`) | |
 | KMS-backed OAuth token encryption (5 adapters) | |
 | Production OAuth callback handler (multi-worker safe) | |
@@ -124,7 +126,7 @@ Layers are uni-directional (lower numbered layers do not import higher ones). Pl
   Layer 5 (optional): Graph layer — Zep / Graphiti for temporal KG
 ```
 
-The dual control plane (admin policy + user preference) governs Layer 1's backend choice and accumulation mode. See `praxia.memory.policy`.
+Layer 1's backend choice and accumulation mode are resolved through `MemoryAdminPolicy` (admin-managed via Streamlit Admin → Settings → Memory policy or the `praxia admin memory-policy-*` CLI). The companion `MemoryUserPreference` SDK class is still part of the resolver, but no UI surface writes to it — memory configuration is intentionally an admin-only concern. See `praxia.memory.policy`.
 
 ## 6. Configuration model
 

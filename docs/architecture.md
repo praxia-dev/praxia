@@ -102,6 +102,15 @@ The agent is also exposed as a single MCP meta-tool `autonomous_agent`
 so remote clients (Claude Desktop / Cursor) can delegate an entire
 investigation rather than orchestrating individual tools.
 
+The Streamlit UI (`praxia ui`) wraps `AutonomousAgent` with two extras:
+**vision input** (`run(..., images=[{"data": <base64>, "mime": ...}])` —
+PNG / JPG / GIF / WebP attached via the chat input's 📎 button, forwarded
+as OpenAI / LiteLLM `image_url` content parts) and **persistent
+conversation threads** (`praxia.data.threads.ThreadStore` saves each
+chat as JSON at `.praxia/chats/<user_id>/<thread_id>.json`; the
+`💬 Conversations` popover lists / resumes / renames / deletes threads).
+Ephemeral mode disables both persistence paths.
+
 See [FEATURES § 38](FEATURES.md#38-autonomous-agent-llm-driven-tool-use-loop)
 for the full tool catalog and governance details.
 

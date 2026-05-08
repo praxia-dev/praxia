@@ -242,9 +242,12 @@ result: AgentResult = agent.run(
     user_input: str,
     *,
     history: list[dict] | None = None,
+    images: list[dict[str, str]] | None = None,
     system_prompt: str | None = None,
 )
 ```
+
+`images` — 当該ターンの画像添付 (任意)。各要素は `{"data": "<base64>", "mime": "image/png"}`。OpenAI/LiteLLM の `image_url` content part として送出されるため、Vision 対応モデル (Claude 3+, GPT-4o, Gemini 1.5+ 等) が前提。`history` 側のメッセージは過去ターンに添付があった場合 multi-content 形式が含まれる場合がある。
 
 `AgentResult`:
 - `final_text: str`
@@ -257,6 +260,26 @@ result: AgentResult = agent.run(
 - `step: int`, `name: str`, `arguments: dict`, `arguments_text: str`
 - `result: Any`, `result_text: str`
 - `ok: bool`, `error: str`
+
+**会話の永続化 (`praxia.data.threads`):**
+
+`ThreadStore` が Agent 会話を 1 スレッド = 1 JSON ファイル (`.praxia/chats/<user_id>/<thread_id>.json`) で保存。Streamlit UI は `💬 会話履歴` ポップオーバから一覧 / 再開 / 改名 / 削除を行う。エフェメラルチェック ON 時は永続化を完全にスキップ。
+
+```python
+from praxia.data.threads import ChatMessage, ChatThread, ThreadStore
+
+store = ThreadStore(memory_dir / "chats")
+thread = store.create("alice")                               # 空スレッド
+thread.messages.append(ChatMessage(role="user",
+                                   content="この図表は何を示してる?",
+                                   images=[{"data": b64, "mime": "image/png"}]))
+store.save(thread)                                           # 初回ユーザメッセージで自動タイトル付与
+threads = store.list_for_user("alice")                       # 更新降順
+store.rename("alice", thread.id, "Q3 図表レビュー")
+store.delete("alice", thread.id)
+```
+
+`ChatMessage` フィールド: `role` / `content` / `timestamp` / `trace` (`AgentResult.tool_calls` の永続化形) / `images` (base64+mime の dict 配列)。
 
 **組込ツール 11 種** (`praxia.agent.tools.builtin_tools()` で取得可能):
 
@@ -517,6 +540,8 @@ reg.items() -> list[tuple[str, type[T]]]
 - `praxia memory show --user-id ID [--role ROLE]`
 - `praxia admin memory-policy-show`
 - `praxia admin memory-policy-set [--enforced-backend B] [--default-backend B] [--allowed B1,B2] [--default-mode M] [--mode-locked] [--accumulate-locked-roles R1,R2]`
+
+Streamlit UI からは **Admin → Settings → 🧠 メモリポリシー** 画面で同じ `MemoryAdminPolicy` (`.praxia/admin/memory_policy.json`) をフォーム編集可能。**ユーザ向けメモリ設定 UI は意図的に存在しません** — メモリのバックエンドとモードは管理者専管事項です。`MemoryUserPreference` SDK クラスは API としては残置 (プログラム経由の利用向け) ですが、UI からの書き込み経路はありません。
 
 ### 2.10 出力エクスポータ
 - `praxia export <input.md> <output.html|.pptx|.docx|.json> [--format] [--title]`

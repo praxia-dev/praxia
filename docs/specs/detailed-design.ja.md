@@ -261,8 +261,10 @@ class AutonomousAgent:
     max_steps: int = 10
     max_tokens_per_step: int = 4096
 
-    def run(self, user_input, *, history=None, system_prompt=None) -> AgentResult: ...
+    def run(self, user_input, *, history=None, images=None, system_prompt=None) -> AgentResult: ...
 ```
+
+`images` は当該ターンの Vision 添付 (任意): `[{"data": "<base64>", "mime": "image/png"}, ...]`。指定時は OpenAI/LiteLLM の multi-content `image_url` 形式で当該ユーザメッセージを構築。未指定時は従来通り plain string で送出 (Vision 非対応モデルへの影響なし)。`history` 側の要素は過去ターンに添付があった場合 multi-content 形式が含まれる場合がある。
 
 **ループ不変式** (1 反復 = 1 ステップ):
 
@@ -416,6 +418,8 @@ User    CLI/UI    OAuthFlow    Provider    OAuthTokenStore    Connector
 │   └── <org_id>/blocks.json
 ├── frozen/                       # Layer-4 Markdown
 │   └── instructions/
+├── chats/                        # ThreadStore — Agent 会話履歴
+│   └── <user_id>/<thread_id>.json
 ├── oauth/                        # ユーザ毎暗号化トークン
 │   └── <user_id>/
 │       └── <provider>.json       # 暗号化された blob

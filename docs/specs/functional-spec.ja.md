@@ -1992,7 +1992,7 @@ os = d.org_summary()
 
 | View | サブタブ | 主要機能 | 必要権限 (auth role) |
 |------|---------|---------|---------|
-| 🎬 Run | 🤖 Agent · 🛠 Skill | **Agent**: `st.chat_message` ベースの会話 UI、`AutonomousAgent.run(prompt, history=...)` を毎ターン呼出 (直近 3 ターン渡す)、tool-use trace 表示。**Skill**: 6 業務スキル選択 + テキスト/ファイル/音声入力 | `run_skills` |
+| 🎬 Run | 🤖 Agent · 🛠 Skill | **Agent**: `st.chat_message` ベースの会話 UI、`AutonomousAgent.run(prompt, history=..., images=...)` を毎ターン呼出 (直近 3 ターン渡す)、tool-use trace 表示。**画像入力対応** (`st.chat_input(accept_file="multiple")`、PNG/JPG/GIF/WebP) — base64 化して LiteLLM 統一 `image_url` 形式で渡す。**会話履歴の永続化** = `praxia.data.threads.ThreadStore` が `.praxia/chats/<user>/<id>.json` に JSON 保存、UI は `st.popover` ベースの `💬 会話履歴` でスレッド一覧 / 再開 / 改名 / 削除。エフェメラル ON では in-memory のみ (no disk writes)。**Skill**: 6 業務スキル選択 + テキスト/ファイル/音声入力 | `run_skills` |
 | 🧠 Knowledge | — | 個人メモリブラウズ + 共有ブロック + Skill registry (個人 + 組織昇格分) | `read_personal_memory` |
 | 📁 Data | 📁 Local · 🔌 Connector · 🔍 Browse | データフォルダ CRUD。ローカルは parent_id で多層化、cascade 削除。コネクタは外部パス登録 (admin が env で連携先有効化) | (制限なし) |
 | 📝 Prompts | ✨ Generate · 📚 Browse & edit · 📤 Distribute | PromptDesigner で生成 / 編集削除 / admin 配信 | `distribute` のみ admin |

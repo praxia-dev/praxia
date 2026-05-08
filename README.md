@@ -179,7 +179,7 @@ Plus two **utility** skills:
 | Skill | What it does |
 |---|---|
 | **`PromptDesignerSkill`** | Take a one-line task description → produce a production-grade prompt template (system + user + 2-3 few-shot examples + 5-criterion rubric) tuned for the target LLM (Claude / OpenAI / DeepSeek / Mistral / Llama / …). Save to `PromptStore`, A/B-test via `praxia.experiments`. |
-| **`OutputFormatSkill`** | Detect "PowerPoint で出して" / "as Word doc" / etc. in natural language and dispatch to the matching exporter (PPTX / DOCX / HTML / MD / JSON). |
+| **`OutputFormatSkill`** | Detect "export as PowerPoint" / "as Word doc" / etc. in natural language (English + JA / ZH / KO / ES / FR / DE / PT-BR phrases also recognized) and dispatch to the matching exporter (PPTX / DOCX / HTML / MD / JSON). |
 
 ```bash
 # Generate a prompt template for any task
@@ -252,13 +252,13 @@ result = export_as(md_text, format="pptx", title="Q3 Review")
 # result.bytes → write to disk, stream over HTTP, push via a connector
 ```
 
-`OutputFormatSkill` infers the format from natural-language hints (English **and** Japanese):
+`OutputFormatSkill` infers the format from natural-language hints across multiple languages:
 
 ```python
 from praxia.skills.output_format import OutputFormatSkill
 fs = OutputFormatSkill()
-fs.detect("レポートをパワポで").format       # → "pptx"
-fs.detect("as a Word document").format       # → "docx"
+fs.detect("export as PowerPoint").format      # → "pptx"
+fs.detect("as a Word document").format        # → "docx"
 fs.deliver(md, user_request="HTML please")    # ExporterResult with .bytes
 ```
 
@@ -630,7 +630,7 @@ Full guide: [docs/quickstart.md](docs/quickstart.md).
 
 > **Deploying it?** Two paths — fastest is `praxia ui` (full-stack); for "Praxia as a brain behind your own frontend" use the SDK or `praxia serve` (HTTP API). Setup recipes: [docs/deployment-modes.md](docs/deployment-modes.md).
 > **Building a connector?** Step-by-step recipe in [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md). The pattern is ~50 lines + an entry-point.
-> **Formal specs?** Basic design / I/F / detailed design / **functional spec (機能仕様書)** (EN + JA) under [docs/specs/](docs/specs/).
+> **Formal specs?** Basic design / I/F / detailed design / **functional spec** (EN + JA) under [docs/specs/](docs/specs/).
 > **Regression suite?** 364 tests covering auth/memory/exporters/CLI/i18n/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
 > **Multilingual?** Landing page + Streamlit UI ship in 8 languages (en / ja / zh-CN / ko / es / fr / de / pt-BR) with browser-language auto-detection — see [docs/i18n.md](docs/i18n.md).
 > **Contributing?** PRs require a DCO sign-off (`git commit -s …`). Trademark policy + GDPR notes for operators are in [docs/legal/](docs/legal/).
@@ -761,7 +761,7 @@ Praxia ships in two halves you can mix:
 | **B-1. Embedded SDK** | Your Python service `import praxia` | You already have a Python backend |
 | **B-2. HTTP service** | `praxia serve` (FastAPI) + your own frontend | Non-Python frontend, mobile, or CDN-cached UI |
 
-Both modes share the same auth, memory, and skills — only the frontend differs. Step-by-step setup, production checklist, and migration path: [docs/deployment-modes.md](docs/deployment-modes.md) / [日本語版](docs/deployment-modes.ja.md).
+Both modes share the same auth, memory, and skills — only the frontend differs. Step-by-step setup, production checklist, and migration path: [docs/deployment-modes.md](docs/deployment-modes.md) ([JA](docs/deployment-modes.ja.md)).
 
 ```bash
 # Full-stack
@@ -778,11 +778,12 @@ praxia serve --host 0.0.0.0 --port 8000 --cors-origin https://your-frontend.exam
 
 For procurement / architecture review / extension work, formal design specs are available in **EN + JA**:
 
-| Document | English | 日本語 |
+| Document | English | JA |
 |---|---|---|
-| Basic design (基本設計仕様書) | [basic-design.en.md](docs/specs/basic-design.en.md) | [basic-design.ja.md](docs/specs/basic-design.ja.md) |
-| Interface spec (I/F 仕様書) | [interface-spec.en.md](docs/specs/interface-spec.en.md) | [interface-spec.ja.md](docs/specs/interface-spec.ja.md) |
-| Detailed design (詳細設計仕様書) | [detailed-design.en.md](docs/specs/detailed-design.en.md) | [detailed-design.ja.md](docs/specs/detailed-design.ja.md) |
+| Basic design | [basic-design.en.md](docs/specs/basic-design.en.md) | [basic-design.ja.md](docs/specs/basic-design.ja.md) |
+| Interface spec | [interface-spec.en.md](docs/specs/interface-spec.en.md) | [interface-spec.ja.md](docs/specs/interface-spec.ja.md) |
+| Detailed design | [detailed-design.en.md](docs/specs/detailed-design.en.md) | [detailed-design.ja.md](docs/specs/detailed-design.ja.md) |
+| Functional spec | — | [functional-spec.ja.md](docs/specs/functional-spec.ja.md) |
 
 ---
 
@@ -802,7 +803,7 @@ Praxia uses a **single extensibility primitive** (`praxia.extensions.Registry`) 
 | Multi-agent flow | `Flow` | `FLOWS` | `praxia.flows` | ~30 |
 | Industry recipe | Markdown | n/a | — | n/a |
 
-**Custom connector tutorial** (end-to-end Notion example): [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md) / [日本語版](docs/CUSTOM_CONNECTORS.ja.md).
+**Custom connector tutorial** (end-to-end Notion example): [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md) ([JA](docs/CUSTOM_CONNECTORS.ja.md)).
 
 **Two ways to register**:
 
