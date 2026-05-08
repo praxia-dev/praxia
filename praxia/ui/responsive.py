@@ -186,7 +186,10 @@ header[data-testid="stHeader"] {
 }
 /* Re-show + boost the sidebar collapse/expand chevron specifically.
    It needs visibility:visible (overrides parent), pointer-events:
-   auto (overrides parent), and z-index above the top-nav. */
+   auto (overrides parent), and z-index above the top-nav. Pad
+   ~0.5rem from the very top of the viewport so the icon isn't
+   clipped by the browser chrome / Streamlit's natural negative-top
+   styling. */
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"],
 header[data-testid="stHeader"] [data-testid*="ollapse"],
@@ -195,6 +198,20 @@ header[data-testid="stHeader"] button[kind="header"] {
     visibility: visible !important;
     pointer-events: auto !important;
     z-index: 100001 !important;
+    top: 0.5rem !important;
+}
+
+/* Aggressively hide every other button inside the header — Deploy,
+   Settings/dev menu, share, Streamlit's own toolbar buttons —
+   without taking out the sidebar chevron. Streamlit shuffles the
+   testids between releases, so target by what to KEEP rather than
+   what to drop. */
+header[data-testid="stHeader"] button:not([kind="header"]):not([data-testid*="ollapse"]):not([data-testid*="idebar" i]),
+header[data-testid="stHeader"] [data-testid*="eploy" i],
+[data-testid="stDeploymentButton"],
+[data-testid="stAppDeployButton"],
+button[data-testid*="eploy" i] {
+    display: none !important;
 }
 footer { visibility: hidden !important; height: 0 !important; }
 
@@ -225,6 +242,17 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     margin: 0 !important;
     border-bottom: 1px solid rgba(127, 127, 127, 0.18);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* When the sidebar is expanded, push the top-nav left edge to the
+   right of it so the leftmost nav button (Run) isn't covered. CSS
+   :has() (Chrome 105+ / Safari 15.4+ / Firefox 121+ — universally
+   supported in the browsers Streamlit users hit). 21rem is
+   Streamlit's default expanded sidebar width; resizable users may
+   see a small gap or overlap, the buttons stay reachable either
+   way. */
+body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav {
+    left: 21rem !important;
 }
 
 /* (Sidebar chevron z-index/visibility handling moved below into the
