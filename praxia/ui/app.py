@@ -41,7 +41,12 @@ from praxia.skills import BUSINESS_SKILLS
 from praxia.ui.i18n import t, detect_language, SUPPORTED, LANG_DISPLAY
 from praxia.ui.responsive import inject_mobile_css
 
-st.set_page_config(page_title="Praxia", page_icon="🪡", layout="wide")
+st.set_page_config(
+    page_title="Praxia",
+    page_icon="🪡",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 inject_mobile_css()
 
 

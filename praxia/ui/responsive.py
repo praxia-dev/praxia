@@ -193,65 +193,45 @@ hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; }
 [data-testid="stDecoration"] { display: none !important; }
 .stDeployButton { display: none !important; }
 #MainMenu { visibility: hidden !important; height: 0 !important; }
-/* stHeader handling — DO NOT display:none it, otherwise the
-   sidebar-reopen chevron (a child of stHeader) disappears too.
-   But also DO NOT raise its z-index globally, otherwise it covers
-   our fixed top-nav and hides the Run/Prompts/etc. buttons.
-   Compromise: collapse the header to 0 height + invisible, and
-   selectively un-hide and z-index-bump *only* the controls inside
-   it that we actually need (the sidebar chevron). visibility:
-   visible on a child overrides visibility: hidden on the parent. */
+/* The sidebar is permanently expanded — no collapse / reopen chevron.
+   Hide the entire stHeader (which holds the chevron, the deploy button,
+   and the dev menu) outright. The sidebar still has its own internal
+   navigation; the user just can't shrink it to a 0-width strip. This
+   is much simpler than trying to keep the chevron visible in some DOM
+   states and not others, and it lets the topnav assume a fixed left
+   offset of 21rem at all times. */
 header[data-testid="stHeader"] {
-    background: transparent !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
+    display: none !important;
 }
-/* Re-show + boost the sidebar collapse/expand chevron specifically.
-   Force position:fixed so `top` actually applies (Streamlit's
-   natural style on this element is sometimes static — the parent
-   stHeader's height:0 + absolute children + Streamlit's negative
-   top conspired to clip the chevron's top half). Pinning at
-   top:0.75rem; left:0.6rem matches the y-position of the in-
-   sidebar chevron when the sidebar is expanded, so the icon
-   doesn't seem to "jump" between the two states. */
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"],
-header[data-testid="stHeader"] [data-testid*="ollapse"],
-header[data-testid="stHeader"] [data-testid*="idebar" i],
-header[data-testid="stHeader"] button[kind="header"] {
-    display: block !important;        /* defeat any ancestor display:none */
+[data-testid="stSidebarCollapseButton"],
+button[data-testid*="ollapse" i],
+button[data-testid*="idebarCollapse" i] {
+    display: none !important;
+}
+/* Belt-and-suspenders: prevent Streamlit from EVER rendering the
+   sidebar at width 0. Even if a stale localStorage entry tries to
+   restore a collapsed state, the user can't end up stranded without
+   navigation. */
+[data-testid="stSidebar"] {
+    transform: none !important;
     visibility: visible !important;
-    pointer-events: auto !important;
-    z-index: 100001 !important;
-    position: fixed !important;
-    top: 0.75rem !important;
-    left: 0.6rem !important;
-    width: auto !important;           /* defeat the width:0 width-clobber */
-    height: auto !important;          /* same for height */
-    margin: 0 !important;
-    transform: none !important;       /* defeat any Streamlit translate */
+    min-width: 21rem !important;
+}
+[data-testid="stSidebar"][aria-expanded="false"] {
+    transform: none !important;
+    visibility: visible !important;
+    margin-left: 0 !important;
 }
 
-/* Reserve a left gutter in the top-nav when the sidebar is
-   collapsed so the chevron at left:0.6rem doesn't visually overlap
-   the Run button. When the sidebar is expanded the chevron lives
-   inside the sidebar (different DOM node) so no gutter is needed. */
+/* Reserve a small left gutter in the topnav for breathing room. */
 .st-key-praxia_topnav {
-    padding-left: 3rem !important;
-}
-body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav {
     padding-left: 1rem !important;
 }
 
-/* Aggressively hide every other button inside the header — Deploy,
-   Settings/dev menu, share, Streamlit's own toolbar buttons —
-   without taking out the sidebar chevron. Streamlit shuffles the
-   testids between releases, so target by what to KEEP rather than
-   what to drop. */
-header[data-testid="stHeader"] button:not([kind="header"]):not([data-testid*="ollapse"]):not([data-testid*="idebar" i]),
-header[data-testid="stHeader"] [data-testid*="eploy" i],
+/* Aggressively hide leftover Deploy / dev menu chrome that sometimes
+   renders outside the (now-hidden) stHeader. */
 [data-testid="stDeploymentButton"],
 [data-testid="stAppDeployButton"],
 button[data-testid*="eploy" i] {
@@ -268,17 +248,19 @@ footer { visibility: hidden !important; height: 0 !important; }
 }
 section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 
-/* --- Top-bar nav: locked to the viewport top via position: fixed.
+/* --- Top-bar nav: locked to the viewport top via position: fixed,
+   permanently offset by 21rem on the left to clear the always-visible
+   sidebar. The sidebar can no longer be collapsed (chevron is hidden,
+   initial_sidebar_state="expanded" + min-width: 21rem on stSidebar),
+   so we don't need :has() to swap left between 0 and 21rem.
    Sticky was unreliable across Streamlit DOM revisions because
    intermediate containers occasionally apply overflow rules that
    break the sticky's scroll context. Fixed is brute-force but
-   bullet-proof. The sidebar's higher z-index naturally overlays the
-   left edge of our bar, so the user never sees the bar bleed under
-   the sidebar even though we span the full viewport width. */
+   bullet-proof. */
 .st-key-praxia_topnav {
     position: fixed !important;
     top: 0 !important;
-    left: 0 !important;
+    left: 21rem !important;
     right: 0 !important;
     z-index: 9999 !important;
     background-color: #ffffff;  /* light; dark overrides below */
@@ -287,22 +269,6 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     border-bottom: 1px solid rgba(127, 127, 127, 0.18);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
-
-/* When the sidebar is expanded, push the top-nav left edge to the
-   right of it so the leftmost nav button (Run) isn't covered. CSS
-   :has() (Chrome 105+ / Safari 15.4+ / Firefox 121+ — universally
-   supported in the browsers Streamlit users hit). 21rem is
-   Streamlit's default expanded sidebar width; resizable users may
-   see a small gap or overlap, the buttons stay reachable either
-   way. */
-body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav {
-    left: 21rem !important;
-}
-
-/* (Sidebar chevron z-index/visibility handling moved below into the
-   stHeader block — see further down. Forcing position:fixed + top:0
-   + left:0 here was making the chevron appear over the Run button
-   when the sidebar was open, which is why this rule got removed.) */
 
 /* Reserve clearance at top + bottom of the main content so the
    fixed top-nav doesn't cover the first item, and the fixed chat
@@ -313,16 +279,16 @@ body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav 
     padding-bottom: 8rem !important;
 }
 
-/* Pin the chat input to the viewport bottom. st.chat_input's
-   default behavior is "stick to the bottom of its container," but
-   inside a tab it pins to the tab's bottom rather than the
-   viewport's. Force viewport-fixed positioning so the user always
-   has the input visible. */
+/* Pin the chat input to the viewport bottom, offset to the right of
+   the always-visible 21rem sidebar so it doesn't slide underneath it.
+   Streamlit's default "stick to container bottom" behavior pins it to
+   the active tab/container, not the viewport, which means the input
+   would scroll off-screen during long conversations. */
 [data-testid="stChatInput"],
 [data-testid="stBottomBlockContainer"] {
     position: fixed !important;
     bottom: 0 !important;
-    left: 0 !important;
+    left: 21rem !important;
     right: 0 !important;
     z-index: 9000 !important;
     background-color: var(--background-color, #ffffff) !important;
