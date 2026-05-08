@@ -2785,68 +2785,140 @@ elif mode == "admin":
         from praxia.memory.policy import MemoryAdminPolicy
         _BACKEND_CHOICES = ["json", "mem0", "langmem", "letta", "zep", "hindsight"]
         _MODE_CHOICES = ["accumulate", "read_only"]
+        _STRATEGY_CHOICES = ["single", "composite", "routed"]
+        _FUSION_CHOICES = ["rrf", "union", "intersection", "weighted", "llm_rerank"]
+        _ROUTER_CHOICES = ["rule", "llm"]
 
         _admin_pol = MemoryAdminPolicy.load(loom.config.memory_dir)
 
-        mp_col1, mp_col2 = st.columns(2)
-        with mp_col1:
-            mp_default_backend = st.selectbox(
-                t("admin.settings.mp_default_backend"),
+        # Strategy selector — drives which sub-form is shown.
+        mp_strategy = st.radio(
+            t("admin.settings.mp_strategy_label"),
+            options=_STRATEGY_CHOICES,
+            index=(
+                _STRATEGY_CHOICES.index(_admin_pol.backend_strategy)
+                if _admin_pol.backend_strategy in _STRATEGY_CHOICES else 0
+            ),
+            format_func=lambda s: t(f"admin.settings.mp_strategy.{s}"),
+            horizontal=True,
+            key="mp_strategy",
+            help=t("admin.settings.mp_strategy_help"),
+        )
+
+        # ---- Single mode ----------------------------------------------
+        mp_single_backend = _admin_pol.backend
+        mp_composite_backends = list(_admin_pol.composite_backends or [])
+        mp_composite_fusion = _admin_pol.composite_fusion
+        mp_composite_write_to = _admin_pol.composite_write_to
+        mp_routed_backends = list(_admin_pol.routed_backends or [])
+        mp_routed_router = _admin_pol.routed_router
+        mp_routed_write_to = _admin_pol.routed_write_to
+
+        if mp_strategy == "single":
+            mp_single_backend = st.selectbox(
+                t("admin.settings.mp_single_backend"),
                 options=_BACKEND_CHOICES,
                 index=(
-                    _BACKEND_CHOICES.index(_admin_pol.default_backend)
-                    if _admin_pol.default_backend in _BACKEND_CHOICES else 0
+                    _BACKEND_CHOICES.index(_admin_pol.backend)
+                    if _admin_pol.backend in _BACKEND_CHOICES else 0
                 ),
-                key="mp_default_backend",
-                help=t("admin.settings.mp_default_backend_help"),
+                key="mp_single_backend",
+                help=t("admin.settings.mp_single_backend_help"),
             )
-            mp_enforced = st.selectbox(
-                t("admin.settings.mp_enforced_backend"),
-                options=["__none__"] + _BACKEND_CHOICES,
-                index=(
-                    _BACKEND_CHOICES.index(_admin_pol.enforced_backend) + 1
-                    if _admin_pol.enforced_backend in _BACKEND_CHOICES else 0
-                ),
-                format_func=lambda x: (
-                    t("admin.settings.mp_enforced_none") if x == "__none__" else x
-                ),
-                key="mp_enforced_backend",
-                help=t("admin.settings.mp_enforced_backend_help"),
-            )
-            mp_allowed = st.multiselect(
-                t("admin.settings.mp_allowed_backends"),
+        elif mp_strategy == "composite":
+            st.caption(t("admin.settings.mp_composite_intro"))
+            mp_composite_backends = st.multiselect(
+                t("admin.settings.mp_composite_backends"),
                 options=_BACKEND_CHOICES,
-                default=_admin_pol.allowed_backends,
-                key="mp_allowed_backends",
-                help=t("admin.settings.mp_allowed_backends_help"),
+                default=[b for b in mp_composite_backends if b in _BACKEND_CHOICES] or ["json"],
+                key="mp_composite_backends",
+                help=t("admin.settings.mp_composite_backends_help"),
             )
-        with mp_col2:
-            mp_default_mode = st.selectbox(
-                t("admin.settings.mp_default_mode"),
-                options=_MODE_CHOICES,
-                index=_MODE_CHOICES.index(_admin_pol.default_mode),
-                format_func=lambda m: t(f"admin.settings.mp_mode.{m}"),
-                key="mp_default_mode",
-                help=t("admin.settings.mp_default_mode_help"),
+            ccol1, ccol2 = st.columns(2)
+            with ccol1:
+                mp_composite_fusion = st.selectbox(
+                    t("admin.settings.mp_composite_fusion"),
+                    options=_FUSION_CHOICES,
+                    index=(
+                        _FUSION_CHOICES.index(mp_composite_fusion)
+                        if mp_composite_fusion in _FUSION_CHOICES else 0
+                    ),
+                    format_func=lambda f: t(f"admin.settings.mp_fusion.{f}"),
+                    key="mp_composite_fusion",
+                    help=t("admin.settings.mp_composite_fusion_help"),
+                )
+            with ccol2:
+                _wt_options = mp_composite_backends or _BACKEND_CHOICES
+                mp_composite_write_to = st.selectbox(
+                    t("admin.settings.mp_composite_write_to"),
+                    options=_wt_options,
+                    index=(
+                        _wt_options.index(mp_composite_write_to)
+                        if mp_composite_write_to in _wt_options else 0
+                    ),
+                    key="mp_composite_write_to",
+                    help=t("admin.settings.mp_composite_write_to_help"),
+                )
+        elif mp_strategy == "routed":
+            st.caption(t("admin.settings.mp_routed_intro"))
+            mp_routed_backends = st.multiselect(
+                t("admin.settings.mp_routed_backends"),
+                options=_BACKEND_CHOICES,
+                default=[b for b in mp_routed_backends if b in _BACKEND_CHOICES] or ["json"],
+                key="mp_routed_backends",
+                help=t("admin.settings.mp_routed_backends_help"),
             )
-            # Mode-lock + role-accumulate-lock controls used to gate users
-            # from changing their own preference. The user-facing memory
-            # pref UI was deliberately removed (admin-only memory config),
-            # so there's nothing left for these to lock against. We keep
-            # the dataclass fields for CLI/SDK callers but hide them here
-            # to match what's actually reachable from the UI.
+            rcol1, rcol2 = st.columns(2)
+            with rcol1:
+                mp_routed_router = st.selectbox(
+                    t("admin.settings.mp_routed_router"),
+                    options=_ROUTER_CHOICES,
+                    index=(
+                        _ROUTER_CHOICES.index(mp_routed_router)
+                        if mp_routed_router in _ROUTER_CHOICES else 0
+                    ),
+                    format_func=lambda r: t(f"admin.settings.mp_router.{r}"),
+                    key="mp_routed_router",
+                    help=t("admin.settings.mp_routed_router_help"),
+                )
+            with rcol2:
+                _rwt_options = mp_routed_backends or _BACKEND_CHOICES
+                mp_routed_write_to = st.selectbox(
+                    t("admin.settings.mp_composite_write_to"),
+                    options=_rwt_options,
+                    index=(
+                        _rwt_options.index(mp_routed_write_to)
+                        if mp_routed_write_to in _rwt_options else 0
+                    ),
+                    key="mp_routed_write_to",
+                    help=t("admin.settings.mp_composite_write_to_help"),
+                )
+
+        st.divider()
+        # Memory accumulation mode — applies regardless of strategy.
+        mp_default_mode = st.selectbox(
+            t("admin.settings.mp_default_mode"),
+            options=_MODE_CHOICES,
+            index=_MODE_CHOICES.index(_admin_pol.default_mode),
+            format_func=lambda m: t(f"admin.settings.mp_mode.{m}"),
+            key="mp_default_mode",
+            help=t("admin.settings.mp_default_mode_help"),
+        )
 
         if st.button(
             t("admin.settings.mp_apply"), type="primary",
             key="mp_apply_btn",
         ):
             new_pol = MemoryAdminPolicy(
-                enforced_backend=(None if mp_enforced == "__none__" else mp_enforced),
-                default_backend=mp_default_backend,
-                allowed_backends=mp_allowed,
+                backend_strategy=mp_strategy,
+                backend=mp_single_backend,
+                composite_backends=mp_composite_backends,
+                composite_fusion=mp_composite_fusion,
+                composite_write_to=mp_composite_write_to,
+                routed_backends=mp_routed_backends,
+                routed_router=mp_routed_router,
+                routed_write_to=mp_routed_write_to,
                 default_mode=mp_default_mode,
-                mode_locked=_admin_pol.mode_locked,
-                accumulate_locked_to=_admin_pol.accumulate_locked_to,
             )
             new_pol.save(loom.config.memory_dir)
             try:

@@ -71,9 +71,21 @@ class Praxia:
         self.llm = LLM(resolved_model)
         self.config.memory_dir.mkdir(parents=True, exist_ok=True)
 
+        # Build the Layer-1 backend per the admin MemoryAdminPolicy.
+        # For 'single' mode this is just a backend name string;
+        # 'composite' / 'routed' return a fully-built MemoryBackend
+        # instance. PersonalMemory accepts both shapes.
+        try:
+            from praxia.memory.policy import build_personal_backend
+            _resolved_backend = build_personal_backend(
+                self.config.memory_dir, user_id=self.config.user_id
+            )
+        except Exception:
+            _resolved_backend = "auto"
         self.personal_memory: PersonalMemory | None = (
             PersonalMemory(
                 user_id=self.config.user_id,
+                backend=_resolved_backend,
                 storage_dir=self.config.memory_dir / "personal",
             )
             if self.config.enable_personal_memory

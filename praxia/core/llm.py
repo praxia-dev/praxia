@@ -410,7 +410,25 @@ class LLM:
             "temperature": overrides.get("temperature", self.config.temperature),
         }
         if self.config.max_tokens or "max_tokens" in overrides:
-            kwargs["max_tokens"] = overrides.get("max_tokens", self.config.max_tokens)
+            _mt_value = overrides.get("max_tokens", self.config.max_tokens)
+            # GPT-5.x and the o-series (o1/o3/o4) require
+            # `max_completion_tokens` and reject the legacy
+            # `max_tokens`. Same for the same models exposed via
+            # Azure OpenAI Service. Detect by model id and route to
+            # the right kwarg name; LiteLLM doesn't always translate
+            # this for Azure.
+            _resolved = self.config.resolve_model().lower()
+            _needs_completion_tokens = (
+                "gpt-5" in _resolved
+                or "/o1" in _resolved or _resolved.endswith("/o1")
+                or "/o3" in _resolved or _resolved.endswith("/o3")
+                or "/o4" in _resolved or _resolved.endswith("/o4")
+                or "-o1-" in _resolved or "-o3-" in _resolved or "-o4-" in _resolved
+            )
+            if _needs_completion_tokens:
+                kwargs["max_completion_tokens"] = _mt_value
+            else:
+                kwargs["max_tokens"] = _mt_value
         if self.config.api_key:
             kwargs["api_key"] = self.config.api_key
         if self.config.api_base:

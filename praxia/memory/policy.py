@@ -29,14 +29,65 @@ MemoryMode = Literal["accumulate", "read_only"]
 
 @dataclass
 class MemoryAdminPolicy:
-    """System-wide policy. Admin writes; users observe."""
+    """System-wide policy. Admin writes; users observe.
 
-    enforced_backend: str | None = None        # if set, overrides user choice
-    default_backend: str = "json"
-    allowed_backends: list[str] = field(default_factory=list)  # empty = any
+    The policy now describes the **single backend strategy** every user
+    is locked into — there is no per-user override path through the UI
+    anymore. The `backend_strategy` discriminator decides how the Layer-1
+    backend is built:
+
+    - ``single``    — one backend for everyone (the default and simplest)
+    - ``composite`` — fan out reads to several backends and fuse via
+                       Reciprocal Rank Fusion / union / intersection /
+                       weighted / llm_rerank. Writes go to a single
+                       chosen target.
+    - ``routed``    — pick a backend per query via a router (rule-based
+                       regex matcher or LLM-driven). Writes go to a
+                       single chosen target.
+
+    Composite + routed mirror the SDK constructs in
+    ``praxia.memory.composite`` and ``praxia.memory.router``, exposed
+    here so the multi-backend story is admin-configurable from the UI.
+    """
+
+    # ---- backend strategy --------------------------------------------------
+    backend_strategy: Literal["single", "composite", "routed"] = "single"
+    # 'single' mode: the one backend used for everyone.
+    backend: str = "json"
+
+    # 'composite' mode
+    composite_backends: list[str] = field(default_factory=list)
+    composite_fusion: Literal[
+        "rrf", "union", "intersection", "weighted", "llm_rerank"
+    ] = "rrf"
+    composite_write_to: str = ""
+
+    # 'routed' mode
+    routed_backends: list[str] = field(default_factory=list)
+    routed_router: Literal["rule", "llm"] = "rule"
+    routed_write_to: str = ""
+
+    # ---- memory accumulation mode -----------------------------------------
     default_mode: MemoryMode = "accumulate"
-    mode_locked: bool = False                  # if True, users cannot override
-    accumulate_locked_to: list[str] = field(default_factory=list)  # roles forced to accumulate
+
+    # ---- legacy fields (kept so old policy.json files still load) ---------
+    # Treat these as deprecated; the post-init migrates them into the
+    # canonical fields above. Don't read them from new code.
+    enforced_backend: str | None = None
+    default_backend: str = "json"
+    allowed_backends: list[str] = field(default_factory=list)
+    mode_locked: bool = False
+    accumulate_locked_to: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        # Migrate from old schema. Old policies set enforced_backend or
+        # default_backend; if the new `backend` field is still at the
+        # bare default, prefer enforced > default from the legacy fields.
+        if self.backend == "json" and self.backend_strategy == "single":
+            if self.enforced_backend:
+                self.backend = self.enforced_backend
+            elif self.default_backend and self.default_backend != "json":
+                self.backend = self.default_backend
 
     @classmethod
     def load(cls, storage_dir: Path | str) -> "MemoryAdminPolicy":
@@ -55,6 +106,8 @@ class MemoryAdminPolicy:
         return path
 
     def is_backend_allowed(self, backend: str) -> bool:
+        # Retained for backwards compat with code/tests that still call
+        # this. New code paths route everything through `backend_strategy`.
         if self.enforced_backend is not None:
             return backend == self.enforced_backend
         if not self.allowed_backends:
@@ -174,10 +227,92 @@ def resolve_memory_config(
     )
 
 
+def build_personal_backend(
+    storage_dir: Path | str,
+    *,
+    user_id: str,
+):
+    """Build the Layer-1 backend object for a user according to the
+    current MemoryAdminPolicy.
+
+    Returns either:
+      - a string ("json", "mem0", ...) — caller should pass it to
+        ``PersonalMemory(backend=name, ...)`` or ``load_backend(name)``
+      - a fully-instantiated MemoryBackend object (CompositeBackend
+        or RoutedBackend) — caller should pass it directly.
+
+    The orchestrator already accepts both shapes via PersonalMemory's
+    ``backend`` arg, so the caller doesn't need to branch on the return
+    type.
+
+    Why returning a union: simple ``single`` policies get the cheap
+    string path (lazy import of optional deps inside load_backend);
+    composite/routed need a constructed object because there's no
+    1:1 backend name for them.
+    """
+    storage_dir = Path(storage_dir)
+    admin = MemoryAdminPolicy.load(storage_dir)
+    if admin.backend_strategy == "single":
+        # The string path — load_backend (called by PersonalMemory
+        # internally with backend=this string) handles lazy imports.
+        return admin.backend or "json"
+
+    # Composite / Routed need actual backend instances.
+    from praxia.memory.backends import load_backend
+    if admin.backend_strategy == "composite":
+        from praxia.memory.composite import CompositeBackend, WeightedBackend
+        names = admin.composite_backends or []
+        if not names:
+            return "json"  # misconfigured; fall back rather than crash
+        wrapped: list[WeightedBackend] = []
+        for n in names:
+            kwargs = {"storage_dir": storage_dir / "personal"} if n == "json" else {}
+            try:
+                wrapped.append(WeightedBackend(name=n, backend=load_backend(n, **kwargs)))
+            except Exception:
+                # Skip backends that fail to init (e.g. missing API key)
+                # rather than blowing up the whole stack.
+                continue
+        if not wrapped:
+            return "json"
+        return CompositeBackend(
+            backends=wrapped,
+            fusion=admin.composite_fusion,  # type: ignore[arg-type]
+            write_to=admin.composite_write_to or wrapped[0].name,
+        )
+
+    if admin.backend_strategy == "routed":
+        from praxia.memory.router import RoutedBackend, RuleRouter, LLMRouter
+        names = admin.routed_backends or []
+        if not names:
+            return "json"
+        backends_dict = {}
+        for n in names:
+            kwargs = {"storage_dir": storage_dir / "personal"} if n == "json" else {}
+            try:
+                backends_dict[n] = load_backend(n, **kwargs)
+            except Exception:
+                continue
+        if not backends_dict:
+            return "json"
+        write_to = admin.routed_write_to or next(iter(backends_dict))
+        if write_to not in backends_dict:
+            write_to = next(iter(backends_dict))
+        router = LLMRouter() if admin.routed_router == "llm" else RuleRouter()
+        return RoutedBackend(
+            backends=backends_dict,
+            router=router,
+            write_to=write_to,
+        )
+
+    return "json"
+
+
 __all__ = [
     "MemoryMode",
     "MemoryAdminPolicy",
     "MemoryUserPreference",
     "ResolvedMemoryConfig",
     "resolve_memory_config",
+    "build_personal_backend",
 ]
