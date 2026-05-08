@@ -32,7 +32,7 @@ from typing import Any
 import streamlit as st
 
 from praxia import Praxia, LLM
-from praxia.core.llm import DEFAULT_ALIASES
+from praxia.core.llm import DEFAULT_ALIASES, LLM_PROVIDERS, provider_for_model
 from praxia.data.scopes import DataScope, ScopeRegistry
 from praxia.data.threads import ChatMessage, ChatThread, ThreadStore
 from praxia.flows import LogicCheckerFlow, RAGOptimizationFlow, SalesAgentFlow
@@ -42,6 +42,28 @@ from praxia.ui.responsive import inject_mobile_css
 
 st.set_page_config(page_title="Praxia", page_icon="🪡", layout="wide")
 inject_mobile_css()
+
+
+# =====================================================================
+# Hydrate os.environ from .env + .praxia/config.toml so third-party
+# libraries (LiteLLM, OpenAI SDK, Mem0, etc.) actually see API keys
+# saved via Admin → Settings. PraxiaConfig.get() reads env first then
+# falls back to TOML; we mirror the TOML values into env so libraries
+# that read os.environ directly (LiteLLM does) can find them. Real
+# env vars set in the shell are never overwritten — only missing
+# slots get filled.
+# =====================================================================
+try:
+    from praxia.config import KNOWN_KEYS as _KNOWN_KEYS
+    from praxia.config import PraxiaConfig as _PraxiaConfig
+    _PraxiaConfig.load_dotenv()
+    for _ck in _KNOWN_KEYS:
+        if _ck not in os.environ:
+            _cv = _PraxiaConfig.get(_ck)
+            if _cv:
+                os.environ[_ck] = _cv
+except Exception:
+    pass
 
 try:
     from streamlit_option_menu import option_menu
@@ -2290,30 +2312,47 @@ elif mode == "admin":
         # Tenant runtime: LLM model + memory backend (admin-only,
         # because the LLM choice depends on which API key is configured).
         st.subheader(t("admin.settings.runtime_h"))
-        col_m, col_b = st.columns(2)
+        col_p, col_m, col_b = st.columns(3)
+        current_model = st.session_state.get("praxia_model", _default_model)
+        # Resolve alias to full model id for matching against the provider map.
+        _resolved_current = DEFAULT_ALIASES.get(current_model, current_model)
+        current_provider = provider_for_model(current_model)
+        provider_options = list(LLM_PROVIDERS.keys()) + ["Custom"]
+        with col_p:
+            picked_provider = st.selectbox(
+                t("admin.settings.provider_label"),
+                options=provider_options,
+                index=(
+                    provider_options.index(current_provider)
+                    if current_provider in provider_options else 0
+                ),
+                key="settings_provider_pick",
+            )
         with col_m:
-            model_options = list(DEFAULT_ALIASES.keys()) + ["custom"]
-            current_model = st.session_state.get("praxia_model", _default_model)
-            preset_index = (
-                model_options.index(current_model)
-                if current_model in DEFAULT_ALIASES
-                else len(model_options) - 1
-            )
-            picked_model = st.selectbox(
-                t("admin.settings.model_label"),
-                options=model_options,
-                index=preset_index,
-                key="settings_model_pick",
-            )
-            if picked_model == "custom":
+            if picked_provider == "Custom":
                 picked_model = st.text_input(
                     t("admin.settings.model_custom"),
                     value=(
-                        current_model if current_model not in DEFAULT_ALIASES
+                        _resolved_current
+                        if "/" in _resolved_current
                         else "anthropic/claude-opus-4-7"
                     ),
                     key="settings_model_custom_input",
                 )
+            else:
+                models_for_provider = LLM_PROVIDERS[picked_provider]
+                labels = [m[0] for m in models_for_provider]
+                ids = [m[1] for m in models_for_provider]
+                # Default to current model if it sits inside this provider's
+                # list; otherwise fall through to the first option.
+                default_idx = ids.index(_resolved_current) if _resolved_current in ids else 0
+                picked_label = st.selectbox(
+                    t("admin.settings.model_label"),
+                    options=labels,
+                    index=default_idx,
+                    key="settings_model_pick",
+                )
+                picked_model = ids[labels.index(picked_label)]
         with col_b:
             backend_options = ["json", "mem0", "langmem", "letta", "zep"]
             current_backend = st.session_state.get("praxia_backend", "json")

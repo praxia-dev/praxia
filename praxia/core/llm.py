@@ -50,14 +50,24 @@ def _import_litellm():  # type: ignore[no-untyped-def]
 
 # Friendly aliases — users can write "claude" instead of "anthropic/claude-opus-4-7"
 DEFAULT_ALIASES: dict[str, str] = {
+    # Anthropic — Claude 4.x family
     "claude": "anthropic/claude-opus-4-7",
+    "claude-opus": "anthropic/claude-opus-4-7",
     "claude-sonnet": "anthropic/claude-sonnet-4-6",
-    "claude-haiku": "anthropic/claude-haiku-4-5-20251001",
+    "claude-haiku": "anthropic/claude-haiku-4-5",
+    # OpenAI
     "chatgpt": "openai/gpt-4o",
     "gpt-4o": "openai/gpt-4o",
+    "gpt-4o-mini": "openai/gpt-4o-mini",
     "o1": "openai/o1",
+    "o1-mini": "openai/o1-mini",
+    "o3-mini": "openai/o3-mini",
+    # Google Gemini
     "gemini": "gemini/gemini-2.0-pro",
+    "gemini-pro": "gemini/gemini-2.0-pro",
     "gemini-flash": "gemini/gemini-2.0-flash",
+    "gemini-1.5-pro": "gemini/gemini-1.5-pro",
+    # Alibaba Qwen
     "qwen": "dashscope/qwen-max",
     "qwen-72b": "dashscope/qwen2.5-72b-instruct",
     "qwen-local": "ollama/qwen2.5:14b",
@@ -76,7 +86,9 @@ DEFAULT_ALIASES: dict[str, str] = {
     "mistral-small": "mistral/mistral-small-latest",
     "codestral": "mistral/codestral-latest",
     # xAI Grok
-    "grok": "xai/grok-2-latest",
+    "grok": "xai/grok-3-latest",
+    "grok-3": "xai/grok-3-latest",
+    "grok-2": "xai/grok-2-latest",
     # Llama — fastest path is Groq (cloud) or Ollama (local).
     "llama": "groq/llama-3.3-70b-versatile",
     "llama-local": "ollama/llama3.3:70b",
@@ -84,9 +96,79 @@ DEFAULT_ALIASES: dict[str, str] = {
     "command-r": "cohere/command-r-plus",
     # Perplexity — Sonar models do web search internally; useful for research-style agents.
     "perplexity": "perplexity/llama-3.1-sonar-large-128k-online",
+    "perplexity-small": "perplexity/llama-3.1-sonar-small-128k-online",
     # Microsoft Phi — small / efficient, the "edge" companion to Gemma.
     "phi": "ollama/phi3.5:3.8b",
 }
+
+
+# Provider → list of (display_label, full_model_id) for the UI picker.
+# Display label is what the user sees in the dropdown; full_model_id is
+# what gets stored in session_state and passed to LiteLLM.
+LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
+    "Anthropic": [
+        ("Claude Opus 4.7 (most capable)", "anthropic/claude-opus-4-7"),
+        ("Claude Sonnet 4.6 (balanced)", "anthropic/claude-sonnet-4-6"),
+        ("Claude Haiku 4.5 (fastest, cheapest)", "anthropic/claude-haiku-4-5"),
+    ],
+    "OpenAI": [
+        ("GPT-4o", "openai/gpt-4o"),
+        ("GPT-4o mini (cheap)", "openai/gpt-4o-mini"),
+        ("o1 (reasoning)", "openai/o1"),
+        ("o1 mini (reasoning, cheap)", "openai/o1-mini"),
+        ("o3 mini (reasoning, latest)", "openai/o3-mini"),
+    ],
+    "Google": [
+        ("Gemini 2.0 Pro", "gemini/gemini-2.0-pro"),
+        ("Gemini 2.0 Flash (fast/cheap)", "gemini/gemini-2.0-flash"),
+        ("Gemini 1.5 Pro (long context)", "gemini/gemini-1.5-pro"),
+    ],
+    "DeepSeek": [
+        ("DeepSeek V3 (chat)", "deepseek/deepseek-chat"),
+        ("DeepSeek R1 (reasoning)", "deepseek/deepseek-reasoner"),
+    ],
+    "Mistral": [
+        ("Mistral Large", "mistral/mistral-large-latest"),
+        ("Mistral Small (cheap)", "mistral/mistral-small-latest"),
+        ("Codestral (code-tuned)", "mistral/codestral-latest"),
+    ],
+    "xAI": [
+        ("Grok 3", "xai/grok-3-latest"),
+        ("Grok 2", "xai/grok-2-latest"),
+    ],
+    "Cohere": [
+        ("Command R+", "cohere/command-r-plus"),
+    ],
+    "Groq (fast Llama)": [
+        ("Llama 3.3 70B", "groq/llama-3.3-70b-versatile"),
+    ],
+    "Perplexity (web-augmented)": [
+        ("Sonar Large 128k (online)", "perplexity/llama-3.1-sonar-large-128k-online"),
+        ("Sonar Small 128k (online)", "perplexity/llama-3.1-sonar-small-128k-online"),
+    ],
+    "Alibaba Qwen": [
+        ("Qwen Max", "dashscope/qwen-max"),
+        ("Qwen 2.5 72B", "dashscope/qwen2.5-72b-instruct"),
+    ],
+    "Local (Ollama)": [
+        ("Llama 3.3 70B", "ollama/llama3.3:70b"),
+        ("Qwen 2.5 72B", "ollama/qwen2.5:72b"),
+        ("Qwen 2.5 14B", "ollama/qwen2.5:14b"),
+        ("Gemma 2 27B", "ollama/gemma2:27b"),
+        ("Gemma 2 9B", "ollama/gemma2:9b"),
+        ("Phi 3.5 (3.8B, edge)", "ollama/phi3.5:3.8b"),
+    ],
+}
+
+
+def provider_for_model(model: str) -> str:
+    """Find which provider a model id (or alias) belongs to."""
+    resolved = DEFAULT_ALIASES.get(model, model)
+    for provider, models in LLM_PROVIDERS.items():
+        for _, mid in models:
+            if mid == resolved:
+                return provider
+    return "Custom"
 
 
 @dataclass

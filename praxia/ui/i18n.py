@@ -2984,6 +2984,16 @@ _T: dict[str, dict[str, str]] = {
         "de": "Diese beiden Schalter wirken sich sofort aus. Sie waren zuvor in der Sidebar, werden aber selten zur Laufzeit geändert.",
         "pt-BR": "Estes dois ajustes afetam o app em execução imediatamente. Antes ficavam na sidebar, mas raramente são alterados em runtime.",
     },
+    "admin.settings.provider_label": {
+        "en": "Provider",
+        "ja": "プロバイダ",
+        "zh-CN": "提供商",
+        "ko": "프로바이더",
+        "es": "Proveedor",
+        "fr": "Fournisseur",
+        "de": "Anbieter",
+        "pt-BR": "Provedor",
+    },
     "admin.settings.model_label": {
         "en": "LLM model",
         "ja": "LLM モデル",
