@@ -169,7 +169,26 @@ hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; }
 [data-testid="stStatusWidget"] { visibility: hidden !important; height: 0 !important; position: fixed !important; }
 .stDeployButton { display: none !important; }
 #MainMenu { visibility: hidden !important; height: 0 !important; }
-header[data-testid="stHeader"] { display: none !important; height: 0 !important; }
+/* Keep stHeader rendered (do NOT display:none it) — the sidebar
+   re-open chevron is a child of it, so hiding the header makes the
+   sidebar unclickable once collapsed. Make it transparent and
+   non-blocking instead, and keep it above our fixed top-nav so the
+   chevron stays clickable. */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    height: auto !important;
+    min-height: 0 !important;
+    z-index: 100001 !important;
+    pointer-events: none !important;  /* let clicks fall through to nav */
+}
+/* But the controls *inside* the header (the sidebar chevron, etc.)
+   must still receive clicks. */
+header[data-testid="stHeader"] button,
+header[data-testid="stHeader"] [role="button"],
+header[data-testid="stHeader"] [data-testid*="ollapse"],
+header[data-testid="stHeader"] [data-testid*="sidebar" i] {
+    pointer-events: auto !important;
+}
 footer { visibility: hidden !important; height: 0 !important; }
 
 /* Push main content to the very top — no padding above the nav bar. */
