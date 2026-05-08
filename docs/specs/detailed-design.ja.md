@@ -23,11 +23,18 @@ praxia/
 │   └── tools.py         # AgentTool + 組込ツール 11 種 (memory/skills/connectors/frozen)
 ├── flows/               # FlowResult, Flow, 組込フロー
 ├── skills/
-│   ├── skill.py         # Skill, SkillManifest
-│   ├── registry.py      # SkillRegistry (personal / org / distributed)
-│   ├── prompts.py       # PromptStore (3 スコープ)
-│   ├── output_format.py # OutputFormatSkill
-│   └── business/        # 6 業務スキル
+│   ├── skill.py             # Skill, SkillManifest
+│   ├── registry.py          # SkillRegistry (personal / org / distributed)
+│   ├── prompts.py           # PromptStore (3 スコープ)
+│   ├── output_format.py     # OutputFormatSkill
+│   ├── prompt_designer.py   # PromptDesignerSkill
+│   ├── document_designer/   # コード生成型デザイナー (Claude Skills 風)
+│   │   ├── sandbox.py       # AST allowlist + subprocess 隔離実行
+│   │   ├── theme.py         # DocumentTheme, ThemeStore (.praxia/themes/)
+│   │   ├── codegen.py       # 共通メタプロンプト + リトライループ
+│   │   ├── pptx_designer.py # PptxDesignerSkill
+│   │   └── docx_designer.py # DocxDesignerSkill
+│   └── business/            # 6 業務スキル
 ├── memory/
 │   ├── personal.py      # PersonalMemory + MemoryEntry + MemoryMode
 │   ├── shared.py        # SharedMemory

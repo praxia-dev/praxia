@@ -148,6 +148,22 @@ praxia skill run patent     "Prior-art search: solid-state battery design"
 praxia skill run legal      "Review the risks in services_agreement.pdf"
 ```
 
+Plus four utility skills always available:
+
+```bash
+# Prompt template designer (text → polished system+user template + few-shot)
+praxia skill run prompt_designer "Score contract risk 1-5 in JSON"
+
+# Output exporter — natural-language hint → MD / HTML / PPTX / DOCX bytes
+praxia skill run output_format "Export the latest report as a Word document"
+
+# Code-gen designers (Claude-Skills-style) — LLM authors python-pptx /
+# python-docx code in a sandbox, returns design-rich .pptx / .docx bytes
+# with theme applied (colors / fonts / logo / footer from .praxia/themes/).
+praxia skill run pptx_designer "Q4 sales review for Acme — cover, summary, top 3 customers, 2x2 challenges, next actions. 10 slides."
+praxia skill run docx_designer "Vendor onboarding checklist — 3 sections, table of required docs, callout for legal review."
+```
+
 ## 6. Launch the UI
 
 ```bash

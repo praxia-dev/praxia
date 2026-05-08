@@ -197,7 +197,7 @@ class SkillManifest:
     author: str | None = None
 ```
 
-Built-in skills: `InvestmentSkill`, `SalesSkill`, `DesignSkill`, `PurchasingSkill`, `PatentSkill`, `LegalSkill`, **`OutputFormatSkill`** (utility).
+Built-in skills: `InvestmentSkill`, `SalesSkill`, `DesignSkill`, `PurchasingSkill`, `PatentSkill`, `LegalSkill`, **`OutputFormatSkill`**, **`PromptDesignerSkill`**, **`PptxDesignerSkill`**, **`DocxDesignerSkill`** (the last four are utility).
 
 ### 1.7 `praxia.skills.output_format.OutputFormatSkill`
 
@@ -209,6 +209,66 @@ fs.deliver(content, *, user_request="", format=None, output_path=None, **exporte
 ```
 
 `FormatRequest`: `format: str`, `confidence: float`, `reason: str`.
+
+### 1.7a `praxia.skills.document_designer` — Code-gen designers
+
+LLM-authored python-pptx / python-docx code that runs in a sandbox to
+produce design-rich `.pptx` / `.docx` bytes (Claude-Skills-style).
+
+```python
+from praxia.skills import PptxDesignerSkill, DocxDesignerSkill
+from praxia.skills.document_designer import DocumentTheme, ThemeStore
+
+PptxDesignerSkill(llm=None)
+    .design(brief: str, *, theme: DocumentTheme | None = None,
+            max_attempts: int = 3, max_tokens: int = 16384,
+            timeout_s: float = 30.0) -> CodegenResult
+    .run(user_input: str, *, theme_name: str | None = None,
+         theme_dir: str | None = None, **inputs) -> bytes
+
+DocxDesignerSkill(llm=None)            # same signature as Pptx
+```
+
+`CodegenResult`: `bytes: bytes`, `attempts: list[CodegenAttempt]`, `final_code: str`, `attempt_count: int`, `ok: bool`.
+
+```python
+DocumentTheme(
+    name: str = "default",
+    colors: dict[str, str] = {"primary", "accent", "background", "muted", "text"},
+    fonts: dict[str, str | int] = {"heading", "body", "code", "heading_size_pt", "body_size_pt"},
+    logo_path: str | None = None,
+    footer_text: str | None = None,
+    slide_master_path: str | None = None,
+    layouts: list[str] = ["title", "bullets", "two_column", "comparison",
+                          "matrix_2x2", "image_full"],
+)
+DocumentTheme.from_json_file(path) -> DocumentTheme
+DocumentTheme.from_dict(data) -> DocumentTheme
+DocumentTheme.to_prompt_block() -> str        # compact summary embedded in meta-prompt
+DocumentTheme.validate() -> list[str]         # human-readable error list (empty = OK)
+
+ThemeStore(base_dir=".praxia/themes")
+    .list_names() -> list[str]
+    .load(name: str) -> DocumentTheme
+    .has(name: str) -> bool
+    .save(theme, *, logo_bytes=None, logo_filename=None, master_bytes=None) -> Path
+    .delete(name: str) -> bool
+```
+
+Sandbox interface (`praxia.skills.document_designer.sandbox`):
+
+```python
+validate_code(code: str) -> None   # raises SandboxValidationError on disallowed ast
+run_in_sandbox(code: str, *, timeout_s: float = 30.0,
+               extra_env: dict[str, str] | None = None,
+               skip_validate: bool = False) -> SandboxResult
+```
+
+`SandboxResult`: `bytes`, `stdout`, `stderr`, `returncode`, `duration_s`, `code`, `extras`, `ok`.
+
+Errors: `SandboxError` (base) → `SandboxValidationError` (AST allowlist), `SandboxTimeout` (timeout exceeded).
+
+Allowed imports inside the sandbox: `pptx`, `docx`, `matplotlib(.pyplot/.figure/.patches/.colors/.cm)`, `PIL(.Image/.ImageDraw/.ImageFont/.ImageColor)`, `numpy`, `math`, `statistics`, `random`, `fractions`, `decimal`, plus safe stdlib (`io`, `base64`, `json`, `datetime`, `time`, `itertools`, `functools`, `collections`, `operator`, `copy`, `string`, `textwrap`, `re`, `uuid`, `hashlib`, `enum`, `dataclasses`, `typing`). Anything else trips `SandboxValidationError`.
 
 ### 1.8 `praxia.io` exporters
 

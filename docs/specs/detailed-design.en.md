@@ -23,11 +23,18 @@ praxia/
 │   └── tools.py         # AgentTool + 11 built-in tools (memory/skills/connectors/frozen)
 ├── flows/               # FlowResult, Flow, built-in flows
 ├── skills/
-│   ├── skill.py         # Skill, SkillManifest
-│   ├── registry.py      # SkillRegistry (personal / org / distributed scopes)
-│   ├── prompts.py       # PromptStore (3 scopes)
-│   ├── output_format.py # OutputFormatSkill
-│   └── business/        # 6 default domain skills
+│   ├── skill.py             # Skill, SkillManifest
+│   ├── registry.py          # SkillRegistry (personal / org / distributed scopes)
+│   ├── prompts.py           # PromptStore (3 scopes)
+│   ├── output_format.py     # OutputFormatSkill
+│   ├── prompt_designer.py   # PromptDesignerSkill
+│   ├── document_designer/   # Code-gen designers (Claude-Skills-style)
+│   │   ├── sandbox.py       # AST allowlist + subprocess sandbox
+│   │   ├── theme.py         # DocumentTheme, ThemeStore (.praxia/themes/)
+│   │   ├── codegen.py       # shared meta-prompt + retry loop
+│   │   ├── pptx_designer.py # PptxDesignerSkill
+│   │   └── docx_designer.py # DocxDesignerSkill
+│   └── business/            # 6 default domain skills
 ├── memory/
 │   ├── personal.py      # PersonalMemory + MemoryEntry + MemoryMode
 │   ├── shared.py        # SharedMemory (Letta-style blocks)

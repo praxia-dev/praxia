@@ -1341,6 +1341,84 @@ req = fs.detect_with_llm("いつもの形式で出力して")
 # なければ LLM に問い合わせ → "md" 等を抽出
 ```
 
+### 9.3a PptxDesignerSkill / DocxDesignerSkill (utility, コード生成型)
+
+`OutputFormatSkill` が「Markdown を素のテンプレ pptx/docx に流し込む」軽量
+パスなのに対し、**Designer 系スキル**は LLM 自身に `python-pptx` / `python-docx`
+コードを書かせて sandbox で実行 → デザインリッチな成果物を直接生成します
+(Anthropic の Claude Skills と同じアプローチ)。
+
+```
+brief + theme.json
+   ↓
+LLM が Python コードを記述 (python-pptx / python-docx)
+   ↓
+AST 許可リスト (pptx/docx/matplotlib/PIL/numpy + 安全 stdlib のみ。
+              os/subprocess/eval/dunder escape は全部拒否)
+   ↓
+subprocess sandbox (timeout 30s, POSIX で 512MB RAM cap, 空 CWD)
+   ↓
+失敗時は traceback を LLM に戻して最大 3 回リトライ
+   ↓
+.pptx / .docx バイト列 → ダウンロード
+```
+
+#### 9.3a.1 テーマ管理
+
+```
+.praxia/themes/
+└── acme_corporate/
+    ├── theme.json         colors / fonts / footer_text
+    ├── logo.png           任意 — 表紙 / カバーページに埋込
+    └── master.pptx        任意 — PptxDesigner のベースとして使用
+```
+
+`theme.json` のスキーマ:
+
+```json
+{
+  "name": "acme_corporate",
+  "colors": {
+    "primary": "#003c8c", "accent": "#e60012",
+    "background": "#ffffff", "muted": "#6b7280", "text": "#111827"
+  },
+  "fonts": {
+    "heading": "Meiryo", "body": "Meiryo", "code": "Consolas",
+    "heading_size_pt": 28, "body_size_pt": 16
+  },
+  "footer_text": "© 2026 Acme Corp.",
+  "layouts": ["title", "bullets", "two_column", "comparison",
+              "matrix_2x2", "image_full"]
+}
+```
+
+#### 9.3a.2 UI
+
+- `Admin → 🎨 Themes`: カラーピッカー / フォント / ロゴ / マスター.pptx を
+  アップロードしてテーマを登録 / 削除。
+- `Run → 🛠 Skill → design — pptx_designer (or docx_designer)`: テーマを
+  ドロップダウンから選択 → 自由記述ブリーフを入力 → 生成 →
+  `📥 PPTX (N bytes)` ダウンロードボタン。
+
+#### 9.3a.3 サンドボックスのセキュリティ境界
+
+- **AST allowlist**: 実行前に `ast.parse` して許可済み import / 名前 /
+  属性のみ通過。`os`, `subprocess`, `requests`, `eval`, `exec`,
+  `__class__.__bases__` 等はパース時点で拒否。
+- **subprocess 隔離**: 親プロセスの CWD / 環境変数を共有せず、
+  `tempfile.TemporaryDirectory` 内で実行。`PYTHONNOUSERSITE=1`、
+  `PYTHONDONTWRITEBYTECODE=1`。
+- **タイムアウト**: 30 秒で kill (リトライは別プロセスで再実行)。
+- **メモリ上限**: POSIX のみ `RLIMIT_AS` で 512MB。Windows は OS が
+  対応していないので適用せず (本番は Docker / firejail を推奨)。
+- **ネットワーク**: syscall レベルでは未制限 (Windows / macOS で名前
+  空間が使えないため)。AST allowlist が `requests` / `urllib` を
+  全部拒否するので、現実には LLM 由来コードからは到達不可。
+- **出力サイズ**: 最大 16MB (100 枚スライド + 画像複数で十分)。
+
+詳細は [interface-spec § 1.7a](interface-spec.ja.md#17a-praxiaskillsdocument_designer--コード生成型デザイナー) と
+[architecture.md § Document Designer](../architecture.md#document-designer-code-gen-skills)。
+
 ### 9.4 スキル昇格 (個人 → 組織)
 
 #### 9.4.1 経路

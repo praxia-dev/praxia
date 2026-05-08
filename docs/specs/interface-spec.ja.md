@@ -195,7 +195,7 @@ class SkillManifest:
     author: str | None = None
 ```
 
-組込スキル: `InvestmentSkill`, `SalesSkill`, `DesignSkill`, `PurchasingSkill`, `PatentSkill`, `LegalSkill`, **`OutputFormatSkill`** (utility)。
+組込スキル: `InvestmentSkill`, `SalesSkill`, `DesignSkill`, `PurchasingSkill`, `PatentSkill`, `LegalSkill`, **`OutputFormatSkill`**, **`PromptDesignerSkill`**, **`PptxDesignerSkill`**, **`DocxDesignerSkill`** (後ろ 4 つは utility)。
 
 ### 1.7 `praxia.skills.output_format.OutputFormatSkill`
 
@@ -207,6 +207,66 @@ fs.deliver(content, *, user_request="", format=None, output_path=None, **exporte
 ```
 
 `FormatRequest`: `format: str`, `confidence: float`, `reason: str`.
+
+### 1.7a `praxia.skills.document_designer` — コード生成型デザイナー
+
+LLM が python-pptx / python-docx コードを記述 → sandbox で実行し、デザインリッチな
+`.pptx` / `.docx` バイト列を出力 (Claude Skills 風のアプローチ)。
+
+```python
+from praxia.skills import PptxDesignerSkill, DocxDesignerSkill
+from praxia.skills.document_designer import DocumentTheme, ThemeStore
+
+PptxDesignerSkill(llm=None)
+    .design(brief: str, *, theme: DocumentTheme | None = None,
+            max_attempts: int = 3, max_tokens: int = 16384,
+            timeout_s: float = 30.0) -> CodegenResult
+    .run(user_input: str, *, theme_name: str | None = None,
+         theme_dir: str | None = None, **inputs) -> bytes
+
+DocxDesignerSkill(llm=None)            # Pptx と同じシグネチャ
+```
+
+`CodegenResult`: `bytes: bytes`, `attempts: list[CodegenAttempt]`, `final_code: str`, `attempt_count: int`, `ok: bool`。
+
+```python
+DocumentTheme(
+    name: str = "default",
+    colors: dict[str, str] = {"primary", "accent", "background", "muted", "text"},
+    fonts: dict[str, str | int] = {"heading", "body", "code", "heading_size_pt", "body_size_pt"},
+    logo_path: str | None = None,
+    footer_text: str | None = None,
+    slide_master_path: str | None = None,
+    layouts: list[str] = ["title", "bullets", "two_column", "comparison",
+                          "matrix_2x2", "image_full"],
+)
+DocumentTheme.from_json_file(path) -> DocumentTheme
+DocumentTheme.from_dict(data) -> DocumentTheme
+DocumentTheme.to_prompt_block() -> str        # メタプロンプトに埋め込む簡易要約
+DocumentTheme.validate() -> list[str]         # 検証エラー (空 = OK)
+
+ThemeStore(base_dir=".praxia/themes")
+    .list_names() -> list[str]
+    .load(name: str) -> DocumentTheme
+    .has(name: str) -> bool
+    .save(theme, *, logo_bytes=None, logo_filename=None, master_bytes=None) -> Path
+    .delete(name: str) -> bool
+```
+
+サンドボックス API (`praxia.skills.document_designer.sandbox`):
+
+```python
+validate_code(code: str) -> None   # AST 不許可で SandboxValidationError
+run_in_sandbox(code: str, *, timeout_s: float = 30.0,
+               extra_env: dict[str, str] | None = None,
+               skip_validate: bool = False) -> SandboxResult
+```
+
+`SandboxResult`: `bytes`, `stdout`, `stderr`, `returncode`, `duration_s`, `code`, `extras`, `ok`。
+
+エラー: `SandboxError` (基底) → `SandboxValidationError` (AST 拒否), `SandboxTimeout` (タイムアウト)。
+
+サンドボックス内で許可される import: `pptx`, `docx`, `matplotlib(.pyplot/.figure/.patches/.colors/.cm)`, `PIL(.Image/.ImageDraw/.ImageFont/.ImageColor)`, `numpy`, `math`, `statistics`, `random`, `fractions`, `decimal`, および安全な stdlib (`io`, `base64`, `json`, `datetime`, `time`, `itertools`, `functools`, `collections`, `operator`, `copy`, `string`, `textwrap`, `re`, `uuid`, `hashlib`, `enum`, `dataclasses`, `typing`)。それ以外は `SandboxValidationError`。
 
 ### 1.8 `praxia.io` エクスポータ
 

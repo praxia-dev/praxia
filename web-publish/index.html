@@ -117,6 +117,7 @@
         <span data-i18n="chip.responsive">📱 Mobile-responsive</span>
         <span data-i18n="chip.agent">🤖 Autonomous agent (LLM-driven tool-use loop)</span>
         <span data-i18n="chip.designer">✨ Prompt Designer (intent → polished template)</span>
+        <span data-i18n="chip.docdesigner">🎨 Document Designer (code-gen pptx / docx)</span>
         <span data-i18n="chip.tests">✅ Hermetic test harness (stubs &amp; drivers)</span>
       </div>
     </div>
@@ -220,6 +221,11 @@
           <div class="card-icon">✨</div>
           <h3 data-i18n="feat.prompt_designer">Prompt Designer — turn intent into a polished template</h3>
           <p data-i18n="feat.prompt_designer.body">Describe the task in one line ("score contract risk 1-5 in JSON") → get a production-grade prompt design back: tuned system message, <code>${variable}</code> user template, 2-3 few-shot examples, 5-criterion rubric. Per-LLM idioms applied automatically (Claude XML / OpenAI JSON-mode / DeepSeek-R1 reasoning / Mistral concise / Llama numbered steps).</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🎨</div>
+          <h3 data-i18n="feat.doc_designer">Document Designer — code-gen pptx / docx (Claude-Skills-style)</h3>
+          <p data-i18n="feat.doc_designer.body">The LLM authors <code>python-pptx</code> / <code>python-docx</code> code, a sandbox runs it (AST allowlist + 30s timeout + 512MB cap on POSIX), and you get a design-rich <code>.pptx</code> / <code>.docx</code> back — multi-column layouts, matrix slides, embedded matplotlib charts, themed branding (colors / fonts / logo / footer from <code>.praxia/themes/</code>). On traceback the error is fed back to the LLM and the attempt repeats up to 3 times. Themes managed in <code>Admin → 🎨 Themes</code>.</p>
         </article>
         <article class="card">
           <div class="card-icon">⚙️</div>

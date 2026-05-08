@@ -174,16 +174,21 @@ without orchestrating individual tools by hand. See
 
 Each skill serializes to Claude-Skills / MCP-compatible `SKILL.md`.
 
-Plus two **utility** skills:
+Plus four **utility** skills:
 
 | Skill | What it does |
 |---|---|
 | **`PromptDesignerSkill`** | Take a one-line task description → produce a production-grade prompt template (system + user + 2-3 few-shot examples + 5-criterion rubric) tuned for the target LLM (Claude / OpenAI / DeepSeek / Mistral / Llama / …). Save to `PromptStore`, A/B-test via `praxia.experiments`. |
 | **`OutputFormatSkill`** | Detect "export as PowerPoint" / "as Word doc" / etc. in natural language (English + JA / ZH / KO / ES / FR / DE / PT-BR phrases also recognized) and dispatch to the matching exporter (PPTX / DOCX / HTML / MD / JSON). |
+| **`PptxDesignerSkill`** | **Code-gen** path (Claude-Skills-style): the LLM authors `python-pptx` code that runs in a sandbox to produce a design-rich `.pptx` — multi-column layouts, matrix slides, embedded charts, themed branding. Themes (colors / fonts / logo / footer) live under `.praxia/themes/<name>/` and are managed in `Admin → 🎨 Themes`. |
+| **`DocxDesignerSkill`** | Same approach for Word documents — LLM-authored `python-docx` code, sandbox execution, themed `.docx` output (heading hierarchy, page footer, tables, callouts, embedded charts). |
 
 ```bash
 # Generate a prompt template for any task
 praxia skill run prompt_designer "Have in-house legal score contract risk on a 5-point scale"
+
+# Generate a design-rich slide deck via code-gen
+praxia skill run pptx_designer "Q4 sales review for Acme — cover, exec summary, top 3 customers, 2x2 challenges matrix, next actions. 10 slides."
 ```
 
 ### All Major LLMs

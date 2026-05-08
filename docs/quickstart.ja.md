@@ -144,6 +144,22 @@ praxia skill run patent     "全固体電池構造の先行技術調査"
 praxia skill run legal      "services_agreement.pdf のリスクをレビュー"
 ```
 
+ユーティリティスキル (常時利用可):
+
+```bash
+# プロンプトテンプレートを生成 (text → 整形済み system+user テンプレ + few-shot)
+praxia skill run prompt_designer "契約リスクを 1-5 で JSON 評価"
+
+# 出力エクスポータ — 自然言語ヒントから MD / HTML / PPTX / DOCX バイト列へ
+praxia skill run output_format   "最新レポートを Word 文書で出力"
+
+# コード生成型デザイナー (Claude Skills 風) — LLM が python-pptx /
+# python-docx コードを書いて sandbox で実行、テーマ (色 / フォント / ロゴ /
+# フッター) 適用済みのデザインリッチな .pptx / .docx バイト列を返す
+praxia skill run pptx_designer "Acme 向け Q4 売上レビュー — 表紙・サマリ・TOP3 顧客・課題 2x2 マトリクス・次アクション。10 枚で。"
+praxia skill run docx_designer "ベンダーオンボーディング・チェックリスト — 3 セクション、必要書類の表、法務レビュー用コールアウト。"
+```
+
 ## 6. UI 起動
 
 ```bash
