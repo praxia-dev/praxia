@@ -815,6 +815,16 @@ _T: dict[str, dict[str, str]] = {
         "de": "Frag den Agenten alles — Bilder via 📎 anhängen, Scopes in der Sidebar.",
         "pt-BR": "Pergunte qualquer coisa — anexe imagens via 📎 e escolha escopos na sidebar.",
     },
+    "run.agent.empty_hint": {
+        "en": "Type below to start the conversation. Past turns will appear here and scroll independently from the input box.",
+        "ja": "下の入力欄から会話を始めてください。過去のやりとりはこの領域に表示され、入力欄から独立してスクロールします。",
+        "zh-CN": "请在下方输入开始对话。历史会显示在此区域并独立滚动。",
+        "ko": "아래 입력창에서 대화를 시작하세요. 이전 대화는 이 영역에 표시되며 입력창과 독립적으로 스크롤됩니다.",
+        "es": "Escribe abajo para empezar. Los turnos anteriores aparecen aquí y se desplazan independientemente del campo de entrada.",
+        "fr": "Tapez ci-dessous pour commencer. Les tours précédents apparaissent ici et défilent indépendamment du champ de saisie.",
+        "de": "Unten tippen, um die Konversation zu starten. Frühere Runden erscheinen hier und scrollen unabhängig vom Eingabefeld.",
+        "pt-BR": "Digite abaixo para começar. Os turnos anteriores aparecem aqui e rolam independentemente da caixa de entrada.",
+    },
     "run.agent.thinking": {
         "en": "Agent thinking…",
         "ja": "エージェント思考中…",
