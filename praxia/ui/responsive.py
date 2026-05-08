@@ -185,11 +185,13 @@ header[data-testid="stHeader"] {
     pointer-events: none !important;
 }
 /* Re-show + boost the sidebar collapse/expand chevron specifically.
-   It needs visibility:visible (overrides parent), pointer-events:
-   auto (overrides parent), and z-index above the top-nav. Pad
-   ~0.5rem from the very top of the viewport so the icon isn't
-   clipped by the browser chrome / Streamlit's natural negative-top
-   styling. */
+   Force position:fixed so `top` actually applies (Streamlit's
+   natural style on this element is sometimes static — the parent
+   stHeader's height:0 + absolute children + Streamlit's negative
+   top conspired to clip the chevron's top half). Pinning at
+   top:0.75rem; left:0.6rem matches the y-position of the in-
+   sidebar chevron when the sidebar is expanded, so the icon
+   doesn't seem to "jump" between the two states. */
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"],
 header[data-testid="stHeader"] [data-testid*="ollapse"],
@@ -198,7 +200,22 @@ header[data-testid="stHeader"] button[kind="header"] {
     visibility: visible !important;
     pointer-events: auto !important;
     z-index: 100001 !important;
-    top: 0.5rem !important;
+    position: fixed !important;
+    top: 0.75rem !important;
+    left: 0.6rem !important;
+    margin: 0 !important;
+    transform: none !important;       /* defeat any Streamlit translate */
+}
+
+/* Reserve a left gutter in the top-nav when the sidebar is
+   collapsed so the chevron at left:0.6rem doesn't visually overlap
+   the Run button. When the sidebar is expanded the chevron lives
+   inside the sidebar (different DOM node) so no gutter is needed. */
+.st-key-praxia_topnav {
+    padding-left: 3rem !important;
+}
+body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav {
+    padding-left: 1rem !important;
 }
 
 /* Aggressively hide every other button inside the header — Deploy,
