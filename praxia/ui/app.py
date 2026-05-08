@@ -118,38 +118,55 @@ def _read_session_cookie() -> str | None:
 
 
 def _write_session_cookie(token: str) -> None:
-    """Set the cookie via a small inline `<script>`. Streamlit doesn't
-    expose a server-side Set-Cookie hook for the WebSocket frame, so
-    JS injection is the path. SameSite=Lax + 30-min Max-Age + Path=/.
-    Secure flag added when served over HTTPS (browser cookie store
-    will otherwise refuse Secure on http://localhost)."""
+    """Set the cookie via a same-origin srcdoc iframe so the `<script>`
+    actually runs.
+
+    `st.markdown(unsafe_allow_html=True)` inserts HTML via innerHTML,
+    and per HTML spec **`<script>` tags inserted via innerHTML never
+    execute** — the browser doesn't run them. We instead use
+    `components.v1.html()`, which spawns a `srcdoc` iframe that the
+    browser parses normally. The iframe inherits the parent's origin
+    (per the HTML spec), so writing to `window.parent.document.cookie`
+    sets a cookie on Streamlit's main page origin."""
     safe_token = "".join(c for c in token if c in "0123456789abcdef")
     if not safe_token:
         return
-    js = (
-        "<script>"
-        "try {"
-        f"  var v = '{safe_token}';"
-        f"  var p = '{_SESSION_COOKIE_NAME}=' + v + ';path=/;max-age={_SESSION_TTL_SECONDS};samesite=lax';"
-        "  if (location.protocol === 'https:') p += ';secure';"
-        "  document.cookie = p;"
-        "} catch(e) {}"
-        "</script>"
-    )
-    st.markdown(js, unsafe_allow_html=True)
+    import streamlit.components.v1 as components
+    js = f"""
+    <script>
+    (function() {{
+        try {{
+            var p = '{_SESSION_COOKIE_NAME}={safe_token};path=/;max-age={_SESSION_TTL_SECONDS};samesite=lax';
+            if (location.protocol === 'https:') p += ';secure';
+            // Set cookie on the parent document (Streamlit main page).
+            // Same-origin srcdoc lets us reach window.parent.
+            try {{ window.parent.document.cookie = p; }} catch(e) {{}}
+            // Also set on the iframe doc as a belt-and-suspenders.
+            try {{ document.cookie = p; }} catch(e) {{}}
+        }} catch(e) {{ console.error('praxia: cookie set failed', e); }}
+    }})();
+    </script>
+    """
+    components.html(js, height=0, width=0)
 
 
 def _clear_session_cookie() -> None:
-    """Drop the cookie client-side. Server-side record is removed
-    separately via `_session_store.delete(token)`."""
-    js = (
-        "<script>"
-        "try {"
-        f"  document.cookie = '{_SESSION_COOKIE_NAME}=;path=/;max-age=0;samesite=lax';"
-        "} catch(e) {}"
-        "</script>"
-    )
-    st.markdown(js, unsafe_allow_html=True)
+    """Drop the cookie client-side via the same iframe trick as the
+    write path. Server-side record is removed separately via
+    `_session_store.delete(token)`."""
+    import streamlit.components.v1 as components
+    js = f"""
+    <script>
+    (function() {{
+        try {{
+            var p = '{_SESSION_COOKIE_NAME}=;path=/;max-age=0;samesite=lax';
+            try {{ window.parent.document.cookie = p; }} catch(e) {{}}
+            try {{ document.cookie = p; }} catch(e) {{}}
+        }} catch(e) {{ console.error('praxia: cookie clear failed', e); }}
+    }})();
+    </script>
+    """
+    components.html(js, height=0, width=0)
 
 
 def _restore_session_from_cookie() -> bool:
