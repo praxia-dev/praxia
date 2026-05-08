@@ -321,7 +321,12 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
    the always-visible 15rem sidebar so it doesn't slide underneath it.
    Streamlit's default "stick to container bottom" behavior pins it to
    the active tab/container, not the viewport, which means the input
-   would scroll off-screen during long conversations. */
+   would scroll off-screen during long conversations.
+   NOTE: no background-color here — that gets set by the theme block
+   (light: white, dark: #15181f). Setting it here with a hardcoded
+   fallback was making the bar render white in dark mode whenever the
+   --background-color CSS var didn't propagate into the chat-input
+   subtree. */
 [data-testid="stChatInput"],
 [data-testid="stBottomBlockContainer"] {
     position: fixed !important;
@@ -329,10 +334,24 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     left: 15rem !important;
     right: 0 !important;
     z-index: 9000 !important;
-    background-color: var(--background-color, #ffffff) !important;
     padding: 0.5rem 1rem !important;
     border-top: 1px solid rgba(127, 127, 127, 0.18);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+}
+/* Light-mode default: white bar. Dark mode overrides this in app.py. */
+@media (prefers-color-scheme: light) {
+    [data-testid="stChatInput"],
+    [data-testid="stBottomBlockContainer"] {
+        background-color: #ffffff;
+    }
+}
+/* If user picks 'auto' theme on a dark OS, this default applies; the
+   explicit dark theme block in app.py overrides it when picked. */
+@media (prefers-color-scheme: dark) {
+    [data-testid="stChatInput"],
+    [data-testid="stBottomBlockContainer"] {
+        background-color: #15181f;
+    }
 }
 
 /* The topnav itself is a horizontal flex container (st.container with

@@ -782,56 +782,77 @@ if theme_choice == "dark":
     color: #ecedf0 !important;
   }
 
-  /* Chat-input file uploader (📎 attach in st.chat_input) — separate
-     DOM tree from stFileUploader, so the rules above don't reach it.
-     "Upload or drag and drop files (PNG, JPG, GIF, WEBP)" text was
-     rendering white-on-white in dark mode. */
+  /* Chat-input bottom bar. Two layers contributed to the bug
+     (white-on-black-on-gray look):
+       1. stBottomBlockContainer (the outer fixed bar) was set in
+          responsive.py to `var(--background-color, #ffffff)`. The CSS
+          var doesn't reliably propagate into Streamlit's chat-input
+          DOM subtree, so it fell back to white.
+       2. stChatInput (the inner wrapper) was a different shade.
+       3. The textarea inside was darker again.
+     Now: outer bar matches the body bg (#15181f), inner textarea
+     matches our other inputs (#23272f), placeholder uses the same
+     mid-gray as other inputs (#8b919f) — visually cohesive with the
+     rest of the dark UI. */
+  [data-testid="stBottomBlockContainer"],
+  [data-testid="stBottom"] {
+    background-color: #15181f !important;
+    border-top: 1px solid rgba(255,255,255,0.10) !important;
+    color: #f4f5f7 !important;
+  }
   [data-testid="stChatInput"],
   [data-testid="stChatInputContainer"],
   [data-testid="stChatInputFileUploadDropzone"],
   [data-testid="stChatInputFileUploadDropzoneInstructions"] {
-    background-color: #1a1d28 !important;
-    color: #ecedf0 !important;
-    border-color: rgba(255,255,255,0.12) !important;
+    background-color: #23272f !important;
+    color: #f4f5f7 !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    border-radius: 6px !important;
   }
   [data-testid="stChatInput"] *,
   [data-testid="stChatInputFileUploadDropzone"] *,
   [data-testid="stChatInputFileUploadDropzoneInstructions"] * {
-    color: #ecedf0 !important;
+    color: #f4f5f7 !important;
   }
   [data-testid="stChatInput"] small,
   [data-testid="stChatInputFileUploadDropzoneInstructions"] small {
-    color: #a8acb8 !important;
+    color: #c1c5d0 !important;
   }
   /* The 📎 / send buttons */
   [data-testid="stChatInputFileUploadButton"],
   [data-testid="stChatInputSubmitButton"],
   [data-testid="stChatInput"] button {
-    background-color: rgba(255,255,255,0.06) !important;
-    color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    background-color: rgba(255,255,255,0.08) !important;
+    color: #f4f5f7 !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
   }
   [data-testid="stChatInputFileUploadButton"]:hover,
   [data-testid="stChatInputSubmitButton"]:hover,
   [data-testid="stChatInput"] button:hover {
-    background-color: rgba(255,255,255,0.12) !important;
+    background-color: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.34) !important;
   }
   /* Already-attached file pill in the chat input */
   [data-testid="stChatInputFile"],
   [data-testid="stChatInputFileName"],
   [data-testid="stChatInputDeleteBtn"] {
-    color: #ecedf0 !important;
-    background-color: rgba(147,197,253,0.12) !important;
+    color: #f4f5f7 !important;
+    background-color: rgba(147,197,253,0.18) !important;
   }
-  /* Chat input textarea itself */
+  /* Chat input textarea itself — same surface as the wrapper so there's
+     no jarring inner-box-on-outer-box stacking. */
   [data-testid="stChatInput"] textarea,
   [data-testid="stChatInputTextArea"] {
-    background-color: #0f111a !important;
-    color: #ecedf0 !important;
-    border-color: rgba(255,255,255,0.1) !important;
+    background-color: #23272f !important;
+    color: #f4f5f7 !important;
+    border: none !important;
   }
   [data-testid="stChatInput"] textarea::placeholder {
-    color: #6c7080 !important;
+    color: #8b919f !important;
+  }
+  [data-testid="stChatInput"] textarea:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(147,197,253,0.20) inset !important;
   }
 
   /* Popover trigger ("会話履歴 (N)" button) — Streamlit's popover button
