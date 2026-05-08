@@ -1366,13 +1366,25 @@ if st.session_state.get("praxia_mode") not in NAV_KEYS:
 
 nav_labels = [t(f"mode.{k}") for k in NAV_KEYS]
 
-# Top nav: wrapped in a keyed container so CSS can target it reliably
-# via the .st-key-praxia_topnav class that Streamlit auto-generates.
-with st.container(key="praxia_topnav"):
-    cols = st.columns(len(NAV_KEYS))
-    for col, key in zip(cols, NAV_KEYS):
+# Top nav: rendered as a horizontal container so the buttons are direct
+# flex children of a single `[data-testid="stHorizontalBlock"]`. The old
+# `st.columns(N)` layout wrapped each button in its own [data-testid="stColumn"]
+# whose width was a percentage precomputed against the original full-width
+# container — which caused the rightmost button (Admin) to overflow the right
+# edge once the topnav got `position: fixed; left: 21rem` after the sidebar
+# opened. The horizontal container puts the buttons directly into a flex row
+# with no per-column percentage widths, so they share the available space
+# regardless of how narrow the bar gets.
+with st.container(
+    key="praxia_topnav",
+    horizontal=True,
+    gap=None,
+    width="stretch",
+    vertical_alignment="center",
+):
+    for key in NAV_KEYS:
         is_active = st.session_state["praxia_mode"] == key
-        if col.button(
+        if st.button(
             t(f"mode.{key}"),
             use_container_width=True,
             type="primary" if is_active else "secondary",

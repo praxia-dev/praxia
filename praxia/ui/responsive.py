@@ -331,77 +331,62 @@ body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav 
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* No gaps between buttons + flush button radii so the bar reads as
-   one continuous strip. Square corners on the strip ends to match the
-   enterprise tone. */
+/* The topnav itself is a horizontal flex container (st.container with
+   horizontal=True). The buttons are direct flex children — no per-column
+   percentage widths to fight with. We just need to:
+     1. Force the flex row to never wrap and to fill its parent's width
+     2. Make every stButton flex item share the row equally and shrink to 0
+     3. Tighten button padding + ellipsize labels so long Japanese / German
+        labels don't push their stButton above min-content width
+   `min-width: 0` is critical — without it flex items refuse to shrink
+   below their content's intrinsic width, which is what was making Admin
+   overflow the right edge before. */
+.st-key-praxia_topnav {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0 !important;
+    column-gap: 0 !important;
+    overflow: hidden !important;
+}
+.st-key-praxia_topnav > .stButton,
+.st-key-praxia_topnav .stElementContainer:has(> .stButton),
+.st-key-praxia_topnav [data-testid="stElementContainer"]:has(> .stButton) {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+.st-key-praxia_topnav .stButton {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+}
 .st-key-praxia_topnav .stButton button {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     border-radius: 0 !important;
     border-right: none !important;
     margin: 0 !important;
 }
-.st-key-praxia_topnav [data-testid="column"]:first-child .stButton button {
+/* First / last button rounded ends so the strip reads as one piece. */
+.st-key-praxia_topnav > *:first-child .stButton button,
+.st-key-praxia_topnav .stButton:first-child button {
     border-top-left-radius: 3px !important;
     border-bottom-left-radius: 3px !important;
 }
-.st-key-praxia_topnav [data-testid="column"]:last-child .stButton button {
+.st-key-praxia_topnav > *:last-child .stButton button,
+.st-key-praxia_topnav .stButton:last-child button {
     border-top-right-radius: 3px !important;
     border-bottom-right-radius: 3px !important;
     border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
-}
-
-/* Force the nav columns to shrink instead of pushing the rightmost
-   button (Admin) off the viewport when the sidebar opens. Streamlit's
-   default st.columns() lays out children with flex + percentage widths
-   computed for the original (full-width) container. After we make the
-   nav `position: fixed` with `left: 21rem` the flex container's
-   effective width shrinks but the per-column percentages don't, and
-   the gap accounting pushes the rightmost column past the right edge.
-
-   Brute-force fix: convert the columns row from flex to CSS grid with
-   `repeat(N, minmax(0, 1fr))`. minmax(0, 1fr) tells the grid that each
-   track may shrink to 0 — so the seven tracks always sum to exactly the
-   container width, regardless of content. Targeting both the legacy
-   `[data-testid="stHorizontalBlock"]` and the newer
-   `[data-testid="stColumnContainer"]` for forward-compat. Selecting
-   any direct grandchild of the topnav as a fallback so a future
-   Streamlit DOM rename doesn't break this again.
-
-   The columns inside get reset width / min-width / max-width / flex so
-   that whatever inline style Streamlit emits is overridden. */
-.st-key-praxia_topnav [data-testid="stHorizontalBlock"],
-.st-key-praxia_topnav [data-testid="stColumnContainer"],
-.st-key-praxia_topnav > div > div[class*="orizontal"],
-.st-key-praxia_topnav > div > div:has(> [data-testid="column"]),
-.st-key-praxia_topnav > div > div:has(> [data-testid="stColumn"]) {
-    display: grid !important;
-    /* grid-auto-flow: column means each child creates its own column.
-       grid-auto-columns: minmax(0, 1fr) means every track is exactly
-       1/N of the container, where N = number of children — so the
-       row always exactly fills its container, never overflows.
-       Forcing grid-template-columns: none defeats any preset that
-       would otherwise win over grid-auto-columns. */
-    grid-auto-flow: column !important;
-    grid-auto-columns: minmax(0, 1fr) !important;
-    grid-template-columns: none !important;
-    gap: 0 !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    flex: none !important;
-}
-.st-key-praxia_topnav [data-testid="column"],
-.st-key-praxia_topnav [data-testid="stColumn"] {
-    flex: none !important;
-    width: auto !important;
-    min-width: 0 !important;
-    max-width: none !important;
-}
-.st-key-praxia_topnav .stButton button {
-    padding-left: 0.4rem !important;
-    padding-right: 0.4rem !important;
-    min-width: 0 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
 }
 
 /* --- Praxia UI mobile / responsive overrides --- */
