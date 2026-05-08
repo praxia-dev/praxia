@@ -157,22 +157,23 @@ UI はログイン画面から始まります:
 
 - **単一ユーザ開発モード** (CLI でユーザ未作成): User ID 入力のみで Sign in。全機能アクセス可。ローカル / 信頼 LAN 用。
 - **複数ユーザモード** (`praxia user create alice --role admin` 等で 1 人以上登録済): User ID + Password (= ユーザ作成時に発行された API key)。サインインでそのユーザのロールが反映。
+- **SSO モード**: `PRAXIA_SSO_PROVIDER` を設定すると、ログイン画面の API キーフォーム上部に「**Sign in with \<プロバイダ\>**」(Google / Microsoft Entra / Okta / GitHub / Keycloak / 汎用 OIDC) ボタンが表示されます。ログイン状態は SameSite=Lax cookie + サーバ側セッション (`.praxia/sessions/<token>.json`、30 分の sliding TTL) で永続化され、ブラウザ再読み込みでも維持されます。
 
-インターネット公開のマルチユーザ環境では `praxia serve` (FastAPI + OIDC SSO) を併用してください。Streamlit UI は信頼環境向け設計です。
+純粋な HTTP API / Streamlit 以外のクライアントが必要な場合は `praxia serve` (FastAPI + OIDC SSO) を併用してください。
 
 ### レイアウト
 
-画面上部に固定ナビ (Run / Knowledge / Prompts / Data / Stats / Preferences、admin role なら + Admin)、サイドバーは **Context picker** 専用 (どのフォルダ / メモリ層を実行に渡すか)、メインに各 view のワークスペース。
+画面上部に固定ナビ (Run / Prompts / Data / Knowledge / Dashboard / Preferences、admin role なら + Admin)、サイドバーは **Context picker** 専用 (どのフォルダ / メモリ層を実行に渡すか)、メインに各 view のワークスペース。TOP ナビは画面上端に固定、チャット入力欄は下端に固定、その間のメッセージ領域だけスクロール (ChatGPT スタイル)。
 
 | View | 内容 |
 |------|------|
 | **🎬 Run** | 2 サブタブ。**🤖 Agent** = `AutonomousAgent` バックエンドの chat。ゴールを書くと LLM が tool (検索 / コネクタ / スキル) を選んで反復実行。**画像添付**対応 (Vision モデル使用時) — チャット入力の 📎 から PNG/JPG/GIF/WebP を添付。**会話履歴の永続化**: 各スレッドが `.praxia/chats/<user>/<id>.json` に保存され、`💬 会話履歴` ポップオーバから過去のスレッドを再開・改名・削除可能。エフェメラルチェック ON のときはディスク書き込みなし (セッションメモリのみ)。**🛠 Skill** = ドメインスキル (投資 / 営業 / 設計 / 購買 / 特許 / 法務) を選んで 1 回呼出。サイドバーで選んだ Context フォルダが両モードに供給され、大きいフォルダは grep ベースで関連箇所だけ抽出。 |
-| **🧠 Knowledge** | 個人 + 共有メモリのブラウズ + Skill registry (個人スキル + 組織昇格スキル) の表示。 |
-| **📁 Data** | データフォルダの管理。ローカル = UI でアップしたファイル群。コネクタ = 外部の特定パス (Box / SharePoint / Notion 等) を登録。 |
 | **📝 Prompts** | 3 サブタブ: Generate (PromptDesigner — 1 行依頼でテンプレ自動生成)、Browse & edit (プロンプト CRUD)、Distribute (管理者のみ — 特定ユーザ / ロールに配信)。 |
-| **📊 Stats** | 3 KPI + 横棒グラフ。個人: 総実行回数 · 成功率 · メモリ件数。組織: アクティブユーザ · 組織実行 · 成功率。 |
+| **📁 Data** | データフォルダの管理。ローカル = UI でアップしたファイル群。**画像 (PNG/JPG/GIF/WebP)** も組込 `ImageParser` で第一級スコープ要素として扱える。**他ユーザへの読み取り共有** にも対応 (オーナーが multiselect で対象ユーザを選択 — オーナーはアップロード/削除/共有設定変更可、共有相手は閲覧のみ)。コネクタ = 外部の特定パス (Box / SharePoint / Notion 等) を登録。 |
+| **🧠 Knowledge** | 個人 + 共有メモリのブラウズ + Skill registry (個人スキル + 組織昇格スキル) の表示。 |
+| **📊 Dashboard** | 3 KPI + 横棒グラフ。個人: 総実行回数 · 成功率 · メモリ件数。組織: アクティブユーザ · 組織実行 · 成功率。 |
 | **👤 Preferences** | ユーザ毎の永続設定: 言語、カラーテーマ (auto / light / dark)。`.praxia/preferences/<user>.json` に保存。 |
-| **⚙ Admin** | admin ロール限定。7 サブタブ: Settings (ランタイム LLM/バックエンド + 永続 KNOWN_KEYS)、Users、Connectors、Policies (ACL)、Consolidate (sleep-time 昇格)、Exports (CSV/JSON/JSONL)、About。 |
+| **⚙ Admin** | admin ロール限定。7 サブタブ: **Settings** (既定 LLM モデル — 全ユーザ・全セッション永続、provider→model の 2 段ピッカー + 各プロバイダで Custom デプロイメント名入力可 · **メモリポリシー** で `single` / `composite` / `routed` 戦略を選択 — composite は複数 backend に並列ファンアウト + RRF/union/intersection/weighted/llm_rerank で結果融合、routed はクエリ毎に rule-based 正規表現 / LLM ルータで backend 選択 · 永続 KNOWN_KEYS をプロバイダ別に整理 — `LLM · OpenAI`, `LLM · Azure OpenAI`, `LLM · AWS Bedrock`, `LLM · Vertex AI`, `LLM · Azure AI Foundry`, `LLM · Anthropic`, `LLM · Google`, `LLM · DeepSeek`, `LLM · Mistral` 等。設定済値は `****` で完全マスク (部分漏洩なし)、各行 `🗑 Delete` チェックで `.praxia/config.toml` から削除可)、Users、Connectors、Policies (ACL)、Consolidate (sleep-time 昇格)、Exports (CSV/JSON/JSONL)、About。 |
 
 ## 7. 複数 LTM の融合 + 動的ルーティング (任意・精度向上)
 

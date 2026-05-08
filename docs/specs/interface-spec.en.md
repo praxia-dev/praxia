@@ -122,16 +122,42 @@ Both implement the `MemoryBackend` protocol → can be passed to `PersonalMemory
 
 ```python
 MemoryAdminPolicy(
+    # --- backend strategy ---
+    backend_strategy: Literal["single", "composite", "routed"] = "single",
+    backend: str = "json",                                # used by 'single'
+
+    # 'composite' mode (CompositeBackend)
+    composite_backends: list[str] = [],                    # e.g. ["mem0", "zep"]
+    composite_fusion: Literal["rrf", "union", "intersection",
+                              "weighted", "llm_rerank"] = "rrf",
+    composite_write_to: str = "",
+
+    # 'routed' mode (RoutedBackend)
+    routed_backends: list[str] = [],
+    routed_router: Literal["rule", "llm"] = "rule",
+    routed_write_to: str = "",
+
+    # --- accumulation mode ---
+    default_mode: Literal["accumulate", "read_only"] = "accumulate",
+
+    # --- legacy fields (kept so old policy.json files load cleanly) ---
+    # __post_init__ migrates `enforced_backend` / `default_backend`
+    # into the new `backend` field when only the legacy field is set.
     enforced_backend: str | None = None,
     default_backend: str = "json",
     allowed_backends: list[str] = [],
-    default_mode: "accumulate" | "read_only" = "accumulate",
     mode_locked: bool = False,
-    accumulate_locked_to: list[str] = [],   # role names
+    accumulate_locked_to: list[str] = [],
 )
 MemoryAdminPolicy.load(storage_dir) -> "MemoryAdminPolicy"
 MemoryAdminPolicy.save(storage_dir) -> Path
 MemoryAdminPolicy.is_backend_allowed(backend) -> bool
+
+# Build the actual Layer-1 backend per the policy. Returns either a
+# backend name string (for 'single' mode — caller can pass it to
+# PersonalMemory(backend=name)) or a fully-built MemoryBackend
+# instance (CompositeBackend / RoutedBackend for the other modes).
+build_personal_backend(storage_dir, *, user_id) -> str | MemoryBackend
 
 MemoryUserPreference(user_id, backend=None, mode=None)
 MemoryUserPreference.load(storage_dir, user_id) -> "MemoryUserPreference"
@@ -140,6 +166,13 @@ MemoryUserPreference.save(storage_dir) -> Path
 resolve_memory_config(*, user_id, storage_dir, user_role=None,
                       requested_backend=None, requested_mode=None) -> ResolvedMemoryConfig
 ```
+
+The Streamlit Admin UI (`Admin → Settings → 🧠 Memory policy`) writes
+`MemoryAdminPolicy` to `.praxia/admin/memory_policy.json`. The CLI
+equivalents are `praxia admin memory-policy-show` and
+`praxia admin memory-policy-set`. **Per-user `MemoryUserPreference` no
+longer has a UI surface** — admin policy is the single source of
+truth for runtime backend behavior.
 
 ### 1.6 `praxia.skills`
 

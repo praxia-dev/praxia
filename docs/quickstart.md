@@ -161,22 +161,23 @@ The UI opens on a login screen:
 
 - **Single-user dev mode** (no users created via CLI yet): just type any User ID and click Sign in. You get unrestricted access. Suitable for laptop / trusted-LAN.
 - **Multi-user mode** (after `praxia user create alice --role admin` issues at least one user): User ID + Password (the API key issued at user-create time). Sign-in resolves to that user's role.
+- **SSO mode**: when `PRAXIA_SSO_PROVIDER` is configured, the login form shows a primary "Sign in with \<provider\>" button (Google / Microsoft Entra / Okta / GitHub / Keycloak / generic OIDC) above the API-key form. Persistent login: a SameSite=Lax cookie + server-side session record at `.praxia/sessions/<token>.json` (30-min sliding TTL) keeps the user logged in across browser reloads.
 
-Internet-exposed multi-user deployments should use `praxia serve` (FastAPI + OIDC SSO) instead — the Streamlit UI is designed for trusted environments.
+For pure HTTP / non-Streamlit consumers there's also `praxia serve` (FastAPI + OIDC SSO).
 
 ### Layout
 
-A sticky top-bar nav (Run / Knowledge / Prompts / Data / Stats / Preferences, plus Admin for admin role), a sidebar dedicated to the **Context picker** (which folders / memory layers feed the current run), and a workspace per view.
+A fixed top-bar nav (Run / Prompts / Data / Knowledge / Dashboard / Preferences, plus Admin for admin role), a sidebar dedicated to the **Context picker** (which folders / memory layers feed the current run), and a workspace per view. Top nav stays pinned to the viewport top, chat input pinned to the bottom — only the message area scrolls in between (ChatGPT-style).
 
 | View | What's there |
 |------|------|
 | **🎬 Run** | Two sub-tabs. **🤖 Agent** = chat interface backed by `AutonomousAgent`; goal in, agent picks tools (search, connectors, skills) and iterates. **Image attachments** supported (vision-capable models) — use the 📎 button on the chat input to attach PNG/JPG/GIF/WebP. **Persistent threads**: every conversation is stored at `.praxia/chats/<user>/<id>.json` and listed in the `💬 Conversations` popover so users can resume, rename, or delete past threads. Ephemeral checkbox keeps the conversation in session memory only (no disk writes). **🛠 Skill** = pick a business skill (investment / sales / design / purchasing / patent / legal), submit input, get one answer. Selected Context folders feed both via grep-relevance filter on large folders. |
-| **🧠 Knowledge** | Browse personal + shared memory entries, plus the Skill registry (your skills + org-promoted ones). |
-| **📁 Data** | Manage data folders. Local folders = files you upload here. Connector folders = registered external paths (Box / SharePoint / Notion / etc.). |
 | **📝 Prompts** | Three sub-tabs: Generate (PromptDesigner — task in, polished template back), Browse & edit (CRUD on your prompt library), Distribute (admin only — push curated prompts to specific users / roles). |
-| **📊 Stats** | Three KPIs + horizontal bar charts. Personal: total runs, success rate, memory entries. Org: active users, org runs, success rate. |
+| **📁 Data** | Manage data folders. Local folders = files you upload here, including images (PNG/JPG/GIF/WebP) which the built-in `ImageParser` makes first-class scope content. **Folders can be shared read-only with other users** via the Share section (multiselect from the auth UserStore — owner can upload + delete + reshare, sharees can only read). Connector folders = registered external paths (Box / SharePoint / Notion / etc.). |
+| **🧠 Knowledge** | Browse personal + shared memory entries, plus the Skill registry (your skills + org-promoted ones). |
+| **📊 Dashboard** | Three KPIs + horizontal bar charts. Personal: total runs, success rate, memory entries. Org: active users, org runs, success rate. |
 | **👤 Preferences** | Per-user persistent settings: language, color theme (auto/light/dark). Saved to `.praxia/preferences/<user>.json`. |
-| **⚙ Admin** | Admin role only. Seven sub-tabs: Settings (runtime LLM/backend + persistent KNOWN_KEYS), Users, Connectors, Policies (ACL), Consolidate (sleep-time promotion), Exports (CSV/JSON/JSONL), About. |
+| **⚙ Admin** | Admin role only. Seven sub-tabs: **Settings** (default LLM model — persistent across users/sessions, picker is provider→model two-step with per-provider Custom-deployment input · Memory policy with `single` / `composite` / `routed` strategy — composite fans reads out across N backends + RRF/union/intersection/weighted/llm_rerank fusion, routed picks per-query via rule-based regex or LLM router · persistent KNOWN_KEYS grouped per provider — `LLM · OpenAI`, `LLM · Azure OpenAI`, `LLM · AWS Bedrock`, `LLM · Vertex AI`, `LLM · Azure AI Foundry`, `LLM · Anthropic`, `LLM · Google`, `LLM · DeepSeek`, `LLM · Mistral`, etc. — set values masked as `****` with no partial leak, per-row `🗑 Delete` removes from `.praxia/config.toml`), Users, Connectors, Policies (ACL), Consolidate (sleep-time promotion), Exports (CSV/JSON/JSONL), About. |
 
 ## 7. Multi-LTM fusion + dynamic routing (optional, accuracy boost)
 

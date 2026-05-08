@@ -135,19 +135,26 @@ string. `LLM.complete()` returns `LLMResponse` with `text`, `usage`,
 
 ```python
 # Frontier proprietary
-LLM("claude")              # → anthropic/claude-opus-4-7
-LLM("chatgpt")             # → openai/gpt-4o
-LLM("gemini")              # → gemini/gemini-2.0-pro
+LLM("claude")              # → anthropic/claude-opus-4-7  (Apr 2026)
+LLM("chatgpt")             # → openai/gpt-5.5             (Apr 2026, codename "Spud")
+LLM("gemini")              # → gemini/gemini-3.1-pro      (Feb 2026)
+
+# Cloud-hosted variants of the same models
+LLM("azure/gpt-5.5")                                   # Azure OpenAI deployment
+LLM("azure_ai/Mistral-large")                          # Azure AI Foundry inference endpoint
+LLM("bedrock/anthropic.claude-opus-4-7-v1:0")          # Anthropic Claude on AWS Bedrock
+LLM("vertex_ai/gemini-3.1-pro")                        # Gemini on GCP Vertex AI
+LLM("vertex_ai/claude-opus-4-7")                       # Anthropic Claude on Vertex
 
 # Strong cloud APIs
-LLM("deepseek")            # → deepseek/deepseek-chat (v3)
-LLM("deepseek-reasoner")   # → deepseek/deepseek-reasoner (R1, chain-of-thought)
-LLM("mistral")             # → mistral/mistral-large-latest
-LLM("codestral")           # → mistral/codestral-latest
-LLM("grok")                # → xai/grok-2-latest
+LLM("deepseek")            # → deepseek/deepseek-v4 (Apr 2026)
+LLM("deepseek-reasoner")   # → deepseek/deepseek-v3.2-speciale (reasoning)
+LLM("mistral")             # → mistral/mistral-large-3 (Dec 2025)
+LLM("codestral")           # → mistral/codestral-2508
+LLM("grok")                # → xai/grok-4.1 (Nov 2025)
 LLM("qwen")                # → dashscope/qwen-max
 LLM("command-r")           # → cohere/command-r-plus
-LLM("perplexity")          # → perplexity/llama-3.1-sonar-large-128k-online (web-search)
+LLM("perplexity")          # → perplexity/sonar-pro (web-search-augmented)
 
 # OSS weights via fast inference / local
 LLM("llama")               # → groq/llama-3.3-70b-versatile (hundreds tok/s)

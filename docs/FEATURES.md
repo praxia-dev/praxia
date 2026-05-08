@@ -571,7 +571,7 @@ Login is a single screen:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  [🎬 Run] [🧠 Knowledge] [📝 Prompts] [📁 Data] [📊 Stats]            │ ← sticky top-bar
+│  [🎬 Run] [📝 Prompts] [📁 Data] [🧠 Knowledge] [📊 Dashboard]        │ ← fixed top-bar
 │                  [👤 Preferences] [⚙ Admin]*                         │   nav
 ├────────────────────────┬─────────────────────────────────────────────┤
 │  🪡 Praxia              │                                             │
@@ -585,7 +585,9 @@ Login is a single screen:
 │  📁 Q3 Sales (12)       │                                             │
 │   📁 …Acme/Q3 (5)       │                                             │
 │  🔌 Box: /Customers     │                                             │
-└────────────────────────┴─────────────────────────────────────────────┘
+├────────────────────────┴─────────────────────────────────────────────┤
+│  [Type a message...                                       📎 📤]      │ ← chat input fixed bottom
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 The sidebar is the **Context picker** — pick which folders / memory
@@ -598,13 +600,13 @@ to keep token use bounded.
 
 | View | Sub-tabs | Functionality |
 |------|---------|---------------|
-| **🎬 Run** | 🤖 Agent · 🛠 Skill | **Agent**: chat interface backed by `AutonomousAgent`. State a goal; the LLM picks tools (search / connector pulls / skills) and iterates. Conversation history persisted in session. **Skill**: pick a domain skill (investment / sales / design / purchasing / patent / legal), submit input, get one answer. |
-| **🧠 Knowledge** | — | Browseable personal + shared memory entries, plus the Skill registry (your skills + org-promoted ones). Search across personal memory. |
-| **📁 Data** | 📁 Local · 🔌 Connector · 🔍 Browse | Manage data folders. Local folders accept uploads and can be **nested** (parent_id-based tree). Connector folders register external paths (Box / SharePoint / Notion / etc.) — admin must enable the connector via env vars first. |
+| **🎬 Run** | 🤖 Agent · 🛠 Skill | **Agent**: chat interface backed by `AutonomousAgent`. State a goal; the LLM picks tools (search / connector pulls / skills) and iterates. **Vision input** via the chat 📎 button (PNG/JPG/GIF/WebP) — forwarded as `image_url` parts to vision-capable models. **Persistent threads** — every conversation saved at `.praxia/chats/<user>/<id>.json`, listed in the `💬 Conversations` popover (resume / rename / delete). ChatGPT-style layout: top nav fixed top, chat input fixed bottom, single page-level scroll. **Skill**: pick a domain skill (investment / sales / design / purchasing / patent / legal), submit input, get one answer. |
 | **📝 Prompts** | ✨ Generate · 📚 Browse & edit · 📤 Distribute | **Generate** uses PromptDesigner: 1-line task → polished system + user template + few-shot + 5-criterion rubric. **Browse & edit**: full CRUD on personal prompts, read-only on org / distributed scopes. **Distribute** (admin): push curated prompts to specific users or roles. |
-| **📊 Stats** | — | 3 KPIs (total runs / success rate / memory entries) + Top-skills bar chart for personal scope; equivalent for org scope (active users / org runs / success rate + Top users / Top skills). plotly with Praxia gold palette. |
+| **📁 Data** | 📁 Local · 🔌 Connector · 🔍 Browse | Manage data folders. Local folders accept uploads (PDF / DOCX / XLSX / images / etc.) and can be **nested** (parent_id-based tree). **Read-only sharing with other users** via per-folder multiselect — owner can upload + delete + reshare; sharees can pick the folder as Run context but cannot mutate. Connector folders register external paths (Box / SharePoint / Notion / etc.). Image uploads (PNG/JPG/GIF/WebP) become first-class scope content via the built-in `ImageParser`. |
+| **🧠 Knowledge** | — | Browseable personal + shared memory entries, plus the Skill registry (your skills + org-promoted ones). Search across personal memory. |
+| **📊 Dashboard** | — | 3 KPIs (total runs / success rate / memory entries) + Top-skills bar chart for personal scope; equivalent for org scope (active users / org runs / success rate + Top users / Top skills). Plotly with restrained navy accent. |
 | **👤 Preferences** | — | Per-user persistent settings (saved to `.praxia/preferences/<user>.json`): Display language (auto-detect from browser/OS, override per-user), Color theme (Auto / Light / Dark — Light follows Streamlit default, Dark applies branded CSS overrides). |
-| **⚙ Admin** | 🔑 Settings · 👥 Users · 🔌 Connectors · 🛡 Policies · 🌙 Consolidate · 💾 Exports · ℹ About | **Settings**: tenant-default LLM model + memory backend, plus the persistent KNOWN_KEYS catalog (~50 keys grouped by category — LLM / Memory / Auth / SSO / KMS / OAuth / SCIM / MCP / Audio) editable with masked-secret display. Every change is audit-logged. **Users / Connectors / Policies**: CRUD over the auth store, connector configs, and resource-access rules. **Consolidate**: dry-run / live trigger of sleep-time promotion (memory + skills). **Exports**: CSV / JSON / JSONL exports of audit log, users, skill usage, memory, policies. |
+| **⚙ Admin** | 🔑 Settings · 👥 Users · 🔌 Connectors · 🛡 Policies · 🌙 Consolidate · 💾 Exports · ℹ About | **Settings**: persistent default LLM model (provider→model two-step picker with per-provider Custom-deployment input) · **Memory policy** with `single` / `composite` / `routed` strategy radio (composite fans reads across N backends + RRF/union/intersection/weighted/llm_rerank fusion; routed picks per-query via rule regex / LLM router) · persistent KNOWN_KEYS catalog re-grouped per provider (`LLM · OpenAI`, `LLM · Anthropic`, `LLM · Azure OpenAI`, `LLM · Azure AI Foundry`, `LLM · AWS Bedrock`, `LLM · Google` (incl. Vertex), `LLM · DeepSeek`, `LLM · Mistral`, `LLM · xAI`, `LLM · Cohere`, `LLM · Perplexity`, `LLM · Groq`, `LLM · Together AI`, `LLM · OpenRouter`, `LLM · Alibaba Qwen`, `LLM · Local (Ollama)`, plus Auth / KMS / SSO / SCIM / MCP / Audio / Identity). Set values rendered as `****` (full mask), per-row `🗑 Delete` checkbox removes from `.praxia/config.toml`. Every change audit-logged. **Users / Connectors / Policies**: CRUD over the auth store (SSO-provisioned users appear here too), connector configs, ACL rules. **Consolidate**: dry-run / live trigger of sleep-time promotion. **Exports**: CSV / JSON / JSONL of audit log, users, skill usage, memory, policies. |
 
 ### Persistence
 

@@ -190,32 +190,41 @@ praxia skill run prompt_designer "Have in-house legal score contract risk on a 5
 
 LiteLLM-powered single-line provider switching:
 
-| Provider | Aliases | Auth |
+| Provider | Aliases (current default) | Auth env var(s) |
 |---|---|---|
-| Anthropic Claude | `claude` / `claude-sonnet` / `claude-haiku` | `ANTHROPIC_API_KEY` |
-| OpenAI ChatGPT | `chatgpt` / `gpt-4o` / `o1` | `OPENAI_API_KEY` |
-| Google Gemini | `gemini` / `gemini-flash` | `GEMINI_API_KEY` |
+| Anthropic Claude | `claude` (Opus 4.7) · `claude-sonnet` (4.6) · `claude-haiku` (4.5) | `ANTHROPIC_API_KEY` |
+| OpenAI ChatGPT | `chatgpt` (GPT-5.5) · `gpt-5.5` · `gpt-5.4` · `gpt-5` · `o4-mini` · `o3` · `gpt-4o` | `OPENAI_API_KEY` |
+| **Azure OpenAI Service** | `azure/<deployment-name>` | `AZURE_API_KEY` + `AZURE_API_BASE` + `AZURE_API_VERSION` (auto-mirrored to AZURE_OPENAI_*) |
+| **Azure AI Foundry (Inference)** | `azure_ai/<model-name>` | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` |
+| **AWS Bedrock** | `bedrock/anthropic.claude-opus-4-7-v1:0` etc. | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` + `AWS_REGION` |
+| **Google Vertex AI** | `vertex_ai/gemini-3.1-pro` · `vertex_ai/claude-opus-4-7` | `VERTEX_PROJECT` + `VERTEX_LOCATION` + `GOOGLE_APPLICATION_CREDENTIALS` |
+| Google Gemini (public API) | `gemini` (3.1 Pro) · `gemini-flash-lite` (3.1) · `gemini-2.5-pro` | `GEMINI_API_KEY` |
 | Google Gemma (open) | `gemma` / `gemma-2b` / `gemma-9b` / `gemma-27b` (Ollama) · `gemma-cloud` (Vertex AI) | (none for local) / Vertex auth |
 | Alibaba Qwen (cloud) | `qwen` / `qwen-72b` | `DASHSCOPE_API_KEY` |
-| **DeepSeek** | `deepseek` (v3 chat) · `deepseek-reasoner` (R1) | `DEEPSEEK_API_KEY` |
-| **Mistral** | `mistral` (large) · `mistral-small` · `codestral` | `MISTRAL_API_KEY` |
-| **xAI Grok** | `grok` | `XAI_API_KEY` |
+| **DeepSeek** | `deepseek` (V4) · `deepseek-v4-pro` · `deepseek-v3.2` · `deepseek-reasoner` (V3.2 Speciale) | `DEEPSEEK_API_KEY` |
+| **Mistral** | `mistral` (Large 3) · `mistral-medium-3.5` · `mistral-small-4` · `magistral` (reasoning) · `codestral` (25.08) · `devstral` (agentic code) | `MISTRAL_API_KEY` |
+| **xAI Grok** | `grok` (Grok 4.1) · `grok-4.1-fast` · `grok-4-heavy` · `grok-code` (code-tuned) | `XAI_API_KEY` |
 | **Llama (Groq fast)** | `llama` (3.3 70B Versatile via Groq) | `GROQ_API_KEY` |
 | **Cohere** | `command-r` (Command R+) | `COHERE_API_KEY` |
-| **Perplexity Sonar** | `perplexity` (web-search-augmented) | `PERPLEXITY_API_KEY` |
+| **Perplexity Sonar** | `perplexity` (Sonar Pro, web search) · `perplexity-cheap` · `perplexity-reasoning` | `PERPLEXITY_API_KEY` |
 | **Microsoft Phi** (local) | `phi` (3.5 3.8B Ollama) | (none — runs in-house) |
 | Qwen / Llama / Phi (local) | `qwen-local` · `llama-local` · `phi` (Ollama) | (none — runs in-house) |
 
 ```python
-LLM("claude")        # Anthropic Claude
-LLM("deepseek")      # DeepSeek v3 — strong + low cost
-LLM("mistral")       # Mistral large — EU-friendly
-LLM("llama")         # Llama 3.3 70B via Groq (fast)
-LLM("gemma")         # Google Gemma 9B via local Ollama
-LLM("phi")           # Microsoft Phi 3.5 — small / edge
-LLM("qwen-local")    # Local Qwen via Ollama
-LLM("openai/gpt-4o") # Any LiteLLM-compatible model string
+LLM("claude")          # Anthropic Claude Opus 4.7
+LLM("chatgpt")         # OpenAI GPT-5.5
+LLM("gemini")          # Gemini 3.1 Pro
+LLM("grok")            # xAI Grok 4.1
+LLM("deepseek")        # DeepSeek V4 — strong + low cost
+LLM("mistral")         # Mistral Large 3 — EU-friendly
+LLM("perplexity")      # Sonar Pro — web-search-augmented
+LLM("azure/gpt-5.5")   # Azure OpenAI deployment named "gpt-5.5"
+LLM("bedrock/anthropic.claude-opus-4-7-v1:0")  # Claude on AWS Bedrock
+LLM("vertex_ai/gemini-3.1-pro")                # Gemini on Vertex
+LLM("openai/gpt-5.5")  # Any LiteLLM-compatible model string
 ```
+
+The Admin → Settings UI groups all these as provider sub-categories (`LLM · OpenAI`, `LLM · Azure OpenAI`, etc.), with required-key indicators and per-key delete. The provider picker has a `Custom deployment / model name…` entry per-provider so deployment-named Azure/Bedrock/Vertex models work without leaving the Provider context. `litellm.drop_params + modify_params` are enabled at import time so per-model quirks (GPT-5 rejects `temperature`, requires `max_completion_tokens` instead of `max_tokens`, etc.) are bridged transparently.
 
 ### File parsing — PDF · Office · CSV · TXT · HTML · MD · code
 
@@ -494,32 +503,43 @@ The bundled Streamlit UI puts the **non-power-user surface area** of Praxia on a
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  [🎬 Run] [🧠 Knowledge] [📝 Prompts] [📁 Data] [📊 Stats]            │ ← sticky top bar
-│                  [👤 Preferences] [⚙ Admin]*                         │   (* admin/dev only)
+│  [🎬 Run] [📝 Prompts] [📁 Data] [🧠 Knowledge] [📊 Dashboard]        │ ← fixed top bar
+│                  [👤 Preferences] [⚙ Admin]*                         │   (* admin role only)
 ├────────────────────────┬─────────────────────────────────────────────┤
 │  🪡 Praxia              │                                             │
 │  👤 alice · admin       │                                             │
 │  [Sign out]             │   Selected view's workspace                 │
 │  ───────────────        │                                             │
 │  📁 Context             │   (Run = Agent chat or Skill form,          │
-│  ☑ Personal memory      │    Knowledge = memories + skill registry,   │
-│  ☑ Org memory           │    Data = folder CRUD,                      │
-│  ☐ Frozen layer         │    Prompts = generate/edit/distribute,      │
-│  📁 Q3 Sales (12)       │    Stats = charts,                          │
+│  ☑ Personal memory      │    Prompts = designer + library,            │
+│  ☑ Org memory           │    Data = folder CRUD + sharing,            │
+│  ☐ Frozen layer         │    Knowledge = memories + skill registry,   │
+│  📁 Q3 Sales (12)       │    Dashboard = KPIs + charts,               │
 │  🔌 Box: /Customers     │    Preferences = language/theme,            │
 │                         │    Admin = settings/users/policies/...)     │
-└────────────────────────┴─────────────────────────────────────────────┘
+├────────────────────────┴─────────────────────────────────────────────┤
+│  [Type a message...                                       📎 📤]      │ ← chat input fixed bottom
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**Login**: just User ID for single-user dev mode, or User ID + Password (= API key issued by `praxia user create`) for role-gated multi-user mode.
+**Login**:
+- **API key** path — User ID + Password (= API key from `praxia user create`) for role-gated multi-user.
+- **SSO** path — when `PRAXIA_SSO_PROVIDER` is set (Google / Microsoft Entra / Okta / GitHub / Keycloak / generic OIDC), a primary "Sign in with \<provider\>" button is rendered above the API-key form; click → IdP redirect → callback restores session.
+- Cookie-based persistent login (30-min sliding TTL, server-side session record at `.praxia/sessions/<token>.json`) survives browser reloads — F5 doesn't kick the user back to the login form.
 
 **Run** is the high-frequency view with two sub-tabs:
-- **🤖 Agent** — chat interface backed by `AutonomousAgent`. Type a goal; the LLM picks tools (search, connectors, skills) and iterates. Selected Context folders are passed in as additional reference data, with grep-based relevance filtering on large folders.
+- **🤖 Agent** — chat backed by `AutonomousAgent`. Type a goal; the LLM picks tools (search, connectors, skills) and iterates. **Vision attachments** via the 📎 button (PNG/JPG/GIF/WebP) when the model supports it. **Persistent threads**: every conversation saved at `.praxia/chats/<user>/<id>.json`; resume / rename / delete from the `💬 Conversations` popover. Selected Context folders are passed in as reference data, with grep-relevance filtering on large folders. Layout is ChatGPT-style — top nav fixed top, chat input fixed bottom.
 - **🛠 Skill** — pick a domain skill (investment / sales / design / purchasing / patent / legal), fill the input, click Run. Single-call, single-answer.
 
-**Knowledge** shows browseable personal + shared memory, plus the skill registry (your skills + org-promoted ones). **Data folders** are how you create/manage local-upload folders or register external paths (Box / SharePoint / Notion / etc.). Selected folders feed the Run workspace via the sidebar Context picker.
+**Prompts** has the PromptDesigner (1-line task → polished prompt) and a per-user prompt library with admin-distributed bundles.
 
-**Admin** (admin role only) consolidates 7 sub-tabs: Settings (language, runtime LLM/backend, persistent API keys), Users, Connectors, Policies (ACL), Consolidate (sleep-time promotion), Exports (audit / users / memory / policies CSV/JSON/JSONL), About.
+**Data folders** are how you create/manage local-upload folders or register external paths (Box / SharePoint / Notion / etc.). Folders can be **shared read-only with other users** (multiselect from Admin → Users — owner can upload + delete + reshare; sharees can only read). Image uploads (PNG/JPG/GIF/WebP) become first-class scope content via the built-in `ImageParser` and feed vision-capable agents.
+
+**Knowledge** shows browseable personal + shared memory, plus the skill registry (your skills + org-promoted ones).
+
+**Dashboard** shows 3 headline KPIs (runs / success-rate / memory entries) and Plotly bar charts of top skills + top users.
+
+**Admin** (admin role only) consolidates 7 sub-tabs: **Settings** (default LLM model + persistent KNOWN_KEYS grouped per provider — `LLM · OpenAI`, `LLM · Anthropic`, `LLM · Azure OpenAI`, `LLM · Azure AI Foundry`, `LLM · AWS Bedrock`, `LLM · Google`, `LLM · DeepSeek`, `LLM · Mistral`, `LLM · xAI`, `LLM · Cohere`, `LLM · Perplexity`, `LLM · Groq`, `LLM · Local (Ollama)`, plus **Memory policy** with `single` / `composite` / `routed` strategy radio — fan reads across multiple backends with RRF fusion, or route per-query via rule/llm router), Users, Connectors, Policies (ACL), Consolidate (sleep-time promotion), Exports (audit / users / memory / policies CSV/JSON/JSONL), About. Set keys are masked as `****` (no partial leak); per-row `🗑 Delete` checkbox removes a key from `.praxia/config.toml`.
 
 CLI users get the same functionality with rich-formatted output:
 
@@ -553,10 +573,11 @@ praxia run rag --question "What license is Praxia released under?"
 praxia skill run investment "Mid-term thesis on a hypothetical mid-cap electronics issuer"
 praxia skill run legal "Review the risk in this services agreement"
 
-# Launch the UI — sticky top-bar nav: Run / Knowledge / Prompts / Data /
-# Stats / Preferences (+ Admin for admin role). Login is User ID alone in
-# single-user dev mode; User ID + Password (= API key from `praxia user
-# create`) for role-gated multi-user mode.
+# Launch the UI — fixed top-bar nav: Run / Prompts / Data / Knowledge /
+# Dashboard / Preferences (+ Admin for admin role). Login: User ID +
+# Password (= API key from `praxia user create`), or "Sign in with
+# <provider>" via OIDC SSO when PRAXIA_SSO_PROVIDER is configured.
+# Cookie-based session survives reloads.
 praxia ui --port 8501
 
 # Personal → org memory distillation

@@ -122,16 +122,41 @@ RoutedBackend(
 
 ```python
 MemoryAdminPolicy(
+    # --- バックエンド戦略 ---
+    backend_strategy: Literal["single", "composite", "routed"] = "single",
+    backend: str = "json",                              # 'single' で使用
+
+    # 'composite' モード (CompositeBackend)
+    composite_backends: list[str] = [],                  # 例: ["mem0", "zep"]
+    composite_fusion: Literal["rrf", "union", "intersection",
+                              "weighted", "llm_rerank"] = "rrf",
+    composite_write_to: str = "",
+
+    # 'routed' モード (RoutedBackend)
+    routed_backends: list[str] = [],
+    routed_router: Literal["rule", "llm"] = "rule",
+    routed_write_to: str = "",
+
+    # --- 蓄積モード ---
+    default_mode: Literal["accumulate", "read_only"] = "accumulate",
+
+    # --- レガシーフィールド (旧 policy.json をそのまま読めるよう残置) ---
+    # __post_init__ が legacy のみ設定されている場合 `enforced_backend` /
+    # `default_backend` を新 `backend` フィールドに自動移行する。
     enforced_backend: str | None = None,
     default_backend: str = "json",
     allowed_backends: list[str] = [],
-    default_mode: "accumulate" | "read_only" = "accumulate",
     mode_locked: bool = False,
-    accumulate_locked_to: list[str] = [],   # ロール名
+    accumulate_locked_to: list[str] = [],
 )
 MemoryAdminPolicy.load(storage_dir) -> "MemoryAdminPolicy"
 MemoryAdminPolicy.save(storage_dir) -> Path
 MemoryAdminPolicy.is_backend_allowed(backend) -> bool
+
+# ポリシーに従って Layer-1 backend オブジェクトを構築。
+# 'single' モードは backend 名 (str)、'composite' / 'routed' は
+# 完全構築済 MemoryBackend インスタンスを返す。
+build_personal_backend(storage_dir, *, user_id) -> str | MemoryBackend
 
 MemoryUserPreference(user_id, backend=None, mode=None)
 MemoryUserPreference.load(storage_dir, user_id) -> "MemoryUserPreference"
@@ -140,6 +165,12 @@ MemoryUserPreference.save(storage_dir) -> Path
 resolve_memory_config(*, user_id, storage_dir, user_role=None,
                       requested_backend=None, requested_mode=None) -> ResolvedMemoryConfig
 ```
+
+Streamlit Admin UI (`Admin → Settings → 🧠 メモリポリシー`) が
+`MemoryAdminPolicy` を `.praxia/admin/memory_policy.json` に書き込みます。
+CLI 等価コマンドは `praxia admin memory-policy-show` /
+`praxia admin memory-policy-set`。**ユーザ毎 `MemoryUserPreference` の
+UI 経路は廃止** — admin ポリシーが唯一の真実です。
 
 ### 1.6 `praxia.skills`
 

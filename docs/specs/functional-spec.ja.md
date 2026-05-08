@@ -1058,36 +1058,61 @@ def record_fact(self, text, *, metadata=None):
 ```python
 @dataclass
 class MemoryAdminPolicy:
-    enforced_backend: str | None = None        # 全ユーザを 1 backend に固定
-    default_backend: str = "json"              # 未指定時のデフォルト
-    allowed_backends: list[str] = []           # 空 = 全許可、非空 = ホワイトリスト
-    default_mode: "accumulate" | "read_only" = "accumulate"
-    mode_locked: bool = False                  # ユーザのモード変更禁止
-    accumulate_locked_to: list[str] = []       # 強制 accumulate のロール
+    # --- バックエンド戦略 ---
+    backend_strategy: Literal["single", "composite", "routed"] = "single"
+    backend: str = "json"                     # 'single' で使う backend
+
+    # 'composite' モード (CompositeBackend)
+    composite_backends: list[str] = []        # 例: ["mem0", "zep"]
+    composite_fusion: Literal["rrf", "union", "intersection",
+                              "weighted", "llm_rerank"] = "rrf"
+    composite_write_to: str = ""
+
+    # 'routed' モード (RoutedBackend)
+    routed_backends: list[str] = []
+    routed_router: Literal["rule", "llm"] = "rule"
+    routed_write_to: str = ""
+
+    # --- 蓄積モード ---
+    default_mode: Literal["accumulate", "read_only"] = "accumulate"
+
+    # --- レガシー (旧 policy.json 互換のため残置、UI では非表示) ---
+    enforced_backend: str | None = None
+    default_backend: str = "json"
+    allowed_backends: list[str] = []
+    mode_locked: bool = False
+    accumulate_locked_to: list[str] = []
 ```
+
+ユーザ毎の `MemoryUserPreference` の UI 経路は廃止 — admin policy
+が単一の真実。policy は `.praxia/admin/memory_policy.json` に永続化、
+旧 `enforced_backend` / `default_backend` は `__post_init__` が
+`backend` フィールドへ自動移行する。
 
 #### 7.5.2 設定例
 
 ```bash
-# 例 1: 全社 mem0 強制 + viewer は read_only 強制
+# 例 1: 全社 mem0 固定
 praxia admin memory-policy-set \
-    --enforced-backend mem0 \
+    --strategy single --backend mem0 \
     --default-mode accumulate
-# viewer ロールに対しては別途 ACL で書込拒否
 
-# 例 2: 監査要件 — 全ユーザ accumulate 強制 (read_only 禁止)
+# 例 2: composite — Mem0 + Zep の並列検索 + RRF 融合、書込は Mem0
 praxia admin memory-policy-set \
-    --default-mode accumulate \
-    --mode-locked
+    --strategy composite \
+    --composite-backends mem0,zep \
+    --composite-fusion rrf \
+    --composite-write-to mem0
 
-# 例 3: ホワイトリスト型 — mem0 / zep / json のみ許可
+# 例 3: routed — クエリ内容で動的選択 (時系列 → Zep, エンティティ → Mem0+HindSight)
 praxia admin memory-policy-set \
-    --allowed mem0,zep,json \
-    --default-backend mem0
+    --strategy routed \
+    --routed-backends mem0,zep,hindsight,json \
+    --routed-router rule \
+    --routed-write-to mem0
 
-# 例 4: operator / admin は強制 accumulate (記録必須)、member は read_only 選択可
+# 例 4: 監査要件 — 全ユーザ accumulate 固定
 praxia admin memory-policy-set \
-    --accumulate-locked-roles operator,admin \
     --default-mode accumulate
 ```
 
@@ -1966,7 +1991,7 @@ os = d.org_summary()
 
 ```
 ┌─ 固定 top-bar (sticky) ─────────────────────────────────────┐
-│ [🎬 Run] [🧠 Knowledge] [📝 Prompts] [📁 Data] [📊 Stats]    │
+│ [🎬 Run] [📝 Prompts] [📁 Data] [🧠 Knowledge] [📊 Dashboard] │
 │                  [👤 Preferences] [⚙ Admin]*                 │   * admin/unknown のみ
 ├─ Sidebar ──────┬─ Main workspace ─────────────────────────┤
 │ 🪡 Praxia       │                                          │
