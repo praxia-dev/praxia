@@ -925,15 +925,28 @@ _components.html(
     var s = pdoc.createElement('script');
     s.textContent =
       "(function(){" +
+        // Sidebar is locked to 15rem in CSS. Compute the available width
+        // directly from window.innerWidth instead of trusting the topnav
+        // element's own clientWidth — Streamlit's container(width='stretch')
+        // can emit `width: 100%` which under position:fixed resolves to
+        // 100vw and gives a wrong measurement.
+        "var SIDEBAR_REM=15;" +
         "var fit=function(){" +
           "var nav=document.querySelector('.st-key-praxia_topnav');" +
           "if(!nav)return;" +
-          "var kids=Array.prototype.filter.call(nav.children,function(c){return c.offsetParent!==null||c.tagName;});" +
+          "var kids=Array.prototype.filter.call(nav.children,function(c){return c.tagName;});" +
           "var n=kids.length;" +
           "if(n<2)return;" +
-          "var w=nav.clientWidth;" +
-          "if(w<50)return;" +  // pre-mount, skip
-          "var each=Math.floor(w/n);" +
+          "var rootFs=parseFloat(getComputedStyle(document.documentElement).fontSize)||16;" +
+          "var sidebarPx=SIDEBAR_REM*rootFs;" +
+          "var pad=parseFloat(getComputedStyle(nav).paddingLeft)+parseFloat(getComputedStyle(nav).paddingRight);" +
+          "var avail=window.innerWidth-sidebarPx-(isNaN(pad)?0:pad);" +
+          "if(avail<50)return;" +
+          "var each=Math.floor(avail/n);" +
+          // Force the topnav itself to its computed width so flex children
+          // can't drift past the right edge from any leftover width:100%.
+          "nav.style.setProperty('width',(window.innerWidth-sidebarPx)+'px','important');" +
+          "nav.style.setProperty('max-width',(window.innerWidth-sidebarPx)+'px','important');" +
           "kids.forEach(function(c){" +
             "c.style.setProperty('width',each+'px','important');" +
             "c.style.setProperty('min-width','0','important');" +
@@ -1447,7 +1460,11 @@ with st.container(
     key="praxia_topnav",
     horizontal=True,
     gap=None,
-    width="stretch",
+    # NOTE: not passing width="stretch" — that emits a `width: 100%` style
+    # which under our `position: fixed` topnav resolves to 100vw and pushes
+    # the row 15rem (sidebar width) off the right edge, hiding the
+    # rightmost button. CSS `width: auto !important` plus left+right gives
+    # the right computed width.
     vertical_alignment="center",
 ):
     for key in NAV_KEYS:

@@ -285,6 +285,13 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     top: 0 !important;
     left: 15rem !important;
     right: 0 !important;
+    /* CRITICAL: width: auto with both left + right set lets the browser
+       compute width = viewport - left - right = 100vw - 15rem. WITHOUT
+       this override, st.container(width="stretch") emits `width: 100%`
+       which under position:fixed resolves to 100vw — that pushes the
+       row 15rem off the right edge and hides Admin behind the viewport. */
+    width: auto !important;
+    max-width: none !important;
     z-index: 9999 !important;
     background-color: #ffffff;  /* light; dark overrides below */
     padding: 0.5rem 0.5rem !important;
