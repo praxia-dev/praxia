@@ -2322,6 +2322,7 @@ elif mode == "admin":
         # Tenant runtime: LLM model + memory backend (admin-only,
         # because the LLM choice depends on which API key is configured).
         st.subheader(t("admin.settings.runtime_h"))
+        st.caption(t("admin.settings.runtime_intro"))
         col_p, col_m, col_b = st.columns(3)
         current_model = st.session_state.get("praxia_model", _default_model)
         # Resolve alias to full model id for matching against the provider map.
@@ -2436,7 +2437,6 @@ elif mode == "admin":
         from praxia.memory.policy import MemoryAdminPolicy
         _BACKEND_CHOICES = ["json", "mem0", "langmem", "letta", "zep", "hindsight"]
         _MODE_CHOICES = ["accumulate", "read_only"]
-        _ROLE_CHOICES = ["admin", "manager", "member", "viewer"]
 
         _admin_pol = MemoryAdminPolicy.load(loom.config.memory_dir)
 
@@ -2481,19 +2481,12 @@ elif mode == "admin":
                 key="mp_default_mode",
                 help=t("admin.settings.mp_default_mode_help"),
             )
-            mp_mode_locked = st.checkbox(
-                t("admin.settings.mp_mode_locked"),
-                value=_admin_pol.mode_locked,
-                key="mp_mode_locked",
-                help=t("admin.settings.mp_mode_locked_help"),
-            )
-            mp_accumulate_locked = st.multiselect(
-                t("admin.settings.mp_accumulate_locked"),
-                options=_ROLE_CHOICES,
-                default=_admin_pol.accumulate_locked_to,
-                key="mp_accumulate_locked",
-                help=t("admin.settings.mp_accumulate_locked_help"),
-            )
+            # Mode-lock + role-accumulate-lock controls used to gate users
+            # from changing their own preference. The user-facing memory
+            # pref UI was deliberately removed (admin-only memory config),
+            # so there's nothing left for these to lock against. We keep
+            # the dataclass fields for CLI/SDK callers but hide them here
+            # to match what's actually reachable from the UI.
 
         if st.button(
             t("admin.settings.mp_apply"), type="primary",
@@ -2504,8 +2497,8 @@ elif mode == "admin":
                 default_backend=mp_default_backend,
                 allowed_backends=mp_allowed,
                 default_mode=mp_default_mode,
-                mode_locked=mp_mode_locked,
-                accumulate_locked_to=mp_accumulate_locked,
+                mode_locked=_admin_pol.mode_locked,
+                accumulate_locked_to=_admin_pol.accumulate_locked_to,
             )
             new_pol.save(loom.config.memory_dir)
             try:
@@ -2530,26 +2523,37 @@ elif mode == "admin":
             grouped.setdefault(_cat, []).append((_key, _is_secret))
 
         for category, keys in grouped.items():
-            with st.expander(
-                f"**{category}**  ·  {len(keys)} {t('admin.settings.keys_label')}",
-                expanded=(category == "LLM"),
-            ):
+            # Show category header with set/total count so users see at
+            # a glance how many keys in this group are already populated.
+            _set_count = sum(1 for k, _ in keys if PraxiaConfig.get(k) is not None)
+            _hdr = (
+                f"**{category}**  ·  {_set_count}/{len(keys)} "
+                + t("admin.settings.keys_set_label")
+            )
+            with st.expander(_hdr, expanded=(category == "LLM")):
                 with st.form(f"settings_form_{category}", clear_on_submit=True):
                     pending: dict[str, str] = {}
                     for key, is_secret in keys:
                         current = PraxiaConfig.get(key)
+                        # Visible per-field "already set" indicator: ✓
+                        # prefix on the label + masked or full value
+                        # appended in parentheses. Makes it obvious
+                        # without needing to hover the help icon.
                         if current is None:
+                            label = key
                             help_text = t("admin.settings.help.unset")
                         elif is_secret:
+                            label = f"✓ {key}  ({_mask_for_display(current)})"
                             help_text = t("admin.settings.help.secret_set").format(
                                 masked=_mask_for_display(current)
                             )
                         else:
+                            label = f"✓ {key}  ({current})"
                             help_text = t("admin.settings.help.value_set").format(
                                 value=current
                             )
                         new_val = st.text_input(
-                            key, value="",
+                            label, value="",
                             type="password" if is_secret else "default",
                             placeholder=t("admin.settings.placeholder.unchanged"),
                             help=help_text,

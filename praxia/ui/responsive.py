@@ -31,29 +31,35 @@ _MOBILE_CSS = """
        consumer SaaS landing. */
 
 /* Sober, neutral font stack. No stylistic-alternate font-feature-settings
-   (those gave a "designy" feel). */
-.stApp, body {
+   (those gave a "designy" feel). Slightly smaller global base size for
+   denser, business-app feel. */
+html, .stApp, body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
                  "Inter", "Helvetica Neue", "Hiragino Sans", "Noto Sans JP",
                  system-ui, sans-serif !important;
+    font-size: 14px !important;  /* default is 16px */
+}
+.stMarkdown p, .stMarkdown li, label, [data-testid="stMarkdownContainer"] p {
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
 }
 code, pre, [data-testid="stCode"], .stCode {
     font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", "Consolas",
                  "Menlo", monospace !important;
-    font-size: 0.875rem !important;
+    font-size: 0.825rem !important;
 }
 
-/* Calm heading hierarchy — modest negative tracking, conservative weights. */
-.stMarkdown h1, h1 { font-weight: 600 !important; letter-spacing: -0.005em !important; line-height: 1.25 !important; }
-.stMarkdown h2, h2 { font-weight: 600 !important; letter-spacing: -0.003em !important; line-height: 1.3 !important; }
-.stMarkdown h3, h3 { font-weight: 600 !important; }
-.stMarkdown h4, h4 { font-weight: 600 !important; }
+/* Calm heading hierarchy — slightly smaller across the board. */
+.stMarkdown h1, h1 { font-size: 1.6rem !important; font-weight: 600 !important; letter-spacing: -0.005em !important; line-height: 1.25 !important; }
+.stMarkdown h2, h2 { font-size: 1.3rem !important; font-weight: 600 !important; letter-spacing: -0.003em !important; line-height: 1.3 !important; }
+.stMarkdown h3, h3 { font-size: 1.1rem !important; font-weight: 600 !important; }
+.stMarkdown h4, h4 { font-size: 1rem !important; font-weight: 600 !important; }
 
-/* Captions — neutral, no decorative tracking. */
+/* Captions — denser. */
 [data-testid="stCaptionContainer"], .stCaption,
 small, [data-testid="stCaption"] {
-    font-size: 0.825rem !important;
-    line-height: 1.45 !important;
+    font-size: 0.78rem !important;
+    line-height: 1.4 !important;
 }
 
 /* Buttons: square-ish, no lift, no shadow. Color change on hover only. */
