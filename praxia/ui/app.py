@@ -2582,7 +2582,14 @@ elif mode == "prompts":
                         )
                         st.session_state["pd_result"] = result
                         st.session_state["pd_task"] = pd_task
-                        st.session_state["pd_target_llm"] = pd_target_llm
+                        # NOTE: do NOT write back to "pd_target_llm" — that
+                        # key is already owned by the selectbox widget above
+                        # and Streamlit forbids modifying a widget-bound
+                        # session_state key after the widget is instantiated.
+                        # The widget keeps its own value automatically; we
+                        # snapshot it under a separate non-widget key for
+                        # later use (tags etc.).
+                        st.session_state["pd_target_llm_used"] = pd_target_llm
                     except Exception as e:
                         st.error(f"Generation failed: {e}")
 
@@ -2613,14 +2620,18 @@ elif mode == "prompts":
                     store.save_personal(
                         user_id=user_id, name=save_name, body=md,
                         description=save_desc,
-                        tags=["generated", st.session_state.get("pd_target_llm") or "auto"],
+                        tags=["generated", st.session_state.get("pd_target_llm_used") or "auto"],
                     )
                     st.success(t("prompts.generate.saved").format(name=save_name))
-                    for k in ("pd_result", "pd_task", "pd_target_llm"):
+                    # Don't pop "pd_target_llm" — it's a widget key and
+                    # Streamlit forbids deleting it after instantiation.
+                    # The selectbox keeps its current value, which is fine
+                    # (user might want to design another with the same target).
+                    for k in ("pd_result", "pd_task", "pd_target_llm_used"):
                         st.session_state.pop(k, None)
                     st.rerun()
                 if col_clear_btn.button(t("prompts.generate.discard_btn"), key="pd_discard_btn"):
-                    for k in ("pd_result", "pd_task", "pd_target_llm"):
+                    for k in ("pd_result", "pd_task", "pd_target_llm_used"):
                         st.session_state.pop(k, None)
                     st.rerun()
 
