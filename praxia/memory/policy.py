@@ -253,9 +253,27 @@ def build_personal_backend(
     storage_dir = Path(storage_dir)
     admin = MemoryAdminPolicy.load(storage_dir)
     if admin.backend_strategy == "single":
-        # The string path — load_backend (called by PersonalMemory
-        # internally with backend=this string) handles lazy imports.
-        return admin.backend or "json"
+        name = admin.backend or "json"
+        if name == "json":
+            return name
+        # Probe non-json backends before committing the orchestrator
+        # to one. If it can't init (missing API key, missing optional
+        # package), fall back to json with a warning rather than
+        # crashing Praxia start-up. The admin can fix the keys in
+        # Settings and the next restart will re-attempt.
+        from praxia.memory.backends import load_backend
+        try:
+            load_backend(name)
+            return name
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Memory policy backend %r failed to initialize (%s). "
+                "Falling back to 'json'. Configure the backend's API "
+                "keys in Admin → Settings → LLM providers to enable it.",
+                name, exc,
+            )
+            return "json"
 
     # Composite / Routed need actual backend instances.
     from praxia.memory.backends import load_backend

@@ -1024,12 +1024,40 @@ def get_loom(_user_id: str, _org_id: str, _model: str) -> Praxia:
 try:
     loom = get_loom(user_id, org_id, model_choice)
 except Exception as _loom_exc:
+    # Read the *actual* admin policy so the error message names the
+    # backend that's failing (which is often different from the
+    # session-state runtime override). Composite/routed configs can
+    # have several backends; show all of them.
+    _failing_label = "json"
+    try:
+        from praxia.memory.policy import MemoryAdminPolicy as _MAP
+        _ap = _MAP.load(Path(".praxia"))
+        if _ap.backend_strategy == "single":
+            _failing_label = _ap.backend
+        elif _ap.backend_strategy == "composite":
+            _failing_label = "composite[" + ", ".join(_ap.composite_backends or []) + "]"
+        elif _ap.backend_strategy == "routed":
+            _failing_label = "routed[" + ", ".join(_ap.routed_backends or []) + "]"
+    except Exception:
+        _failing_label = backend_choice
     st.error(t("loom.init_failed").format(
-        backend=backend_choice,
-        error=str(_loom_exc),
+        backend=_failing_label,
+        error=_scrub_secrets(str(_loom_exc)),
     ))
     st.caption(t("loom.init_failed_hint"))
     if st.button(t("loom.fallback_to_json"), type="primary", key="_loom_fallback_json"):
+        # One-click recovery: rewrite the admin policy back to
+        # 'single + json' so the next start uses the dependency-free
+        # backend. The user can re-enable mem0 / letta / etc. once
+        # they've configured the corresponding API keys.
+        try:
+            from praxia.memory.policy import MemoryAdminPolicy as _MAP
+            _safe = _MAP.load(Path(".praxia"))
+            _safe.backend_strategy = "single"
+            _safe.backend = "json"
+            _safe.save(Path(".praxia"))
+        except Exception:
+            pass
         st.session_state["praxia_backend"] = "json"
         os.environ["PRAXIA_MEMORY_BACKEND"] = "json"
         try:
