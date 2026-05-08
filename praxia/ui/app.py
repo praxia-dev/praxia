@@ -1518,45 +1518,42 @@ if mode == "run":
                 if active_thread is not None:
                     st.caption(f"💬 {active_thread.title}")
 
-        # ----- Render messages (ChatGPT-style scrollable area) ---------
-        # st.container(height=...) renders a fixed-height scrollable
-        # box, so the messages scroll independently from the rest of
-        # the page. The chat_input below stays pinned at the bottom.
-        # Height is in pixels; ~64% of a 900-pixel viewport is enough
-        # to feel comfortable while leaving room for header + input.
-        _messages_box = st.container(height=560, border=False)
-        with _messages_box:
-            if not messages_view:
-                # Subtle hint when the conversation is empty so the
-                # box isn't a confusing blank slate.
-                st.caption("ℹ️ " + t("run.agent.empty_hint"))
-            for msg in messages_view:
-                with st.chat_message(msg["role"]):
-                    if msg.get("content"):
-                        st.markdown(msg["content"])
-                    # Vision attachments — inline thumbnails.
-                    for img in msg.get("images") or []:
-                        data = img.get("data")
-                        mime = img.get("mime", "image/png")
-                        if not data:
-                            continue
-                        try:
-                            st.image(
-                                f"data:{mime};base64,{data}",
-                                width=320,
-                            )
-                        except Exception:
-                            pass
-                    if msg.get("trace"):
-                        with st.expander(t("run.agent.trace"), expanded=False):
-                            for step in msg["trace"]:
-                                tc = step if isinstance(step, dict) else {}
-                                tn = tc.get("tool_name", str(step))
-                                ta = tc.get("tool_args", {})
-                                tr = tc.get("tool_result", "")
-                                st.markdown(f"**🔧 {tn}** `{ta}`")
-                                st.text(str(tr)[:600])
-                                st.divider()
+        # ----- Render messages -----------------------------------------
+        # Render inline (no fixed-height container) so there's ONE
+        # scrollbar — the page-level one — instead of nesting a
+        # height-bounded box that produces a second scrollbar inside
+        # the first. The fixed top-nav and fixed chat-input keep their
+        # positions during page scroll, which gives the same
+        # 'ChatGPT-like' feel without the nested-scroll annoyance.
+        if not messages_view:
+            st.caption("ℹ️ " + t("run.agent.empty_hint"))
+        for msg in messages_view:
+            with st.chat_message(msg["role"]):
+                if msg.get("content"):
+                    st.markdown(msg["content"])
+                # Vision attachments — inline thumbnails.
+                for img in msg.get("images") or []:
+                    data = img.get("data")
+                    mime = img.get("mime", "image/png")
+                    if not data:
+                        continue
+                    try:
+                        st.image(
+                            f"data:{mime};base64,{data}",
+                            width=320,
+                        )
+                    except Exception:
+                        pass
+                if msg.get("trace"):
+                    with st.expander(t("run.agent.trace"), expanded=False):
+                        for step in msg["trace"]:
+                            tc = step if isinstance(step, dict) else {}
+                            tn = tc.get("tool_name", str(step))
+                            ta = tc.get("tool_args", {})
+                            tr = tc.get("tool_result", "")
+                            st.markdown(f"**🔧 {tn}** `{ta}`")
+                            st.text(str(tr)[:600])
+                            st.divider()
 
         # ----- Chat input ----------------------------------------------
         # accept_file=True turns the chat input into an "attach + send"

@@ -201,6 +201,23 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+/* The sidebar collapse/expand control (the small chevron button
+   that appears at top-left when the sidebar is collapsed) was sitting
+   *under* our fixed top-nav, so users couldn't re-open the sidebar
+   once it was closed. Bump its z-index above the nav, and force its
+   visibility — Streamlit hides it with display:none when the
+   sidebar is open, but we never want to fully hide it. */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+button[kind="header"][aria-label*="sidebar" i],
+button[data-testid="stExpandSidebarButton"] {
+    z-index: 100000 !important;
+    position: fixed !important;
+    top: 0.5rem !important;
+    left: 0.5rem !important;
+    visibility: visible !important;
+}
+
 /* Reserve clearance at top + bottom of the main content so the
    fixed top-nav doesn't cover the first item, and the fixed chat
    input doesn't cover the last message. ~3.5rem matches the nav
