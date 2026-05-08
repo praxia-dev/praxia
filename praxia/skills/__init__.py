@@ -40,13 +40,23 @@ from praxia.skills.prompt_designer import (  # noqa: E402
     FewShotExample,
     PromptDesignerSkill,
 )
+from praxia.skills.document_designer import (  # noqa: E402
+    DocumentTheme,
+    DocxDesignerSkill,
+    PptxDesignerSkill,
+    ThemeStore,
+)
 
-# Auto-register the OutputFormatSkill (domain="utility", so it stays out of
-# BUSINESS_SKILLS but is still discoverable via the SKILLS registry).
+# Auto-register utility skills (domain="utility", so they stay out of
+# BUSINESS_SKILLS but are discoverable via the SKILLS registry).
 if not SKILLS.has(OutputFormatSkill.manifest.name):
     SKILLS.register(OutputFormatSkill.manifest.name, OutputFormatSkill)
 if not SKILLS.has(PromptDesignerSkill.manifest.name):
     SKILLS.register(PromptDesignerSkill.manifest.name, PromptDesignerSkill)
+if not SKILLS.has(PptxDesignerSkill.manifest.name):
+    SKILLS.register(PptxDesignerSkill.manifest.name, PptxDesignerSkill)
+if not SKILLS.has(DocxDesignerSkill.manifest.name):
+    SKILLS.register(DocxDesignerSkill.manifest.name, DocxDesignerSkill)
 
 
 def get_business_skills() -> list[type[Skill]]:
@@ -70,6 +80,10 @@ __all__ = [
     "LegalSkill",
     "OutputFormatSkill",
     "PromptDesignerSkill",
+    "PptxDesignerSkill",
+    "DocxDesignerSkill",
+    "DocumentTheme",
+    "ThemeStore",
     "DesignedPrompt",
     "DesignerResult",
     "FewShotExample",

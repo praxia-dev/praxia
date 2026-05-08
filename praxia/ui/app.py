@@ -1943,15 +1943,25 @@ if mode == "run":
 
     # ---- Skill (single domain skill) --------------------------------
     with tab_skill:
-        skill_options = {
-            f"{s.manifest.domain} — {s.manifest.name}": s
-            for s in BUSINESS_SKILLS
-        }
+        from praxia.skills import (
+            DocxDesignerSkill as _DocxDesignerSkill,
+            PptxDesignerSkill as _PptxDesignerSkill,
+        )
+        # Designer skills are domain="utility" so they don't ship in
+        # BUSINESS_SKILLS. Add them explicitly here so users can run
+        # design-rich pptx / docx generation alongside the domain skills.
+        _designer_skills = [_PptxDesignerSkill, _DocxDesignerSkill]
+        skill_options: dict[str, type] = {}
+        for s in BUSINESS_SKILLS:
+            skill_options[f"{s.manifest.domain} — {s.manifest.name}"] = s
+        for s in _designer_skills:
+            skill_options[f"design — {s.manifest.name}"] = s
         label = st.selectbox(
             t("skill.pick"), options=list(skill_options.keys()), key="sk_pick",
         )
         skill_cls = skill_options[label]
         st.caption(skill_cls.manifest.description)
+        _is_designer = skill_cls in _designer_skills
 
         from praxia.io.parsers import parse_file as _parse2, supported_extensions as _exts2
         SKILL_EXTS = _exts2()
@@ -2048,8 +2058,29 @@ if mode == "run":
                     except Exception as e:
                         st.error(f"STT failed: {e}")
 
+        # Designer skills get a theme picker (loaded from the admin
+        # theme store). Falls back to "no theme" if none configured.
+        _picked_theme_name = ""
+        if _is_designer:
+            from praxia.skills.document_designer import ThemeStore as _ThemeStore
+            _ts = _ThemeStore(base_dir=loom.config.memory_dir / "themes")
+            _theme_names = [""] + _ts.list_names()
+            _picked_theme_name = st.selectbox(
+                t("skill.designer.theme"),
+                options=_theme_names,
+                format_func=lambda n: (
+                    t("skill.designer.theme_none") if n == "" else f"🎨 {n}"
+                ),
+                key="skill_theme_pick",
+            )
+            st.caption(t("skill.designer.theme_hint"))
+
         enable_tts = st.checkbox(
             t("skill.tts_toggle"), value=False, key="skill_tts",
+            disabled=_is_designer,
+            help=(
+                t("skill.designer.no_tts") if _is_designer else None
+            ),
         )
 
         # Sidebar data-scope picker drives this; the user's input is
@@ -2070,30 +2101,116 @@ if mode == "run":
         ):
             llm = LLM(model_choice)
             skill_obj = skill_cls(llm=llm)
-            with st.spinner(f"Running {skill_obj.manifest.name}…"):
-                output = skill_obj.run(user_input)
-            # Persist the output across reruns so the download buttons
-            # below keep working after their first click (each download
-            # click triggers a Streamlit rerun, which would otherwise
-            # blow away the local `output` variable).
-            st.session_state["skill_run_output"] = output
-            st.session_state["skill_run_name"] = skill_obj.manifest.name
-            # Ephemeral mode: skip the skill_registry usage log + the
-            # promotion-engine signals it feeds. Default mode logs as usual.
-            if loom.skill_registry and not ephemeral:
-                loom.skill_registry.log_usage(
-                    skill_name=skill_obj.manifest.name, user_id=user_id,
-                )
-            if enable_tts:
-                from praxia.io.audio import TTS
-                try:
-                    with st.spinner(t("skill.tts_synthesizing")):
-                        audio_bytes = TTS().synthesize(
-                            output[:4000], voice="alloy", format="mp3",
+            try:
+                if _is_designer:
+                    # Designer skills return raw .pptx / .docx bytes via
+                    # an LLM-codegen → sandbox pipeline. They take longer
+                    # (the LLM authors python-pptx code, the sandbox runs
+                    # it, on failure we retry) — show a longer spinner.
+                    with st.spinner(t("skill.designer.designing")):
+                        bytes_out = skill_obj.run(
+                            user_input,
+                            theme_name=(_picked_theme_name or None),
+                            theme_dir=str(loom.config.memory_dir / "themes"),
                         )
-                    st.session_state["skill_run_tts_bytes"] = audio_bytes
-                except Exception as e:
-                    st.warning(f"TTS unavailable: {e}")
+                    # Stash bytes + the file extension keyed off skill
+                    # name so the persistent panel below knows what to
+                    # offer (just the native format — no md/html/etc
+                    # since the bytes are already a real document).
+                    _ext = (
+                        "pptx" if skill_obj.manifest.name == "pptx_designer"
+                        else "docx"
+                    )
+                    st.session_state["skill_designer_bytes"] = bytes_out
+                    st.session_state["skill_designer_ext"] = _ext
+                    st.session_state["skill_designer_brief"] = user_input[:120]
+                    # Clear any older non-designer output so the panel
+                    # doesn't show both at once.
+                    for _k in (
+                        "skill_run_output", "skill_run_name", "skill_run_tts_bytes",
+                    ):
+                        st.session_state.pop(_k, None)
+                else:
+                    with st.spinner(f"Running {skill_obj.manifest.name}…"):
+                        output = skill_obj.run(user_input)
+                    # Persist the output across reruns so the download
+                    # buttons below keep working after their first click
+                    # (each download click triggers a Streamlit rerun,
+                    # which would otherwise blow away the local
+                    # `output` variable).
+                    st.session_state["skill_run_output"] = output
+                    st.session_state["skill_run_name"] = skill_obj.manifest.name
+                    # Clear designer-output keys if any
+                    for _k in (
+                        "skill_designer_bytes", "skill_designer_ext",
+                        "skill_designer_brief",
+                    ):
+                        st.session_state.pop(_k, None)
+                # Ephemeral mode: skip the skill_registry usage log + the
+                # promotion-engine signals it feeds. Default mode logs as usual.
+                if loom.skill_registry and not ephemeral:
+                    loom.skill_registry.log_usage(
+                        skill_name=skill_obj.manifest.name, user_id=user_id,
+                    )
+                if enable_tts and not _is_designer:
+                    from praxia.io.audio import TTS
+                    try:
+                        with st.spinner(t("skill.tts_synthesizing")):
+                            audio_bytes = TTS().synthesize(
+                                output[:4000], voice="alloy", format="mp3",
+                            )
+                        st.session_state["skill_run_tts_bytes"] = audio_bytes
+                    except Exception as e:
+                        st.warning(f"TTS unavailable: {e}")
+            except Exception as e:
+                st.error(f"{skill_obj.manifest.name} failed: {e}")
+
+        # --- Designer skill output panel (raw .pptx / .docx bytes).
+        # Designer skills already return a fully-formed binary document;
+        # there's nothing to re-export — just one download button + a
+        # clear-output button. Each generation triggers a fresh codegen
+        # cycle, so the user shouldn't expect to "tweak then re-export".
+        if "skill_designer_bytes" in st.session_state:
+            _ds_bytes = st.session_state["skill_designer_bytes"]
+            _ds_ext = st.session_state.get("skill_designer_ext", "bin")
+            _ds_brief = st.session_state.get("skill_designer_brief", "designed")
+            _ds_stem = "".join(
+                c if c.isalnum() else "_"
+                for c in _ds_brief.lower()
+            )[:40] or "designed"
+            _ds_mime = (
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                if _ds_ext == "pptx"
+                else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            st.success(
+                t("skill.designer.success").format(
+                    n=len(_ds_bytes), ext=_ds_ext.upper(),
+                )
+            )
+            _ds_col1, _ds_col2 = st.columns([2, 1])
+            with _ds_col1:
+                st.download_button(
+                    f"📥 {_ds_ext.upper()} ({len(_ds_bytes):,} bytes)",
+                    data=_ds_bytes,
+                    file_name=f"{_ds_stem}.{_ds_ext}",
+                    mime=_ds_mime,
+                    key="skill_designer_dl",
+                    type="primary",
+                    use_container_width=True,
+                )
+            with _ds_col2:
+                if st.button(
+                    t("skill.clear_output"),
+                    key="skill_designer_clear", type="secondary",
+                    use_container_width=True,
+                ):
+                    for _k in (
+                        "skill_designer_bytes", "skill_designer_ext",
+                        "skill_designer_brief",
+                    ):
+                        st.session_state.pop(_k, None)
+                    st.rerun()
 
         # --- Persistent output panel (survives reruns triggered by
         # download_button clicks). The output is the skill's last result;
@@ -3053,7 +3170,7 @@ elif mode == "admin":
 
     (
         tab_settings, tab_users, tab_connectors, tab_policies,
-        tab_consolidate, tab_exports, tab_about,
+        tab_consolidate, tab_exports, tab_themes, tab_about,
     ) = st.tabs([
         t("admin.settings.subtab"),
         t("admin.users.subtab"),
@@ -3061,6 +3178,7 @@ elif mode == "admin":
         t("admin.policies.subtab"),
         t("admin.consolidate.subtab"),
         t("admin.downloads.subtab"),
+        t("admin.themes.subtab"),
         t("admin.about.subtab"),
     ])
 
@@ -3821,6 +3939,141 @@ elif mode == "admin":
                         file_name=path.name,
                         mime="application/octet-stream",
                     )
+
+    with tab_themes:
+        from praxia.skills.document_designer import DocumentTheme, ThemeStore
+
+        st.markdown(t("admin.themes.intro"))
+
+        _theme_store = ThemeStore(
+            base_dir=loom.config.memory_dir / "themes",
+        )
+
+        # --- Existing themes
+        existing = _theme_store.list_names()
+        st.subheader(t("admin.themes.existing_h"))
+        if not existing:
+            st.caption(t("admin.themes.empty"))
+        for theme_name in existing:
+            with st.expander(f"🎨 {theme_name}", expanded=False):
+                try:
+                    th = _theme_store.load(theme_name)
+                except Exception as e:
+                    st.error(f"load error: {e}")
+                    continue
+                st.code(th.to_prompt_block(), language="text")
+                if st.button(
+                    t("admin.themes.delete_btn"),
+                    key=f"theme_delete_{theme_name}", type="secondary",
+                ):
+                    _theme_store.delete(theme_name)
+                    st.success(t("admin.themes.deleted").format(name=theme_name))
+                    st.rerun()
+
+        # --- New theme form
+        st.divider()
+        st.subheader(t("admin.themes.new_h"))
+        with st.form("new_theme_form", clear_on_submit=True):
+            tn_name = st.text_input(
+                t("admin.themes.new.name"),
+                placeholder="acme_corporate",
+                key="theme_new_name",
+            )
+            tcol1, tcol2 = st.columns(2)
+            with tcol1:
+                tn_primary = st.color_picker(
+                    t("admin.themes.new.primary"), "#1f2937",
+                    key="theme_new_primary",
+                )
+                tn_accent = st.color_picker(
+                    t("admin.themes.new.accent"), "#2563eb",
+                    key="theme_new_accent",
+                )
+                tn_bg = st.color_picker(
+                    t("admin.themes.new.bg"), "#ffffff",
+                    key="theme_new_bg",
+                )
+            with tcol2:
+                tn_muted = st.color_picker(
+                    t("admin.themes.new.muted"), "#6b7280",
+                    key="theme_new_muted",
+                )
+                tn_text = st.color_picker(
+                    t("admin.themes.new.text"), "#111827",
+                    key="theme_new_text",
+                )
+            fcol1, fcol2 = st.columns(2)
+            with fcol1:
+                tn_heading_font = st.text_input(
+                    t("admin.themes.new.heading_font"),
+                    value="Calibri", key="theme_new_heading_font",
+                )
+                tn_body_font = st.text_input(
+                    t("admin.themes.new.body_font"),
+                    value="Calibri", key="theme_new_body_font",
+                )
+            with fcol2:
+                tn_heading_size = st.number_input(
+                    t("admin.themes.new.heading_size"),
+                    min_value=12, max_value=72, value=28,
+                    key="theme_new_heading_size",
+                )
+                tn_body_size = st.number_input(
+                    t("admin.themes.new.body_size"),
+                    min_value=8, max_value=48, value=16,
+                    key="theme_new_body_size",
+                )
+            tn_footer = st.text_input(
+                t("admin.themes.new.footer_text"),
+                placeholder="© 2026 Acme Corp.",
+                key="theme_new_footer",
+            )
+            tn_logo = st.file_uploader(
+                t("admin.themes.new.logo"),
+                type=["png", "jpg", "jpeg"],
+                key="theme_new_logo",
+            )
+            tn_master = st.file_uploader(
+                t("admin.themes.new.master"),
+                type=["pptx"],
+                key="theme_new_master",
+            )
+            tn_submit = st.form_submit_button(
+                t("admin.themes.new.save_btn"), type="primary",
+            )
+
+        if tn_submit:
+            try:
+                new_theme = DocumentTheme(
+                    name=tn_name.strip(),
+                    colors={
+                        "primary": tn_primary,
+                        "accent": tn_accent,
+                        "background": tn_bg,
+                        "muted": tn_muted,
+                        "text": tn_text,
+                    },
+                    fonts={
+                        "heading": tn_heading_font.strip() or "Calibri",
+                        "body": tn_body_font.strip() or "Calibri",
+                        "code": "Consolas",
+                        "heading_size_pt": int(tn_heading_size),
+                        "body_size_pt": int(tn_body_size),
+                    },
+                    footer_text=(tn_footer.strip() or None),
+                )
+                _theme_store.save(
+                    new_theme,
+                    logo_bytes=(tn_logo.getvalue() if tn_logo else None),
+                    logo_filename=(tn_logo.name if tn_logo else None),
+                    master_bytes=(tn_master.getvalue() if tn_master else None),
+                )
+                st.success(t("admin.themes.saved").format(name=new_theme.name))
+                st.rerun()
+            except ValueError as e:
+                st.error(str(e))
+            except Exception as e:
+                st.error(f"failed to save theme: {e}")
 
     with tab_about:
         st.header(t("about.h"))

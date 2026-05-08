@@ -126,6 +126,46 @@ result = flow.run({"customer_name": "...", "product": "..."})
 
 Each `FlowStep` can reference earlier outputs via `${step_name}` template substitution.
 
+## Document Designer (Code-gen Skills)
+
+Two utility skills produce design-rich `.pptx` and `.docx` files by
+having the LLM author `python-pptx` / `python-docx` code that runs in
+a sandbox. Inspired by Anthropic's Claude Code Skills approach —
+unlike the bare structure-mapping `OutputFormatSkill`, the designer
+skills compose multi-column layouts, matrix slides, embedded
+matplotlib charts, and themed branding.
+
+```
+brief + theme.json
+   ↓
+LLM writes Python code (python-pptx / python-docx)
+   ↓
+AST allowlist (only pptx, docx, matplotlib, PIL, numpy + safe stdlib)
+   ↓
+subprocess sandbox (30s timeout, 512MB RAM on POSIX, no network)
+   ↓
+on traceback → feed it back to LLM, retry up to 3 times
+   ↓
+.pptx / .docx bytes → st.download_button
+```
+
+Themes live under `.praxia/themes/<name>/`:
+
+```
+.praxia/themes/
+└── acme_corporate/
+    ├── theme.json        # colors, fonts, footer_text
+    ├── logo.png          # optional, embedded on slide 1 / cover page
+    └── master.pptx       # optional, used as base for PptxDesigner
+```
+
+Admin UI: `Admin → Themes` lets admins upload / inspect / delete
+themes via color pickers + file uploaders. Users pick a theme from
+the dropdown when running the skill in `Run → Skill`.
+
+See [`praxia.skills.document_designer`](../praxia/skills/document_designer/__init__.py)
+for the source.
+
 ## LLM Provider Abstraction
 
 Thin wrapper over LiteLLM. 27 friendly aliases cover the major providers;

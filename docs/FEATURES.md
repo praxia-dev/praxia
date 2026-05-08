@@ -1303,6 +1303,31 @@ fs.deliver(md, user_request="HTML please")      # ExporterResult with .bytes
 
 Custom formats register via the `praxia.exporters` entry-point — same pattern as connectors.
 
+### 28a. Document designer (code-gen, Claude-Skills-style)
+
+The bare exporters above map Markdown into a default-styled deck or doc — no colors, no charts, no branding. The **`pptx_designer`** and **`docx_designer`** skills go further: the LLM writes `python-pptx` / `python-docx` code that's executed in a sandbox, producing design-rich output.
+
+```python
+from praxia.skills import PptxDesignerSkill, DocumentTheme, ThemeStore
+
+# Themes ship as JSON + assets under .praxia/themes/<name>/
+theme = ThemeStore().load("acme_corporate")    # colors, fonts, logo, footer
+designer = PptxDesignerSkill()
+result = designer.design(
+    "Q4 sales review for Acme. Cover → exec summary → top 3 customers "
+    "→ challenges as 2x2 matrix → next actions. 10 slides.",
+    theme=theme,
+)
+Path("acme_q4.pptx").write_bytes(result.bytes)   # ready to present
+print(f"{result.attempt_count} attempts, final code:\n{result.final_code}")
+```
+
+Sandboxing: every LLM-produced snippet passes an AST allowlist (only `pptx`, `docx`, `matplotlib`, `PIL`, `numpy`, plus safe stdlib — no `os`, `subprocess`, `requests`, no dunder introspection). The validated snippet runs in a fresh subprocess with a 30s timeout and a 512MB RAM cap (POSIX). On traceback, the error is fed back to the LLM and the attempt repeats — up to 3 retries by default.
+
+Theme management: `Admin → 🎨 Themes` lets admins upload colors / fonts / logo / optional slide-master `.pptx`. Users pick a theme in `Run → 🛠 Skill` when running a designer.
+
+**Setup:** `pip install praxia[office]` (python-pptx, python-docx). Charts and rasterized images additionally need `matplotlib` and `Pillow` installed in the sandbox-host environment.
+
 ---
 
 ## 29. Gemma support (Google's open-weight family)
