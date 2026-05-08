@@ -782,24 +782,27 @@ if theme_choice == "dark":
     color: #ecedf0 !important;
   }
 
-  /* Chat-input bottom bar. Two layers contributed to the bug
-     (white-on-black-on-gray look):
-       1. stBottomBlockContainer (the outer fixed bar) was set in
-          responsive.py to `var(--background-color, #ffffff)`. The CSS
-          var doesn't reliably propagate into Streamlit's chat-input
-          DOM subtree, so it fell back to white.
-       2. stChatInput (the inner wrapper) was a different shade.
-       3. The textarea inside was darker again.
-     Now: outer bar matches the body bg (#15181f), inner textarea
-     matches our other inputs (#23272f), placeholder uses the same
-     mid-gray as other inputs (#8b919f) — visually cohesive with the
-     rest of the dark UI. */
+  /* Chat-input bottom bar (autonomous agent etc).
+     Streamlit 1.57 wraps the chat input in MULTIPLE intermediate divs
+     between stBottom and stChatInput that have NO data-testid. Those
+     inherit the default white background and were causing the
+     "white outer / black middle / gray text" stack the user saw.
+     Strategy: force ALL descendants of stBottom + stBottomBlockContainer
+     to a dark surface, then re-elevate the inner textarea and buttons
+     to slightly different tones. */
+  [data-testid="stBottom"],
   [data-testid="stBottomBlockContainer"],
-  [data-testid="stBottom"] {
+  [data-testid="stBottom"] *,
+  [data-testid="stBottomBlockContainer"] * {
     background-color: #15181f !important;
-    border-top: 1px solid rgba(255,255,255,0.10) !important;
     color: #f4f5f7 !important;
+    border-color: rgba(255,255,255,0.18) !important;
   }
+  [data-testid="stBottom"],
+  [data-testid="stBottomBlockContainer"] {
+    border-top: 1px solid rgba(255,255,255,0.10) !important;
+  }
+  /* The chat input wrapper — a slightly elevated card on the bar */
   [data-testid="stChatInput"],
   [data-testid="stChatInputContainer"],
   [data-testid="stChatInputFileUploadDropzone"],
@@ -809,50 +812,74 @@ if theme_choice == "dark":
     border: 1px solid rgba(255,255,255,0.18) !important;
     border-radius: 6px !important;
   }
+  /* Make sure the chat input's nested wrappers also pick up the
+     elevated tone — same all-descendants trick. */
   [data-testid="stChatInput"] *,
+  [data-testid="stChatInputContainer"] *,
   [data-testid="stChatInputFileUploadDropzone"] *,
   [data-testid="stChatInputFileUploadDropzoneInstructions"] * {
+    background-color: #23272f !important;
     color: #f4f5f7 !important;
+    border-color: rgba(255,255,255,0.18) !important;
   }
   [data-testid="stChatInput"] small,
-  [data-testid="stChatInputFileUploadDropzoneInstructions"] small {
+  [data-testid="stChatInputFileUploadDropzoneInstructions"] small,
+  [data-testid="stChatInputInstructions"],
+  [data-testid="stChatInputInstructions"] * {
     color: #c1c5d0 !important;
+    background-color: transparent !important;
   }
-  /* The 📎 / send buttons */
+  /* The 📎 / send / mic / cancel / approve buttons */
   [data-testid="stChatInputFileUploadButton"],
   [data-testid="stChatInputSubmitButton"],
+  [data-testid="stChatInputMicButton"],
+  [data-testid="stChatInputApproveButton"],
+  [data-testid="stChatInputCancelButton"],
   [data-testid="stChatInput"] button {
-    background-color: rgba(255,255,255,0.08) !important;
+    background-color: rgba(255,255,255,0.10) !important;
     color: #f4f5f7 !important;
     border: 1px solid rgba(255,255,255,0.22) !important;
   }
+  [data-testid="stChatInputFileUploadButton"] *,
+  [data-testid="stChatInputSubmitButton"] *,
+  [data-testid="stChatInputMicButton"] *,
+  [data-testid="stChatInputApproveButton"] *,
+  [data-testid="stChatInputCancelButton"] *,
+  [data-testid="stChatInput"] button * {
+    background-color: transparent !important;
+  }
   [data-testid="stChatInputFileUploadButton"]:hover,
   [data-testid="stChatInputSubmitButton"]:hover,
+  [data-testid="stChatInputMicButton"]:hover,
+  [data-testid="stChatInputApproveButton"]:hover,
+  [data-testid="stChatInputCancelButton"]:hover,
   [data-testid="stChatInput"] button:hover {
-    background-color: rgba(255,255,255,0.16) !important;
+    background-color: rgba(255,255,255,0.18) !important;
     border-color: rgba(255,255,255,0.34) !important;
   }
-  /* Already-attached file pill in the chat input */
+  /* Already-attached file pill */
   [data-testid="stChatInputFile"],
   [data-testid="stChatInputFileName"],
   [data-testid="stChatInputDeleteBtn"] {
     color: #f4f5f7 !important;
     background-color: rgba(147,197,253,0.18) !important;
   }
-  /* Chat input textarea itself — same surface as the wrapper so there's
-     no jarring inner-box-on-outer-box stacking. */
+  /* The textarea — same surface as the wrapper, no inner box-in-box */
   [data-testid="stChatInput"] textarea,
-  [data-testid="stChatInputTextArea"] {
+  [data-testid="stChatInputTextArea"],
+  [data-testid="stChatInputTextArea"] textarea {
     background-color: #23272f !important;
     color: #f4f5f7 !important;
     border: none !important;
   }
-  [data-testid="stChatInput"] textarea::placeholder {
-    color: #8b919f !important;
+  [data-testid="stChatInput"] textarea::placeholder,
+  [data-testid="stChatInputTextArea"] textarea::placeholder {
+    color: #9ba0ac !important;
   }
-  [data-testid="stChatInput"] textarea:focus {
+  [data-testid="stChatInput"] textarea:focus,
+  [data-testid="stChatInputTextArea"] textarea:focus {
     outline: none !important;
-    box-shadow: 0 0 0 2px rgba(147,197,253,0.20) inset !important;
+    box-shadow: 0 0 0 2px rgba(147,197,253,0.22) inset !important;
   }
 
   /* Popover trigger ("会話履歴 (N)" button) — Streamlit's popover button
