@@ -23,6 +23,7 @@ day-to-day.
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,7 @@ import streamlit as st
 from praxia import Praxia, LLM
 from praxia.core.llm import DEFAULT_ALIASES
 from praxia.data.scopes import DataScope, ScopeRegistry
+from praxia.data.threads import ChatMessage, ChatThread, ThreadStore
 from praxia.flows import LogicCheckerFlow, RAGOptimizationFlow, SalesAgentFlow
 from praxia.skills import BUSINESS_SKILLS
 from praxia.ui.i18n import t, detect_language, SUPPORTED, LANG_DISPLAY
@@ -79,6 +81,108 @@ def save_user_pref(user_id: str, key: str, value: Any) -> None:
         json.dumps(prefs, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+
+# =====================================================================
+# Persistent login (server-side session + browser cookie)
+# =====================================================================
+#
+# Streamlit's `st.session_state` lives in memory and dies on every page
+# reload (the WebSocket closes). We mint an opaque random token at
+# login, hand it to the browser as a cookie, and store the actual
+# user_id / org_id / role on disk under `.praxia/sessions/<token>.json`
+# with a 30-minute TTL. On every rerun we read the cookie back via
+# `st.context.cookies` and rehydrate `st.session_state` if the token
+# resolves to a live session — survives refreshes, doesn't survive
+# cookie expiry / explicit signout / server purge.
+
+from praxia.auth.sessions import SessionStore as _SessionStore
+
+_SESSION_COOKIE_NAME = "praxia_session"
+_SESSION_TTL_SECONDS = 30 * 60  # 30 min sliding window
+
+_session_store = _SessionStore(
+    Path(".praxia") / "sessions",
+    ttl_seconds=_SESSION_TTL_SECONDS,
+)
+
+
+def _read_session_cookie() -> str | None:
+    """Best-effort read of the praxia_session cookie."""
+    try:
+        cookies = getattr(st.context, "cookies", None) or {}
+        token = cookies.get(_SESSION_COOKIE_NAME)
+    except Exception:
+        token = None
+    return token if isinstance(token, str) and token else None
+
+
+def _write_session_cookie(token: str) -> None:
+    """Set the cookie via a small inline `<script>`. Streamlit doesn't
+    expose a server-side Set-Cookie hook for the WebSocket frame, so
+    JS injection is the path. SameSite=Lax + 30-min Max-Age + Path=/.
+    Secure flag added when served over HTTPS (browser cookie store
+    will otherwise refuse Secure on http://localhost)."""
+    safe_token = "".join(c for c in token if c in "0123456789abcdef")
+    if not safe_token:
+        return
+    js = (
+        "<script>"
+        "try {"
+        f"  var v = '{safe_token}';"
+        f"  var p = '{_SESSION_COOKIE_NAME}=' + v + ';path=/;max-age={_SESSION_TTL_SECONDS};samesite=lax';"
+        "  if (location.protocol === 'https:') p += ';secure';"
+        "  document.cookie = p;"
+        "} catch(e) {}"
+        "</script>"
+    )
+    st.markdown(js, unsafe_allow_html=True)
+
+
+def _clear_session_cookie() -> None:
+    """Drop the cookie client-side. Server-side record is removed
+    separately via `_session_store.delete(token)`."""
+    js = (
+        "<script>"
+        "try {"
+        f"  document.cookie = '{_SESSION_COOKIE_NAME}=;path=/;max-age=0;samesite=lax';"
+        "} catch(e) {}"
+        "</script>"
+    )
+    st.markdown(js, unsafe_allow_html=True)
+
+
+def _restore_session_from_cookie() -> bool:
+    """If a valid session cookie exists, rehydrate session_state.
+    Returns True if a session was restored. Idempotent — safe to call
+    on every rerun."""
+    if st.session_state.get("logged_in"):
+        return True  # already hydrated this WebSocket
+    token = _read_session_cookie()
+    if not token:
+        return False
+    rec = _session_store.touch(token)  # extends TTL on activity
+    if rec is None:
+        return False
+    st.session_state["logged_in"] = True
+    st.session_state["user_id"] = rec.user_id
+    st.session_state["org_id"] = rec.org_id or "default-org"
+    st.session_state["actor_role"] = rec.role or "unknown"
+    st.session_state["_praxia_session_token"] = token
+    # Re-load persisted user prefs (lang, theme) for this rehydrated user
+    for k, v in _load_user_prefs(rec.user_id).items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+    return True
+
+
+# Best-effort housekeeping — run once per process start.
+if not st.session_state.get("_session_purge_done"):
+    try:
+        _session_store.purge_expired()
+    except Exception:
+        pass
+    st.session_state["_session_purge_done"] = True
 
 
 # =====================================================================
@@ -182,6 +286,21 @@ def _render_login() -> None:
                 if k not in st.session_state:
                     st.session_state[k] = v
 
+            # Mint a server-side session + drop the cookie so a browser
+            # reload doesn't kick the user back to the login form.
+            try:
+                _new_token = _session_store.create(
+                    user_id=resolved_user,
+                    org_id=st.session_state["org_id"],
+                    role=resolved_role,
+                )
+                st.session_state["_praxia_session_token"] = _new_token
+                _write_session_cookie(_new_token)
+            except Exception:
+                # If session minting fails, login still works — just no
+                # cross-reload persistence on this turn.
+                pass
+
             st.rerun()
 
     st.write("")
@@ -190,8 +309,12 @@ def _render_login() -> None:
 
 
 if not st.session_state.get("logged_in"):
-    _render_login()
-    st.stop()
+    # Try to rehydrate from a previous browser cookie before showing
+    # the login form. If the cookie resolves to a live session, the
+    # user keeps going as if the reload never happened.
+    if not _restore_session_from_cookie():
+        _render_login()
+        st.stop()
 
 
 user_id: str = st.session_state["user_id"]
@@ -248,20 +371,20 @@ if theme_choice == "dark":
     background-color: #252834 !important;
     border-color: rgba(255,255,255,0.2) !important;
   }
-  /* Primary action — gold-on-dark for high contrast */
+  /* Primary action — restrained navy on dark, white text. */
   .stButton button[kind="primary"],
   .stDownloadButton button[kind="primary"],
   [data-testid="stFormSubmitButton"] button[kind="primary"] {
-    background-color: #c9a456 !important;
-    color: #0a0a0f !important;
-    border-color: #c9a456 !important;
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+    border-color: #1e3a8a !important;
     font-weight: 600 !important;
   }
   .stButton button[kind="primary"]:hover,
   .stDownloadButton button[kind="primary"]:hover,
   [data-testid="stFormSubmitButton"] button[kind="primary"]:hover {
-    background-color: #d8b466 !important;
-    color: #0a0a0f !important;
+    background-color: #2547a8 !important;
+    color: #ffffff !important;
   }
   /* Secondary buttons */
   .stButton button[kind="secondary"],
@@ -279,7 +402,7 @@ if theme_choice == "dark":
   [data-testid="stExpander"] { background-color: rgba(255,255,255,0.02) !important; border-color: rgba(255,255,255,0.06) !important; }
   [data-testid="stTabs"] [data-testid="stMarkdownContainer"] { color: #ecedf0 !important; }
   [data-testid="stTabs"] button[role="tab"] { color: #a8acb8 !important; }
-  [data-testid="stTabs"] button[role="tab"][aria-selected="true"] { color: #c9a456 !important; border-color: #c9a456 !important; }
+  [data-testid="stTabs"] button[role="tab"][aria-selected="true"] { color: #93c5fd !important; border-color: #93c5fd !important; }
   [data-testid="stForm"] { background-color: rgba(255,255,255,0.02) !important; border: 1px solid rgba(255,255,255,0.06) !important; }
   [data-testid="stMetric"] { background-color: rgba(255,255,255,0.03) !important; padding: 0.5rem; border-radius: 6px; }
   hr { border-color: rgba(255,255,255,0.08) !important; }
@@ -287,12 +410,173 @@ if theme_choice == "dark":
   /* Alerts */
   [data-testid="stAlert"] { background-color: rgba(255,255,255,0.04) !important; }
 
-  /* Sticky top nav — solid dark bg with subtle gold underline */
+  /* Sticky top nav — solid dark bg with subtle navy underline */
   .st-key-praxia_topnav {
     background-color: #15171f !important;
-    border-bottom: 1px solid rgba(201,164,86,0.25) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    border-bottom: 1px solid rgba(147,197,253,0.22) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
   }
+
+  /* File uploader — dropzone background + instruction text + size limit
+     ("Limit 200MB per file") all default to white-on-white otherwise. */
+  [data-testid="stFileUploader"],
+  [data-testid="stFileUploader"] section,
+  [data-testid="stFileUploaderDropzone"] {
+    background-color: #1a1d28 !important;
+    border: 1px dashed rgba(255,255,255,0.18) !important;
+    color: #ecedf0 !important;
+  }
+  [data-testid="stFileUploader"] label,
+  [data-testid="stFileUploader"] span,
+  [data-testid="stFileUploader"] p,
+  [data-testid="stFileUploader"] div,
+  [data-testid="stFileUploaderDropzoneInstructions"],
+  [data-testid="stFileUploaderDropzoneInstructions"] * {
+    color: #ecedf0 !important;
+  }
+  [data-testid="stFileUploader"] small,
+  [data-testid="stFileUploaderDropzoneInstructions"] small {
+    color: #a8acb8 !important;
+  }
+  [data-testid="stFileUploader"] button {
+    background-color: rgba(255,255,255,0.08) !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+  }
+  [data-testid="stFileUploader"] button:hover {
+    background-color: rgba(255,255,255,0.14) !important;
+  }
+  /* Already-uploaded file rows + their X-remove icons */
+  [data-testid="stFileUploaderFile"],
+  [data-testid="stFileUploaderFileName"],
+  [data-testid="stFileUploaderDeleteBtn"] {
+    color: #ecedf0 !important;
+  }
+
+  /* Popover trigger ("会話履歴 (N)" button) — Streamlit's popover button
+     uses a different DOM than .stButton, so override explicitly. */
+  [data-testid="stPopover"] > div > button,
+  [data-testid="stPopover"] button,
+  button[data-testid="stPopoverButton"] {
+    background-color: #1a1d28 !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  [data-testid="stPopover"] > div > button:hover,
+  [data-testid="stPopover"] button:hover,
+  button[data-testid="stPopoverButton"]:hover {
+    background-color: #252834 !important;
+    border-color: rgba(255,255,255,0.2) !important;
+  }
+
+  /* Popover panel — rendered in a BaseWeb portal at <body> level, so
+     none of our `.stApp` rules cascade. Target the BaseWeb attribute
+     directly. */
+  [data-baseweb="popover"],
+  [data-baseweb="popover"] > div,
+  [data-testid="stPopoverBody"] {
+    background-color: #15171f !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  }
+  [data-baseweb="popover"] *,
+  [data-testid="stPopoverBody"] * {
+    color: #ecedf0 !important;
+  }
+  [data-baseweb="popover"] [data-testid="stCaption"],
+  [data-baseweb="popover"] small,
+  [data-testid="stPopoverBody"] small {
+    color: #a8acb8 !important;
+  }
+  /* Buttons inside the popover */
+  [data-baseweb="popover"] button,
+  [data-testid="stPopoverBody"] button {
+    background-color: #1a1d28 !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  [data-baseweb="popover"] button[kind="primary"],
+  [data-testid="stPopoverBody"] button[kind="primary"] {
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+    border-color: #1e3a8a !important;
+  }
+  [data-baseweb="popover"] button:hover,
+  [data-testid="stPopoverBody"] button:hover {
+    background-color: #252834 !important;
+  }
+  /* Text inputs inside the popover (rename field) */
+  [data-baseweb="popover"] input,
+  [data-testid="stPopoverBody"] input {
+    background-color: #0f111a !important;
+    color: #ecedf0 !important;
+    border-color: rgba(255,255,255,0.1) !important;
+  }
+
+  /* ===== BaseWeb portal widgets (selectbox dropdown, multiselect,
+          datepicker, tooltip) — rendered at <body> level outside .stApp,
+          so .stApp-scoped rules never reach them. White-on-white in dark
+          mode otherwise. ===== */
+
+  /* Selectbox / multiselect dropdown menu */
+  [role="listbox"],
+  [data-baseweb="menu"],
+  ul[data-baseweb="menu"],
+  div[data-baseweb="select"] [role="listbox"] {
+    background-color: #15171f !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5) !important;
+  }
+  [role="option"],
+  [data-baseweb="menu"] li,
+  li[role="option"] {
+    background-color: #15171f !important;
+    color: #ecedf0 !important;
+  }
+  [role="option"]:hover,
+  [data-baseweb="menu"] li:hover,
+  li[role="option"]:hover {
+    background-color: rgba(147,197,253,0.12) !important;
+    color: #ffffff !important;
+  }
+  [role="option"][aria-selected="true"],
+  li[role="option"][aria-selected="true"] {
+    background-color: rgba(30,58,138,0.55) !important;
+    color: #ffffff !important;
+  }
+
+  /* Multiselect chips (selected-tag pills inside the input) */
+  [data-baseweb="tag"] {
+    background-color: rgba(147,197,253,0.18) !important;
+    color: #ecedf0 !important;
+    border-color: rgba(147,197,253,0.35) !important;
+  }
+
+  /* Datepicker calendar */
+  [data-baseweb="calendar"],
+  [data-baseweb="datepicker"] {
+    background-color: #15171f !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  [data-baseweb="calendar"] *,
+  [data-baseweb="datepicker"] * {
+    color: #ecedf0 !important;
+  }
+  [data-baseweb="calendar"] button[aria-pressed="true"] {
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+  }
+
+  /* Tooltips */
+  [data-baseweb="tooltip"] {
+    background-color: #1a1d28 !important;
+    color: #ecedf0 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  [data-baseweb="tooltip"] * { color: #ecedf0 !important; }
 </style>
         """,
         unsafe_allow_html=True,
@@ -301,6 +585,39 @@ elif theme_choice == "light":
     # No overrides needed — Streamlit's default light is fine.
     pass
 # theme_choice == "auto" → no override; Streamlit's default follows OS pref.
+
+
+# Suppress Streamlit's developer keyboard shortcuts ('C' = Clear caches,
+# 'R' = Rerun, '?' = shortcut list). `toolbarMode = "viewer"` hides the
+# toolbar but Streamlit still binds the keydown handler globally, so the
+# cache-clear modal pops on a stray 'c' keystroke. We install a capture-
+# phase listener that swallows those bare keys *before* Streamlit sees
+# them, while leaving Ctrl+C / Cmd+C copy and shortcuts inside form
+# inputs untouched.
+st.markdown(
+    """
+<script>
+(function() {
+  if (window.__praxiaShortcutGuard) return;
+  window.__praxiaShortcutGuard = true;
+  const SHORTCUT_KEYS = new Set(['c', 'C', 'r', 'R', '?', '/']);
+  document.addEventListener('keydown', function(e) {
+    // Honor real text-editing modifiers (Ctrl/Cmd+C copy, Ctrl+R reload).
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Don't interfere when the user is typing in an input/textarea/contenteditable.
+    const tgt = e.target;
+    if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' ||
+                tgt.isContentEditable)) return;
+    if (SHORTCUT_KEYS.has(e.key)) {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+})();
+</script>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # =====================================================================
@@ -329,6 +646,8 @@ scope_registry = ScopeRegistry(loom.config.memory_dir / "data")
 user_scopes = scope_registry.list_for_user(user_id)
 local_scopes = [s for s in user_scopes if s.kind == "local"]
 connector_scopes = [s for s in user_scopes if s.kind == "connector"]
+
+thread_store = ThreadStore(loom.config.memory_dir / "chats")
 
 
 def _grep_relevant(text: str, query: str, max_chars: int = 5000) -> str:
@@ -480,6 +799,54 @@ def gather_scope_context(
     return "\n\n".join(out)
 
 
+def gather_scope_images(
+    scope_ids: list[str],
+    *,
+    max_images: int = 10,
+    max_total_bytes: int = 20 * 1024 * 1024,
+) -> list[dict[str, str]]:
+    """Pull image attachments out of selected local-folder scopes.
+
+    Returns the same shape consumed by ``AutonomousAgent.run(images=...)``:
+    ``[{"data": "<base64>", "mime": "image/png"}, ...]``. Connector-kind
+    scopes are skipped (their image bytes would have to be pulled and
+    decoded too — TODO if a real connector demands it).
+
+    Caps to ``max_images`` images and ``max_total_bytes`` of decoded
+    payload to keep the LLM call from blowing up the context budget.
+    """
+    if not scope_ids:
+        return []
+    out: list[dict[str, str]] = []
+    total = 0
+    from praxia.io.parsers import parse_file
+    for sid in scope_ids:
+        if len(out) >= max_images or total >= max_total_bytes:
+            break
+        scope = scope_registry.get(user_id, sid)
+        if scope is None or scope.kind != "local":
+            continue
+        for f in scope_registry.list_local_files(scope):
+            if len(out) >= max_images or total >= max_total_bytes:
+                break
+            ext = f.suffix.lower().lstrip(".")
+            if ext not in {"png", "jpg", "jpeg", "gif", "webp"}:
+                continue
+            try:
+                parsed = parse_file(f.read_bytes(), filename=f.name)
+                img = (parsed.metadata or {}).get("image")
+                if not img or not img.get("data"):
+                    continue
+                size = int(img.get("size_bytes") or 0)
+                if size and total + size > max_total_bytes:
+                    continue
+                out.append({"data": img["data"], "mime": img.get("mime", "image/png")})
+                total += size
+            except Exception:
+                continue
+    return out
+
+
 # =====================================================================
 # Sidebar — brand · sign-out · ALWAYS-VISIBLE data-scope picker
 # =====================================================================
@@ -488,6 +855,15 @@ with st.sidebar:
     st.markdown(f"### {t('app.title')}")
     st.caption(f"👤 {user_id} · {actor_role}")
     if st.button(t("login.sign_out"), use_container_width=True, key="signout"):
+        # Drop the server-side session record + clear the browser cookie
+        # so reload after sign-out doesn't auto-rehydrate.
+        _signout_token = st.session_state.get("_praxia_session_token")
+        if _signout_token:
+            try:
+                _session_store.delete(_signout_token)
+            except Exception:
+                pass
+        _clear_session_cookie()
         st.session_state.clear()
         st.rerun()
 
@@ -605,14 +981,131 @@ if mode == "run":
     # ---- Agent (LLM-driven chat with tool use) ----------------------
     with tab_agent:
 
-        # Maintain chat history per user in session_state.
-        if "praxia_chat" not in st.session_state:
-            st.session_state["praxia_chat"] = []
+        # ----- Thread management ---------------------------------------
+        # Persistent threads live on disk (.praxia/chats/<user>/<id>.json).
+        # In ephemeral mode we keep messages purely in session_state so
+        # they vanish on reload — no disk writes.
+        threads = thread_store.list_for_user(user_id)
 
-        # Render history
-        for msg in st.session_state["praxia_chat"]:
+        # Resolve which thread is currently active. If the user has just
+        # arrived (no active id) and threads exist, pick the most-recent.
+        active_id = st.session_state.get("active_thread_id")
+        if not ephemeral and active_id not in {th.id for th in threads}:
+            active_id = threads[0].id if threads else None
+            st.session_state["active_thread_id"] = active_id
+
+        if ephemeral:
+            st.caption("ℹ️ " + t("run.threads.ephemeral_note"))
+            # Ephemeral conversation is in-memory only.
+            if "ephemeral_chat" not in st.session_state:
+                st.session_state["ephemeral_chat"] = []
+            messages_view: list[dict[str, Any]] = st.session_state["ephemeral_chat"]
+            active_thread: ChatThread | None = None
+        else:
+            active_thread = (
+                thread_store.load(user_id, st.session_state["active_thread_id"])
+                if st.session_state.get("active_thread_id") else None
+            )
+            messages_view = (
+                [
+                    {"role": m.role, "content": m.content, "trace": m.trace}
+                    for m in active_thread.messages
+                ]
+                if active_thread else []
+            )
+
+            # Single-row top bar: popover button on the left holds the
+            # full thread list + rename/delete; caption on the right
+            # shows what's currently loaded. Total height ≈ one line.
+            bar_left, bar_right = st.columns([1, 3])
+            with bar_left:
+                pop_label = (
+                    f"{t('run.threads.h')} ({len(threads)})"
+                    if threads else t("run.threads.h")
+                )
+                with st.popover(pop_label, use_container_width=True):
+                    if st.button(
+                        t("run.threads.new"),
+                        key="thread_new",
+                        use_container_width=True,
+                        type="primary",
+                    ):
+                        new_thread = thread_store.create(user_id)
+                        st.session_state["active_thread_id"] = new_thread.id
+                        st.session_state.pop("thread_delete_pending", None)
+                        st.rerun()
+                    st.divider()
+                    if not threads:
+                        st.caption(t("run.threads.empty"))
+                    else:
+                        for th in threads:
+                            is_active = th.id == (active_thread.id if active_thread else None)
+                            label = ("✅ " if is_active else "") + (th.title or "(untitled)")
+                            if st.button(
+                                label,
+                                key=f"th_pick_{th.id}",
+                                use_container_width=True,
+                                type="tertiary" if is_active else "secondary",
+                            ):
+                                st.session_state["active_thread_id"] = th.id
+                                st.session_state.pop("thread_delete_pending", None)
+                                st.rerun()
+                    if active_thread is not None:
+                        st.divider()
+                        new_title = st.text_input(
+                            t("run.threads.rename_label"),
+                            value=active_thread.title,
+                            key=f"thread_rename_{active_thread.id}",
+                        )
+                        rn_col, del_col = st.columns(2)
+                        if rn_col.button(
+                            t("run.threads.rename_btn"),
+                            key=f"thread_rename_btn_{active_thread.id}",
+                            use_container_width=True,
+                        ):
+                            if new_title.strip() and new_title.strip() != active_thread.title:
+                                thread_store.rename(user_id, active_thread.id, new_title.strip())
+                                st.rerun()
+                        pending_delete = st.session_state.get("thread_delete_pending") == active_thread.id
+                        del_label = (
+                            t("run.threads.delete_confirm") if pending_delete
+                            else t("run.threads.delete_btn")
+                        )
+                        if del_col.button(
+                            del_label,
+                            key=f"thread_del_{active_thread.id}",
+                            use_container_width=True,
+                        ):
+                            if pending_delete:
+                                thread_store.delete(user_id, active_thread.id)
+                                st.session_state.pop("thread_delete_pending", None)
+                                st.session_state.pop("active_thread_id", None)
+                                st.rerun()
+                            else:
+                                st.session_state["thread_delete_pending"] = active_thread.id
+                                st.rerun()
+            with bar_right:
+                if active_thread is not None:
+                    st.caption(f"💬 {active_thread.title}")
+
+        # ----- Render messages -----------------------------------------
+        for msg in messages_view:
             with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
+                if msg.get("content"):
+                    st.markdown(msg["content"])
+                # Vision attachments — render inline thumbnails.
+                for img in msg.get("images") or []:
+                    data = img.get("data")
+                    mime = img.get("mime", "image/png")
+                    if not data:
+                        continue
+                    try:
+                        st.image(
+                            f"data:{mime};base64,{data}",
+                            width=320,
+                        )
+                    except Exception:
+                        pass
                 if msg.get("trace"):
                     with st.expander(t("run.agent.trace"), expanded=False):
                         for step in msg["trace"]:
@@ -624,42 +1117,109 @@ if mode == "run":
                             st.text(str(tr)[:600])
                             st.divider()
 
-        # Optional clear-history button (only when there's something to clear)
-        if st.session_state["praxia_chat"]:
-            if st.button(t("run.agent.clear"), key="agent_clear"):
-                st.session_state["praxia_chat"] = []
-                st.rerun()
+        # ----- Chat input ----------------------------------------------
+        # accept_file=True turns the chat input into an "attach + send"
+        # control. When `accept_file` is set, the return value is a
+        # ChatInputValue object with `.text` and `.files` (UploadedFile
+        # list) instead of a plain string.
+        chat_value = st.chat_input(
+            t("run.agent.placeholder"),
+            accept_file="multiple",
+            file_type=["png", "jpg", "jpeg", "gif", "webp"],
+        )
+        if chat_value:
+            # Streamlit returns a ChatInputValue when accept_file is set,
+            # else a plain str. Defensive unpacking either way.
+            if hasattr(chat_value, "text"):
+                prompt = chat_value.text or ""
+                uploaded_files = chat_value.files or []
+            else:  # pragma: no cover — fallback for older Streamlit
+                prompt = str(chat_value)
+                uploaded_files = []
 
-        # Chat input — submitting triggers an agent run.
-        prompt = st.chat_input(t("run.agent.placeholder"))
-        if prompt:
-            # Show the user's message immediately.
-            st.session_state["praxia_chat"].append({
-                "role": "user",
-                "content": prompt,
-            })
+            # Encode uploaded images to base64 for the agent + persistence.
+            images_payload: list[dict[str, str]] = []
+            for f in uploaded_files:
+                try:
+                    raw = f.getvalue() if hasattr(f, "getvalue") else f.read()
+                    mime = getattr(f, "type", None) or "image/png"
+                    if not mime.startswith("image/"):
+                        continue
+                    images_payload.append({
+                        "data": base64.b64encode(raw).decode("ascii"),
+                        "mime": mime,
+                    })
+                except Exception as exc:
+                    st.warning(f"Could not read attachment: {exc}")
 
-            # Inject selected scopes as additional reference data.
-            # Pass the user's prompt as `query` so large folders get
-            # grep-filtered to just the relevant chunks.
+            if not prompt and not images_payload:
+                st.stop()
+
+            if not ephemeral and active_thread is None:
+                active_thread = thread_store.create(user_id)
+                st.session_state["active_thread_id"] = active_thread.id
+
+            user_msg = ChatMessage(role="user", content=prompt, images=images_payload)
+            if ephemeral:
+                st.session_state["ephemeral_chat"].append({
+                    "role": "user",
+                    "content": prompt,
+                    "trace": [],
+                    "images": images_payload,
+                })
+            else:
+                active_thread.messages.append(user_msg)
+
+            # Inject selected scopes as additional reference data —
+            # text via gather_scope_context() (greppable string), images
+            # via gather_scope_images() which reuses the ImageParser to
+            # extract base64 + mime from any png/jpg/gif/webp in the
+            # selected local folders. The two streams are combined
+            # below: text concatenated to the prompt, images merged
+            # with the chat-attached images_payload.
             scope_ctx = (
                 gather_scope_context(selected_custom_ids, query=prompt)
-                if selected_custom_ids else ""
+                if selected_custom_ids and prompt else ""
             )
-            full_task = prompt + (
+            scope_imgs = (
+                gather_scope_images(selected_custom_ids)
+                if selected_custom_ids else []
+            )
+            combined_images = (images_payload or []) + scope_imgs
+            full_task = (prompt or "(image)") + (
                 f"\n\n--- Reference data ---\n{scope_ctx}" if scope_ctx else ""
             )
 
-            # Build a short conversation history for context.
-            recent = st.session_state["praxia_chat"][-7:-1]  # last 3 turns
-            history = [
-                {"role": m["role"], "content": m["content"]}
-                for m in recent
-            ]
+            # Build a short conversation history for context (last 3 turns
+            # before this latest user message). Stored images from prior
+            # turns get re-shaped into the multi-content vision format.
+            def _prior_to_history_entry(role: str, text: str, imgs: list[dict[str, str]]) -> dict[str, Any]:
+                if not imgs:
+                    return {"role": role, "content": text}
+                parts: list[dict[str, Any]] = [{"type": "text", "text": text or ""}]
+                for im in imgs:
+                    d, m = im.get("data"), im.get("mime", "image/png")
+                    if d:
+                        parts.append({
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{m};base64,{d}"},
+                        })
+                return {"role": role, "content": parts}
 
-            # Ephemeral mode: set PRAXIA_MEMORY_MODE=read_only so the
-            # AutonomousAgent's freshly-constructed PersonalMemory drops
-            # episode/fact writes silently. Restore env after the run.
+            if ephemeral:
+                prior_msgs = st.session_state["ephemeral_chat"][:-1]
+                prior = [
+                    _prior_to_history_entry(m["role"], m.get("content", ""), m.get("images") or [])
+                    for m in prior_msgs
+                ]
+            else:
+                prior = [
+                    _prior_to_history_entry(m.role, m.content, m.images)
+                    for m in active_thread.messages[:-1]
+                ]
+            history = prior[-6:]
+
+            # Ephemeral mode: drop personal-memory writes via env flag.
             _saved_mem_mode = os.environ.get("PRAXIA_MEMORY_MODE")
             if ephemeral:
                 os.environ["PRAXIA_MEMORY_MODE"] = "read_only"
@@ -672,7 +1232,11 @@ if mode == "run":
                     llm=LLM(model_choice),
                 )
                 with st.spinner(t("run.agent.thinking")):
-                    result = agent.run(full_task, history=history or None)
+                    result = agent.run(
+                        full_task,
+                        history=history or None,
+                        images=combined_images or None,
+                    )
                 response_text = result.final_text or "(no response)"
                 trace = getattr(result, "tool_calls", None) or []
             except Exception as exc:
@@ -685,11 +1249,15 @@ if mode == "run":
                     else:
                         os.environ["PRAXIA_MEMORY_MODE"] = _saved_mem_mode
 
-            st.session_state["praxia_chat"].append({
-                "role": "assistant",
-                "content": response_text,
-                "trace": trace,
-            })
+            if ephemeral:
+                st.session_state["ephemeral_chat"].append(
+                    {"role": "assistant", "content": response_text, "trace": trace}
+                )
+            else:
+                active_thread.messages.append(
+                    ChatMessage(role="assistant", content=response_text, trace=trace)
+                )
+                thread_store.save(active_thread)
             st.rerun()
 
     # ---- Skill (single domain skill) --------------------------------
@@ -945,9 +1513,11 @@ elif mode == "data":
                         st.rerun()
 
                 st.divider()
+                from praxia.io.parsers import supported_extensions as _data_exts
                 new_files = st.file_uploader(
                     t("data.local.add_files"),
                     accept_multiple_files=True,
+                    type=_data_exts(),
                     key=f"upload_more_{s.id}",
                 )
                 col_save, col_del = st.columns(2)
@@ -994,9 +1564,11 @@ elif mode == "data":
                 key="create_local_parent",
             )
 
+            from praxia.io.parsers import supported_extensions as _data_exts2
             init_files = st.file_uploader(
                 t("data.local.create_files"),
                 accept_multiple_files=True,
+                type=_data_exts2(),
                 key="create_local_files",
             )
             if st.form_submit_button(t("data.local.create_btn"), type="primary"):
@@ -1177,6 +1749,7 @@ elif mode == "dashboard":
         format_func=lambda x: t(f"dashboard.scope.{x}"),
         horizontal=True,
         key="dash_scope",
+        label_visibility="collapsed",
     )
 
     if scope == "personal":
@@ -1327,7 +1900,7 @@ elif mode == "prompts":
                 placeholder=t("prompts.generate.task_placeholder"),
                 height=120,
             )
-            pd_col1, pd_col2 = st.columns(2)
+            pd_col1, pd_col2, pd_col3 = st.columns(3)
             with pd_col1:
                 pd_target_llm = st.selectbox(
                     t("prompts.generate.target_llm"),
@@ -1338,20 +1911,21 @@ elif mode == "prompts":
                     format_func=lambda x: t("prompts.generate.target_llm_auto") if x == "" else x,
                     key="pd_target_llm",
                 )
+            with pd_col2:
                 pd_output_format = st.selectbox(
                     t("prompts.generate.output_format"),
                     options=["text", "json", "markdown", "xml"],
                     index=1, key="pd_output_format",
                 )
-            with pd_col2:
-                pd_include_examples = st.checkbox(
-                    t("prompts.generate.include_examples"),
-                    value=True, key="pd_include_examples",
-                )
+            with pd_col3:
                 pd_constraint = st.selectbox(
                     t("prompts.generate.constraint"),
                     options=["strict", "loose"], key="pd_constraint",
                 )
+            pd_include_examples = st.checkbox(
+                t("prompts.generate.include_examples"),
+                value=True, key="pd_include_examples",
+            )
             generate_clicked = st.form_submit_button(
                 t("prompts.generate.btn"), type="primary",
             )
@@ -1660,8 +2234,97 @@ elif mode == "admin":
 
         st.divider()
 
+        # Persistent memory policy — written to .praxia/admin/memory_policy.json
+        # and observed by all PersonalMemory constructions. Distinct from the
+        # session-scoped runtime override above.
+        st.subheader(t("admin.settings.memory_policy_h"))
+        st.caption(t("admin.settings.memory_policy_intro"))
+
+        from praxia.memory.policy import MemoryAdminPolicy
+        _BACKEND_CHOICES = ["json", "mem0", "langmem", "letta", "zep", "hindsight"]
+        _MODE_CHOICES = ["accumulate", "read_only"]
+        _ROLE_CHOICES = ["admin", "manager", "member", "viewer"]
+
+        _admin_pol = MemoryAdminPolicy.load(loom.config.memory_dir)
+
+        mp_col1, mp_col2 = st.columns(2)
+        with mp_col1:
+            mp_default_backend = st.selectbox(
+                t("admin.settings.mp_default_backend"),
+                options=_BACKEND_CHOICES,
+                index=(
+                    _BACKEND_CHOICES.index(_admin_pol.default_backend)
+                    if _admin_pol.default_backend in _BACKEND_CHOICES else 0
+                ),
+                key="mp_default_backend",
+                help=t("admin.settings.mp_default_backend_help"),
+            )
+            mp_enforced = st.selectbox(
+                t("admin.settings.mp_enforced_backend"),
+                options=["__none__"] + _BACKEND_CHOICES,
+                index=(
+                    _BACKEND_CHOICES.index(_admin_pol.enforced_backend) + 1
+                    if _admin_pol.enforced_backend in _BACKEND_CHOICES else 0
+                ),
+                format_func=lambda x: (
+                    t("admin.settings.mp_enforced_none") if x == "__none__" else x
+                ),
+                key="mp_enforced_backend",
+                help=t("admin.settings.mp_enforced_backend_help"),
+            )
+            mp_allowed = st.multiselect(
+                t("admin.settings.mp_allowed_backends"),
+                options=_BACKEND_CHOICES,
+                default=_admin_pol.allowed_backends,
+                key="mp_allowed_backends",
+                help=t("admin.settings.mp_allowed_backends_help"),
+            )
+        with mp_col2:
+            mp_default_mode = st.selectbox(
+                t("admin.settings.mp_default_mode"),
+                options=_MODE_CHOICES,
+                index=_MODE_CHOICES.index(_admin_pol.default_mode),
+                format_func=lambda m: t(f"admin.settings.mp_mode.{m}"),
+                key="mp_default_mode",
+                help=t("admin.settings.mp_default_mode_help"),
+            )
+            mp_mode_locked = st.checkbox(
+                t("admin.settings.mp_mode_locked"),
+                value=_admin_pol.mode_locked,
+                key="mp_mode_locked",
+                help=t("admin.settings.mp_mode_locked_help"),
+            )
+            mp_accumulate_locked = st.multiselect(
+                t("admin.settings.mp_accumulate_locked"),
+                options=_ROLE_CHOICES,
+                default=_admin_pol.accumulate_locked_to,
+                key="mp_accumulate_locked",
+                help=t("admin.settings.mp_accumulate_locked_help"),
+            )
+
+        if st.button(
+            t("admin.settings.mp_apply"), type="primary",
+            key="mp_apply_btn",
+        ):
+            new_pol = MemoryAdminPolicy(
+                enforced_backend=(None if mp_enforced == "__none__" else mp_enforced),
+                default_backend=mp_default_backend,
+                allowed_backends=mp_allowed,
+                default_mode=mp_default_mode,
+                mode_locked=mp_mode_locked,
+                accumulate_locked_to=mp_accumulate_locked,
+            )
+            new_pol.save(loom.config.memory_dir)
+            try:
+                st.cache_resource.clear()
+            except Exception:
+                pass
+            st.success(t("admin.settings.mp_saved"))
+            st.rerun()
+
+        st.divider()
+
         st.subheader(t("admin.settings.persistent_h"))
-        st.caption(t("admin.settings.precedence_hint"))
 
         def _mask_for_display(value: str) -> str:
             if len(value) <= 12:

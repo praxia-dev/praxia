@@ -26,61 +26,56 @@ _log = logging.getLogger(__name__)
 
 _MOBILE_CSS = """
 <style>
-/* --- Praxia UI: design polish — typography, spacing, refined widgets.
-       Goal: feel like a modern product, not a dev tool. */
+/* --- Praxia UI: enterprise visual tone — restrained typography, square-ish
+       widgets, calm interactions. Goal: looks like business software, not a
+       consumer SaaS landing. */
 
-/* Better web font stack — system UI on each OS, with Inter fallback for
-   web users who have it installed. */
+/* Sober, neutral font stack. No stylistic-alternate font-feature-settings
+   (those gave a "designy" feel). */
 .stApp, body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-                 "Segoe UI", "Roboto", "Inter", "Helvetica Neue",
-                 "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif !important;
-    font-feature-settings: "cv11", "ss01", "ss03";
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+                 "Inter", "Helvetica Neue", "Hiragino Sans", "Noto Sans JP",
+                 system-ui, sans-serif !important;
 }
 code, pre, [data-testid="stCode"], .stCode {
-    font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code",
+    font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", "Consolas",
                  "Menlo", monospace !important;
     font-size: 0.875rem !important;
 }
 
-/* Tighter, more confident heading hierarchy */
-.stMarkdown h1, h1 { font-weight: 700 !important; letter-spacing: -0.02em !important; line-height: 1.2 !important; }
-.stMarkdown h2, h2 { font-weight: 700 !important; letter-spacing: -0.015em !important; line-height: 1.25 !important; }
-.stMarkdown h3, h3 { font-weight: 600 !important; letter-spacing: -0.01em !important; }
+/* Calm heading hierarchy — modest negative tracking, conservative weights. */
+.stMarkdown h1, h1 { font-weight: 600 !important; letter-spacing: -0.005em !important; line-height: 1.25 !important; }
+.stMarkdown h2, h2 { font-weight: 600 !important; letter-spacing: -0.003em !important; line-height: 1.3 !important; }
+.stMarkdown h3, h3 { font-weight: 600 !important; }
 .stMarkdown h4, h4 { font-weight: 600 !important; }
 
-/* Calmer captions */
+/* Captions — neutral, no decorative tracking. */
 [data-testid="stCaptionContainer"], .stCaption,
 small, [data-testid="stCaption"] {
     font-size: 0.825rem !important;
     line-height: 1.45 !important;
-    letter-spacing: 0.005em !important;
 }
 
-/* Buttons: rounded, subtle hover transition, no harsh borders */
+/* Buttons: square-ish, no lift, no shadow. Color change on hover only. */
 .stButton button, .stDownloadButton button,
 [data-testid="stFormSubmitButton"] button {
-    border-radius: 8px !important;
+    border-radius: 4px !important;
     font-weight: 500 !important;
-    letter-spacing: -0.005em !important;
-    transition: transform 80ms ease, box-shadow 120ms ease,
-                background-color 120ms ease !important;
+    transition: background-color 120ms ease, border-color 120ms ease !important;
     border-width: 1px !important;
 }
 .stButton button:hover, .stDownloadButton button:hover,
 [data-testid="stFormSubmitButton"] button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background-color: rgba(127, 127, 127, 0.06) !important;
 }
-.stButton button:active { transform: translateY(0); }
 
-/* Form inputs: more breathing room */
+/* Form inputs: square corners, solid borders. */
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea,
 [data-testid="stSelectbox"] div[role="combobox"],
 [data-testid="stNumberInput"] input,
 [data-testid="stDateInput"] input {
-    border-radius: 8px !important;
+    border-radius: 4px !important;
     font-size: 0.9rem !important;
 }
 
@@ -90,45 +85,45 @@ small, [data-testid="stCaption"] {
     font-size: 0.9rem !important;
 }
 
-/* Metrics: card look */
+/* Metrics: square card, subdued border. */
 [data-testid="stMetric"] {
-    background: rgba(127, 127, 127, 0.04);
-    border-radius: 10px;
+    background: rgba(127, 127, 127, 0.03);
+    border-radius: 4px;
     padding: 0.85rem 1rem !important;
-    border: 1px solid rgba(127, 127, 127, 0.1);
+    border: 1px solid rgba(127, 127, 127, 0.14);
 }
 [data-testid="stMetricValue"] {
-    font-weight: 700 !important;
-    letter-spacing: -0.02em !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.005em !important;
 }
 
-/* Expanders: cleaner edges */
+/* Expanders: squared-off, conservative. */
 [data-testid="stExpander"] {
-    border-radius: 10px !important;
-    border: 1px solid rgba(127, 127, 127, 0.12) !important;
-    background: rgba(127, 127, 127, 0.02);
+    border-radius: 4px !important;
+    border: 1px solid rgba(127, 127, 127, 0.16) !important;
+    background: transparent;
 }
 [data-testid="stExpander"] summary {
-    padding: 0.65rem 1rem !important;
+    padding: 0.6rem 1rem !important;
     font-weight: 500 !important;
 }
 
-/* Tabs: underline-style instead of pill */
+/* Tabs: thin underline, neutral indigo accent (replaces gold). */
 [data-testid="stTabs"] [role="tablist"] {
     gap: 0 !important;
-    border-bottom: 1px solid rgba(127, 127, 127, 0.18);
+    border-bottom: 1px solid rgba(127, 127, 127, 0.22);
 }
 [data-testid="stTabs"] [role="tab"] {
-    padding: 0.6rem 1rem !important;
+    padding: 0.55rem 1rem !important;
     font-weight: 500 !important;
-    font-size: 0.92rem !important;
+    font-size: 0.9rem !important;
     border-bottom: 2px solid transparent !important;
     border-radius: 0 !important;
     background: transparent !important;
 }
 [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
-    color: #c9a456 !important;
-    border-bottom-color: #c9a456 !important;
+    color: #1e3a8a !important;
+    border-bottom-color: #1e3a8a !important;
     font-weight: 600 !important;
 }
 
@@ -142,11 +137,11 @@ small, [data-testid="stCaption"] {
     font-size: 1.1rem !important;
 }
 
-/* Chat messages: cleaner bubble */
+/* Chat messages: square, restrained bubble. */
 [data-testid="stChatMessage"] {
     padding: 0.85rem 1rem !important;
-    border-radius: 12px !important;
-    border: 1px solid rgba(127, 127, 127, 0.08);
+    border-radius: 4px !important;
+    border: 1px solid rgba(127, 127, 127, 0.12);
     background: rgba(127, 127, 127, 0.025);
     margin-bottom: 0.6rem !important;
 }
@@ -194,19 +189,20 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
 }
 
 /* No gaps between buttons + flush button radii so the bar reads as
-   one continuous strip. */
+   one continuous strip. Square corners on the strip ends to match the
+   enterprise tone. */
 .st-key-praxia_topnav .stButton button {
     border-radius: 0 !important;
     border-right: none !important;
     margin: 0 !important;
 }
 .st-key-praxia_topnav [data-testid="column"]:first-child .stButton button {
-    border-top-left-radius: 6px !important;
-    border-bottom-left-radius: 6px !important;
+    border-top-left-radius: 3px !important;
+    border-bottom-left-radius: 3px !important;
 }
 .st-key-praxia_topnav [data-testid="column"]:last-child .stButton button {
-    border-top-right-radius: 6px !important;
-    border-bottom-right-radius: 6px !important;
+    border-top-right-radius: 3px !important;
+    border-bottom-right-radius: 3px !important;
     border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
 }
 
