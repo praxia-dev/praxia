@@ -160,6 +160,37 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         ("Azure deployment: o3", "azure/o3"),
         ("Azure deployment: o4-mini", "azure/o4-mini"),
     ],
+    "AWS Bedrock (Anthropic Claude)": [
+        # Bedrock uses anthropic.<model>-<version> prefix and AWS auth
+        # (AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY + AWS_REGION).
+        # The exact ":v1:0" suffix and inference-profile prefix
+        # (us./eu./apac.) varies by region/account — check the
+        # 'Available models' page in your Bedrock console. Use
+        # Provider=Custom if your deployment uses a region-prefixed
+        # inference profile (e.g. bedrock/us.anthropic.claude-opus-4-7-v1:0).
+        ("Claude Opus 4.7 (Bedrock)", "bedrock/anthropic.claude-opus-4-7-v1:0"),
+        ("Claude Sonnet 4.6 (Bedrock)", "bedrock/anthropic.claude-sonnet-4-6-v1:0"),
+        ("Claude Haiku 4.5 (Bedrock)", "bedrock/anthropic.claude-haiku-4-5-v1:0"),
+        ("Claude 3.5 Sonnet v2 (Bedrock)", "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0"),
+        ("Claude 3.5 Haiku (Bedrock)", "bedrock/anthropic.claude-3-5-haiku-20241022-v1:0"),
+    ],
+    "AWS Bedrock (other)": [
+        # Non-Anthropic models hosted on Bedrock — same AWS IAM auth.
+        ("Llama 3.3 70B (Bedrock)", "bedrock/meta.llama3-3-70b-instruct-v1:0"),
+        ("Mistral Large (Bedrock)", "bedrock/mistral.mistral-large-2407-v1:0"),
+        ("Cohere Command R+ (Bedrock)", "bedrock/cohere.command-r-plus-v1:0"),
+        ("Amazon Nova Pro", "bedrock/amazon.nova-pro-v1:0"),
+        ("Amazon Nova Lite", "bedrock/amazon.nova-lite-v1:0"),
+    ],
+    "Google Vertex AI": [
+        # Requires VERTEX_PROJECT + VERTEX_LOCATION +
+        # GOOGLE_APPLICATION_CREDENTIALS. Both Gemini and
+        # Anthropic-on-Vertex deployments are reachable.
+        ("Gemini 2.5 Pro (Vertex)", "vertex_ai/gemini-2.5-pro"),
+        ("Gemini 2.5 Flash (Vertex)", "vertex_ai/gemini-2.5-flash"),
+        ("Claude Opus 4.7 (Vertex)", "vertex_ai/claude-opus-4-7@20250105"),
+        ("Claude Sonnet 4.6 (Vertex)", "vertex_ai/claude-sonnet-4-6@20240620"),
+    ],
     "Google": [
         ("Gemini 2.5 Pro (most capable)", "gemini/gemini-2.5-pro"),
         ("Gemini 2.5 Flash (fast)", "gemini/gemini-2.5-flash"),

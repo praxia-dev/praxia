@@ -100,6 +100,18 @@ KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     # OpenAI-compatible API but lives under foundry.azure.com)
     "AZURE_AI_API_KEY":               ("LLM", True),
     "AZURE_AI_API_BASE":              ("LLM", False),
+    # AWS Bedrock — Claude / Llama / Titan etc. served on AWS infra.
+    # Authenticates with AWS IAM credentials, not an Anthropic key.
+    # AWS_REGION is shared with KMS but Bedrock needs it too — we list
+    # it once under KMS; same value works for both.
+    "AWS_ACCESS_KEY_ID":              ("LLM", True),
+    "AWS_SECRET_ACCESS_KEY":          ("LLM", True),
+    "AWS_SESSION_TOKEN":              ("LLM", True),  # only when using STS / role assumption
+    "AWS_BEDROCK_RUNTIME_ENDPOINT":   ("LLM", False),  # rare — for VPC endpoints
+    # Google Vertex AI — for Gemini & Anthropic-on-Vertex deployments
+    "VERTEX_PROJECT":                 ("LLM", False),
+    "VERTEX_LOCATION":                ("LLM", False),  # e.g. us-central1
+    "GOOGLE_APPLICATION_CREDENTIALS": ("LLM", False),  # path to service-account JSON
     "OLLAMA_API_BASE":                ("LLM", False),
     "PRAXIA_LOCAL_MODEL":             ("LLM", False),
 
