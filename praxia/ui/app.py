@@ -2736,11 +2736,14 @@ elif mode == "prompts":
                     t("prompts.generate.output_format"),
                     # markdown first so it's the default — most prompts produce
                     # markdown content that exports cleanly to all downstream
-                    # formats. docx / pptx / pdf hints make the meta-prompt
-                    # add structure-conversion guidance to the system_prompt.
+                    # formats. docx / pptx hints make the meta-prompt add
+                    # structure-conversion guidance to the system_prompt.
+                    # PDF intentionally omitted — Praxia's OSS doesn't ship a
+                    # PDF generator, so offering it as an output format would
+                    # be misleading.
                     options=[
                         "markdown", "text", "json", "xml",
-                        "html", "docx", "pptx", "pdf",
+                        "html", "docx", "pptx",
                     ],
                     index=0, key="pd_output_format",
                 )
