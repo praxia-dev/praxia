@@ -95,8 +95,12 @@ DEFAULT_ALIASES: dict[str, str] = {
     # Cohere — Command R+ shines on retrieval-augmented enterprise use.
     "command-r": "cohere/command-r-plus",
     # Perplexity — Sonar models do web search internally; useful for research-style agents.
-    "perplexity": "perplexity/llama-3.1-sonar-large-128k-online",
-    "perplexity-small": "perplexity/llama-3.1-sonar-small-128k-online",
+    # New naming: sonar / sonar-pro / sonar-reasoning / sonar-reasoning-pro.
+    # The old llama-3.1-sonar-* IDs are deprecated.
+    "perplexity": "perplexity/sonar-pro",
+    "perplexity-pro": "perplexity/sonar-pro",
+    "perplexity-cheap": "perplexity/sonar",
+    "perplexity-reasoning": "perplexity/sonar-reasoning-pro",
     # Microsoft Phi — small / efficient, the "edge" companion to Gemma.
     "phi": "ollama/phi3.5:3.8b",
 }
@@ -143,8 +147,10 @@ LLM_PROVIDERS: dict[str, list[tuple[str, str]]] = {
         ("Llama 3.3 70B", "groq/llama-3.3-70b-versatile"),
     ],
     "Perplexity (web-augmented)": [
-        ("Sonar Large 128k (online)", "perplexity/llama-3.1-sonar-large-128k-online"),
-        ("Sonar Small 128k (online)", "perplexity/llama-3.1-sonar-small-128k-online"),
+        ("Sonar Pro (web search, recommended)", "perplexity/sonar-pro"),
+        ("Sonar (web search, cheaper)", "perplexity/sonar"),
+        ("Sonar Reasoning Pro (web + reasoning)", "perplexity/sonar-reasoning-pro"),
+        ("Sonar Reasoning (web + reasoning, cheaper)", "perplexity/sonar-reasoning"),
     ],
     "Alibaba Qwen": [
         ("Qwen Max", "dashscope/qwen-max"),
