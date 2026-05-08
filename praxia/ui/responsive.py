@@ -351,26 +351,49 @@ body:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-praxia_topnav 
 
 /* Force the nav columns to shrink instead of pushing the rightmost
    button (Admin) off the viewport when the sidebar opens. Streamlit's
-   default column flexbox uses min-width based on content, which keeps
-   the row at ~7×min-button-width even when the available width is
-   smaller than that — so Admin overflows behind the right edge. The
-   fixes layered together:
-     1. min-width: 0 on the row + columns lets flex actually shrink them
-     2. flex: 1 1 0 on each column distributes space evenly, never below 0
-     3. overflow-x: auto on the row is a safety net if shrinking still
-        isn't enough at very narrow widths
-     4. tighter button padding + ellipsis on label so labels don't
-        force min-content width back up
-*/
-.st-key-praxia_topnav [data-testid="stHorizontalBlock"] {
-    flex-wrap: nowrap !important;
+   default st.columns() lays out children with flex + percentage widths
+   computed for the original (full-width) container. After we make the
+   nav `position: fixed` with `left: 21rem` the flex container's
+   effective width shrinks but the per-column percentages don't, and
+   the gap accounting pushes the rightmost column past the right edge.
+
+   Brute-force fix: convert the columns row from flex to CSS grid with
+   `repeat(N, minmax(0, 1fr))`. minmax(0, 1fr) tells the grid that each
+   track may shrink to 0 — so the seven tracks always sum to exactly the
+   container width, regardless of content. Targeting both the legacy
+   `[data-testid="stHorizontalBlock"]` and the newer
+   `[data-testid="stColumnContainer"]` for forward-compat. Selecting
+   any direct grandchild of the topnav as a fallback so a future
+   Streamlit DOM rename doesn't break this again.
+
+   The columns inside get reset width / min-width / max-width / flex so
+   that whatever inline style Streamlit emits is overridden. */
+.st-key-praxia_topnav [data-testid="stHorizontalBlock"],
+.st-key-praxia_topnav [data-testid="stColumnContainer"],
+.st-key-praxia_topnav > div > div[class*="orizontal"],
+.st-key-praxia_topnav > div > div:has(> [data-testid="column"]),
+.st-key-praxia_topnav > div > div:has(> [data-testid="stColumn"]) {
+    display: grid !important;
+    /* grid-auto-flow: column means each child creates its own column.
+       grid-auto-columns: minmax(0, 1fr) means every track is exactly
+       1/N of the container, where N = number of children — so the
+       row always exactly fills its container, never overflows.
+       Forcing grid-template-columns: none defeats any preset that
+       would otherwise win over grid-auto-columns. */
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(0, 1fr) !important;
+    grid-template-columns: none !important;
+    gap: 0 !important;
+    width: 100% !important;
     min-width: 0 !important;
-    overflow-x: auto !important;
-    scrollbar-width: thin;
+    flex: none !important;
 }
-.st-key-praxia_topnav [data-testid="stHorizontalBlock"] [data-testid="column"] {
-    flex: 1 1 0 !important;
+.st-key-praxia_topnav [data-testid="column"],
+.st-key-praxia_topnav [data-testid="stColumn"] {
+    flex: none !important;
+    width: auto !important;
     min-width: 0 !important;
+    max-width: none !important;
 }
 .st-key-praxia_topnav .stButton button {
     padding-left: 0.4rem !important;
