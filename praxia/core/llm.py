@@ -39,16 +39,18 @@ def _import_litellm():  # type: ignore[no-untyped-def]
     """Lazy-load LiteLLM only when an actual completion call is made.
     This lets users browse skills/flows without installing the LLM client.
 
-    Side effect: turn on ``litellm.drop_params`` so per-provider quirks
-    (GPT-5 only allows ``temperature=1``, o-series doesn't accept
-    temperature at all, Anthropic ignores ``response_format``, etc.)
-    don't surface as ``UnsupportedParamsError`` to the user. LiteLLM
-    silently strips the offending field instead.
+    Side effects:
+      - ``litellm.drop_params = True`` — silently drop params the model
+        rejects (temperature for o-series, etc.).
+      - ``litellm.modify_params = True`` — let LiteLLM rename params
+        between providers (e.g. ``max_tokens`` → ``max_completion_tokens``
+        when the target model needs it).
     """
     try:
         import litellm  # type: ignore[import-untyped]
         try:
             litellm.drop_params = True
+            litellm.modify_params = True
         except Exception:
             pass
         return litellm
@@ -411,19 +413,25 @@ class LLM:
         }
         if self.config.max_tokens or "max_tokens" in overrides:
             _mt_value = overrides.get("max_tokens", self.config.max_tokens)
-            # GPT-5.x and the o-series (o1/o3/o4) require
-            # `max_completion_tokens` and reject the legacy
-            # `max_tokens`. Same for the same models exposed via
-            # Azure OpenAI Service. Detect by model id and route to
-            # the right kwarg name; LiteLLM doesn't always translate
-            # this for Azure.
+            # Pick the right kwarg name. GPT-5.x / o-series (o1/o3/o4)
+            # *only* accept `max_completion_tokens` and explicitly reject
+            # `max_tokens`. Same with Azure OpenAI when the deployed
+            # model is one of those — but Azure deployment names are
+            # user-defined ("ai-integration-planning2", "prod-gpt", …)
+            # so we *can't* infer the family from the model string for
+            # Azure. Default Azure to `max_completion_tokens` since it
+            # works for the entire GPT-4.1 / GPT-4o / GPT-5 / o-series
+            # generation; older deployments (GPT-3.5) are rare and
+            # litellm.drop_params + modify_params will bridge them.
             _resolved = self.config.resolve_model().lower()
+            _is_azure = _resolved.startswith("azure/") or _resolved.startswith("azure_ai/")
+            _is_gpt5_family = "gpt-5" in _resolved
+            _is_o_series = any(
+                tok in _resolved
+                for tok in ("/o1", "/o3", "/o4", "-o1-", "-o3-", "-o4-")
+            ) or _resolved.endswith("/o1") or _resolved.endswith("/o3") or _resolved.endswith("/o4")
             _needs_completion_tokens = (
-                "gpt-5" in _resolved
-                or "/o1" in _resolved or _resolved.endswith("/o1")
-                or "/o3" in _resolved or _resolved.endswith("/o3")
-                or "/o4" in _resolved or _resolved.endswith("/o4")
-                or "-o1-" in _resolved or "-o3-" in _resolved or "-o4-" in _resolved
+                _is_azure or _is_gpt5_family or _is_o_series
             )
             if _needs_completion_tokens:
                 kwargs["max_completion_tokens"] = _mt_value
