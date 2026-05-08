@@ -2716,18 +2716,52 @@ elif mode == "admin":
                 )
             else:
                 models_for_provider = LLM_PROVIDERS[picked_provider]
-                labels = [m[0] for m in models_for_provider]
-                ids = [m[1] for m in models_for_provider]
-                # Default to current model if it sits inside this provider's
-                # list; otherwise fall through to the first option.
-                default_idx = ids.index(_resolved_current) if _resolved_current in ids else 0
+                # Derive provider prefix from the first model id so the
+                # Custom-deployment option lands in the right LiteLLM
+                # namespace ('azure/', 'azure_ai/', 'bedrock/', etc.).
+                _first_id = models_for_provider[0][1] if models_for_provider else ""
+                _prefix = _first_id.split("/", 1)[0] + "/" if "/" in _first_id else ""
+                _CUSTOM_SENTINEL = "__custom_within_provider__"
+                labels = [m[0] for m in models_for_provider] + [
+                    "✏ " + t("admin.settings.model_custom_in_provider")
+                ]
+                ids = [m[1] for m in models_for_provider] + [_CUSTOM_SENTINEL]
+                # Default to current model if it's in this provider's
+                # list; if the current id starts with this provider's
+                # prefix but isn't a preset, default to the Custom entry.
+                if _resolved_current in ids:
+                    default_idx = ids.index(_resolved_current)
+                elif _prefix and _resolved_current.startswith(_prefix):
+                    default_idx = len(ids) - 1  # the Custom sentinel
+                else:
+                    default_idx = 0
                 picked_label = st.selectbox(
                     t("admin.settings.model_label"),
                     options=labels,
                     index=default_idx,
                     key="settings_model_pick",
                 )
-                picked_model = ids[labels.index(picked_label)]
+                _picked_id = ids[labels.index(picked_label)]
+                if _picked_id == _CUSTOM_SENTINEL:
+                    # Free-text deployment name within this provider's
+                    # namespace. Pre-fill with the current value if it
+                    # already uses the right prefix, else seed with a
+                    # template the user can edit.
+                    _seed = (
+                        _resolved_current
+                        if _prefix and _resolved_current.startswith(_prefix)
+                        else f"{_prefix}your-deployment-name"
+                    )
+                    picked_model = st.text_input(
+                        t("admin.settings.model_custom_in_provider_input").format(
+                            prefix=_prefix
+                        ),
+                        value=_seed,
+                        key="settings_model_within_provider_custom",
+                        help=t("admin.settings.model_custom_in_provider_help"),
+                    )
+                else:
+                    picked_model = _picked_id
         if st.button(
             t("admin.settings.runtime_apply"), type="primary",
             key="settings_runtime_apply",
