@@ -77,43 +77,42 @@ from typing import Any
 KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     # category, is_secret
 
-    # LLM providers (auto-detected by LLM.auto_detect in this priority)
-    "ANTHROPIC_API_KEY":              ("LLM", True),
-    "OPENAI_API_KEY":                 ("LLM", True),
-    "GEMINI_API_KEY":                 ("LLM", True),
-    "DEEPSEEK_API_KEY":               ("LLM", True),
-    "MISTRAL_API_KEY":                ("LLM", True),
-    "XAI_API_KEY":                    ("LLM", True),
-    "DASHSCOPE_API_KEY":              ("LLM", True),
-    "COHERE_API_KEY":                 ("LLM", True),
-    "PERPLEXITY_API_KEY":             ("LLM", True),
-    "GROQ_API_KEY":                   ("LLM", True),
-    "TOGETHERAI_API_KEY":             ("LLM", True),
-    "OPENROUTER_API_KEY":             ("LLM", True),
-    # Azure OpenAI (different from OpenAI: requires deployment name +
-    # endpoint + API version; the AZURE_API_KEY is from Azure portal,
-    # not platform.openai.com)
-    "AZURE_API_KEY":                  ("LLM", True),
-    "AZURE_API_BASE":                 ("LLM", False),  # https://<resource>.openai.azure.com/
-    "AZURE_API_VERSION":              ("LLM", False),  # e.g. 2024-08-01-preview
-    # Azure AI Foundry / Inference (separate endpoint flavor — uses
-    # OpenAI-compatible API but lives under foundry.azure.com)
-    "AZURE_AI_API_KEY":               ("LLM", True),
-    "AZURE_AI_API_BASE":              ("LLM", False),
-    # AWS Bedrock — Claude / Llama / Titan etc. served on AWS infra.
-    # Authenticates with AWS IAM credentials, not an Anthropic key.
-    # AWS_REGION is shared with KMS but Bedrock needs it too — we list
-    # it once under KMS; same value works for both.
-    "AWS_ACCESS_KEY_ID":              ("LLM", True),
-    "AWS_SECRET_ACCESS_KEY":          ("LLM", True),
-    "AWS_SESSION_TOKEN":              ("LLM", True),  # only when using STS / role assumption
-    "AWS_BEDROCK_RUNTIME_ENDPOINT":   ("LLM", False),  # rare — for VPC endpoints
-    # Google Vertex AI — for Gemini & Anthropic-on-Vertex deployments
-    "VERTEX_PROJECT":                 ("LLM", False),
-    "VERTEX_LOCATION":                ("LLM", False),  # e.g. us-central1
-    "GOOGLE_APPLICATION_CREDENTIALS": ("LLM", False),  # path to service-account JSON
-    "OLLAMA_API_BASE":                ("LLM", False),
-    "PRAXIA_LOCAL_MODEL":             ("LLM", False),
+    # LLM providers — categories grouped per vendor so the Settings UI
+    # can render one expander per provider instead of a flat 30-row list.
+    "ANTHROPIC_API_KEY":              ("LLM · Anthropic", True),
+    "OPENAI_API_KEY":                 ("LLM · OpenAI", True),
+    "GEMINI_API_KEY":                 ("LLM · Google", True),
+    "VERTEX_PROJECT":                 ("LLM · Google", False),
+    "VERTEX_LOCATION":                ("LLM · Google", False),  # e.g. us-central1
+    "GOOGLE_APPLICATION_CREDENTIALS": ("LLM · Google", False),  # service-account JSON path
+    "DEEPSEEK_API_KEY":               ("LLM · DeepSeek", True),
+    "MISTRAL_API_KEY":                ("LLM · Mistral", True),
+    "XAI_API_KEY":                    ("LLM · xAI", True),
+    "DASHSCOPE_API_KEY":              ("LLM · Alibaba Qwen", True),
+    "COHERE_API_KEY":                 ("LLM · Cohere", True),
+    "PERPLEXITY_API_KEY":             ("LLM · Perplexity", True),
+    "GROQ_API_KEY":                   ("LLM · Groq", True),
+    "TOGETHERAI_API_KEY":             ("LLM · Together AI", True),
+    "OPENROUTER_API_KEY":             ("LLM · OpenRouter", True),
+    # Azure OpenAI — different from OpenAI: requires deployment name +
+    # endpoint + API version; AZURE_API_KEY is from Azure portal, NOT
+    # platform.openai.com.
+    "AZURE_API_KEY":                  ("LLM · Azure OpenAI", True),
+    "AZURE_API_BASE":                 ("LLM · Azure OpenAI", False),  # https://<resource>.openai.azure.com/
+    "AZURE_API_VERSION":              ("LLM · Azure OpenAI", False),  # e.g. 2024-08-01-preview
+    # Azure AI Foundry / Inference — separate endpoint flavor.
+    "AZURE_AI_API_KEY":               ("LLM · Azure AI Foundry", True),
+    "AZURE_AI_API_BASE":              ("LLM · Azure AI Foundry", False),
+    # AWS Bedrock — Claude / Llama / Titan etc. on AWS infra. Uses AWS
+    # IAM credentials, not an Anthropic key. AWS_REGION is shared with
+    # KMS — listed once there; same value works for both.
+    "AWS_ACCESS_KEY_ID":              ("LLM · AWS Bedrock", True),
+    "AWS_SECRET_ACCESS_KEY":          ("LLM · AWS Bedrock", True),
+    "AWS_SESSION_TOKEN":              ("LLM · AWS Bedrock", True),  # for STS / AssumeRole
+    "AWS_BEDROCK_RUNTIME_ENDPOINT":   ("LLM · AWS Bedrock", False),  # rare — VPC endpoints
+    # Local / self-hosted
+    "OLLAMA_API_BASE":                ("LLM · Local (Ollama)", False),
+    "PRAXIA_LOCAL_MODEL":             ("LLM · Local (Ollama)", False),
 
     # Identity (for the agent / multi-tenant scenarios)
     "PRAXIA_USER_ID":                 ("Identity", False),
@@ -222,6 +221,22 @@ class PraxiaConfig:
         existing[key] = value
         cls._write_toml(toml_path, existing)
         cls._toml_cache = existing  # invalidate cache
+
+    @classmethod
+    def delete_persistent(cls, key: str) -> bool:
+        """Remove `key` from `.praxia/config.toml`. Returns True if a row
+        was removed. Does NOT touch process env vars or `.env` — those
+        layers can still re-supply the value on the next start."""
+        toml_path = Path(".praxia/config.toml")
+        if not toml_path.exists():
+            return False
+        existing = cls._load_toml()
+        if key not in existing:
+            return False
+        del existing[key]
+        cls._write_toml(toml_path, existing)
+        cls._toml_cache = existing
+        return True
 
     @classmethod
     def list_set(cls) -> dict[str, tuple[str, str]]:

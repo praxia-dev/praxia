@@ -2571,15 +2571,14 @@ elif mode == "admin":
                 f"**{category}**  ·  {_set_count}/{len(keys)} "
                 + t("admin.settings.keys_set_label")
             )
-            with st.expander(_hdr, expanded=(category == "LLM")):
+            # Auto-expand groups that already have something set so admins
+            # can see what's there at a glance; collapse empty groups.
+            with st.expander(_hdr, expanded=(_set_count > 0)):
                 with st.form(f"settings_form_{category}", clear_on_submit=True):
                     pending: dict[str, str] = {}
+                    delete_keys: list[str] = []
                     for key, is_secret in keys:
                         current = PraxiaConfig.get(key)
-                        # ✓ prefix when set; placeholder shows '****' so
-                        # the user can SEE that a value is on file
-                        # without leaking any of its characters. Help
-                        # tooltip keeps the same no-leak message.
                         if current is None:
                             label = key
                             help_text = t("admin.settings.help.unset")
@@ -2590,20 +2589,36 @@ elif mode == "admin":
                             placeholder = "********"
                         else:
                             # Non-secret values are still safe to show —
-                            # they're things like URLs / timezones, no
-                            # leak risk.
+                            # they're things like URLs / timezones.
                             label = f"✓ {key}  ({current})"
                             help_text = t("admin.settings.help.value_set").format(
                                 value=current
                             )
                             placeholder = current
-                        new_val = st.text_input(
-                            label, value="",
-                            type="password" if is_secret else "default",
-                            placeholder=placeholder,
-                            help=help_text,
-                            key=f"setting_input_{category}_{key}",
-                        )
+                        col_in, col_del = st.columns([5, 1])
+                        with col_in:
+                            new_val = st.text_input(
+                                label, value="",
+                                type="password" if is_secret else "default",
+                                placeholder=placeholder,
+                                help=help_text,
+                                key=f"setting_input_{category}_{key}",
+                            )
+                        with col_del:
+                            # Delete checkbox only renders for keys that
+                            # actually have a stored value — there's
+                            # nothing to delete otherwise.
+                            if current is not None:
+                                # Spacer to align the checkbox with the
+                                # text-input (which has a label row above).
+                                st.markdown("&nbsp;", unsafe_allow_html=True)
+                                if st.checkbox(
+                                    t("admin.settings.delete_checkbox"),
+                                    value=False,
+                                    key=f"setting_del_{category}_{key}",
+                                    help=t("admin.settings.delete_checkbox_help"),
+                                ):
+                                    delete_keys.append(key)
                         if new_val:
                             pending[key] = new_val
                     st.caption(t("admin.settings.save_hint"))
@@ -2615,19 +2630,15 @@ elif mode == "admin":
                     if submit:
                         if actor_role not in ("admin", "unknown"):
                             st.error(t("admin.settings.role_required"))
-                        elif not pending:
+                        elif not pending and not delete_keys:
                             st.info(t("admin.settings.no_changes"))
                         else:
                             for k, v in pending.items():
                                 PraxiaConfig.set_persistent(k, v)
-                                # Mirror the value into os.environ for the
-                                # *current* process — TOML writes alone don't
-                                # reach LiteLLM/OpenAI SDK/Mem0 (they all
-                                # read os.environ directly), so without this
-                                # the user has to restart the whole UI just
-                                # to apply a new API key. Hydration at
-                                # startup handles the next restart; this
-                                # handles right-now.
+                                # Mirror into os.environ so LiteLLM /
+                                # OpenAI SDK / Mem0 (which read
+                                # os.environ directly) see the value
+                                # immediately, no restart needed.
                                 os.environ[k] = v
                                 if auth is not None:
                                     auth.audit.record(
@@ -2640,13 +2651,31 @@ elif mode == "admin":
                                             "is_secret": KNOWN_KEYS[k][1],
                                         },
                                     )
-                            # Bust LLM caches so cached LiteLLM clients
-                            # rebuild and pick up the new credentials.
+                            for k in delete_keys:
+                                if PraxiaConfig.delete_persistent(k):
+                                    # Also clear from current process env
+                                    # so reads stop seeing the deleted
+                                    # value mid-session.
+                                    os.environ.pop(k, None)
+                                    if auth is not None:
+                                        auth.audit.record(
+                                            actor_id=user_id,
+                                            actor_role=actor_role,
+                                            action="config.delete",
+                                            resource=f"config:{k}",
+                                            metadata={
+                                                "category": KNOWN_KEYS[k][0],
+                                                "is_secret": KNOWN_KEYS[k][1],
+                                            },
+                                        )
                             try:
                                 st.cache_resource.clear()
                             except Exception:
                                 pass
-                            st.success(t("admin.settings.saved").format(count=len(pending)))
+                            if pending:
+                                st.success(t("admin.settings.saved").format(count=len(pending)))
+                            if delete_keys:
+                                st.success(t("admin.settings.deleted").format(count=len(delete_keys)))
                             st.info(t("admin.settings.applied_immediately"))
 
     with tab_users:

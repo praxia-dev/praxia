@@ -130,8 +130,11 @@ DEFAULT_ALIASES: dict[str, str] = {
     # Mistral — Mistral Large 3 (Dec 2 2025), Medium 3.5 (Apr 30 2026),
     # Small 4 (Mar 2026), Magistral 1.2 (reasoning), Devstral 2 (code).
     "mistral": "mistral/mistral-large-3",
+    "mistral-large": "mistral/mistral-large-3",
     "mistral-large-3": "mistral/mistral-large-3",
+    "mistral-medium": "mistral/mistral-medium-3.5",
     "mistral-medium-3.5": "mistral/mistral-medium-3.5",
+    "mistral-small": "mistral/mistral-small-4",
     "mistral-small-4": "mistral/mistral-small-4",
     "magistral": "mistral/magistral-medium-1.2",
     "codestral": "mistral/codestral-2508",
