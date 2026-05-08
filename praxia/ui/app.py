@@ -26,6 +26,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re as _re
 from pathlib import Path
 from typing import Any
 
@@ -77,6 +78,31 @@ except ImportError:
 # =====================================================================
 
 _PREFS_DIR = Path(".praxia") / "preferences"
+
+
+def _scrub_secrets(text: str) -> str:
+    """Mask anything in ``text`` that looks like a leaked API key.
+
+    Third-party error messages (OpenAI / Anthropic / etc.) sometimes
+    echo back partial key material — e.g. OpenAI's
+    ``Incorrect API key provided: 50b65c14********************e652``.
+    Scrub before showing to the end user so we don't accidentally surface
+    a fragment that helps attackers confirm a stolen key.
+    """
+    if not text:
+        return text
+    out = text
+    # 1) Partial-mask patterns: <chars>****<chars>, <chars>……<chars>, etc.
+    out = _re.sub(
+        r"[A-Za-z0-9_\-]{4,}[\*…\.]{3,}[A-Za-z0-9_\-]{4,}", "****", out,
+    )
+    # 2) Raw OpenAI-style keys (sk-...)
+    out = _re.sub(r"\bsk-[A-Za-z0-9_\-]{20,}\b", "sk-****", out)
+    # 3) Raw Anthropic-style (sk-ant-...)
+    out = _re.sub(r"\bsk-ant-[A-Za-z0-9_\-]{20,}\b", "sk-ant-****", out)
+    # 4) Generic 32+ char hex tokens (often raw keys)
+    out = _re.sub(r"\b[A-Fa-f0-9]{32,}\b", "****", out)
+    return out
 
 
 def _prefs_path(user_id: str) -> Path:
@@ -710,26 +736,47 @@ elif theme_choice == "light":
 # same-origin, so attaching the listener to window.parent.document
 # correctly intercepts keys hitting the main Streamlit page.
 import streamlit.components.v1 as _components
+# The previous attempt attached the listener directly from the iframe
+# to window.parent.document. That works once but the listener function
+# lives in the iframe's JS context — when Streamlit reruns and our
+# iframe gets replaced, the function reference can become orphaned in
+# some browsers and stop firing. Worse, if Streamlit's own keydown
+# listener was registered after ours (no guarantee of ordering between
+# capture-phase listeners on the same target), it can still see the
+# event despite our stopPropagation.
+#
+# Belt-and-suspenders fix: from the iframe, *inject a real <script>
+# element into the parent document*. Once appended, the parent's HTML
+# parser executes it, the listener is registered in the parent's own
+# JS context, and it survives every iframe lifecycle. We attach to
+# both `document` and `window` capture phase to win against whatever
+# target Streamlit uses.
 _components.html(
     """
 <script>
 (function() {
   try {
-    var doc = (window.parent && window.parent.document) ? window.parent.document : document;
-    if (doc.__praxiaShortcutGuard) return;
-    doc.__praxiaShortcutGuard = true;
-    var SHORTCUT_KEYS = new Set(['c', 'C', 'r', 'R', '?', '/']);
-    doc.addEventListener('keydown', function(e) {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      var tgt = e.target;
-      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' ||
-                  tgt.isContentEditable)) return;
-      if (SHORTCUT_KEYS.has(e.key)) {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        e.preventDefault();
-      }
-    }, true);
+    var pdoc = (window.parent && window.parent.document) ? window.parent.document : null;
+    if (!pdoc) return;
+    if (pdoc.__praxiaShortcutGuardInstalled) return;
+    pdoc.__praxiaShortcutGuardInstalled = true;
+    var s = pdoc.createElement('script');
+    s.textContent =
+      "(function(){" +
+        "var SK=new Set(['c','C','r','R','?','/']);" +
+        "var handler=function(e){" +
+          "if(e.ctrlKey||e.metaKey||e.altKey)return;" +
+          "var t=e.target;" +
+          "if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;" +
+          "if(SK.has(e.key)){" +
+            "e.stopPropagation();e.stopImmediatePropagation();e.preventDefault();" +
+          "}" +
+        "};" +
+        "document.addEventListener('keydown',handler,true);" +
+        "window.addEventListener('keydown',handler,true);" +
+        "console.log('praxia: shortcut guard active');" +
+      "})();";
+    pdoc.head.appendChild(s);
   } catch(err) { console.error('praxia: shortcut guard install failed', err); }
 })();
 </script>
@@ -1417,7 +1464,10 @@ if mode == "run":
                 response_text = result.final_text or "(no response)"
                 trace = getattr(result, "tool_calls", None) or []
             except Exception as exc:
-                response_text = f"❌ {exc}"
+                # Scrub any leaked key fragments before displaying the
+                # third-party error (OpenAI / Anthropic / etc. sometimes
+                # echo partial key material in their responses).
+                response_text = "❌ " + _scrub_secrets(str(exc))
                 trace = []
             finally:
                 if ephemeral:
@@ -2362,7 +2412,6 @@ elif mode == "admin":
         # Memory backend used to live here too but now belongs entirely
         # under the Memory policy section below (one source of truth).
         st.subheader(t("admin.settings.runtime_h"))
-        st.caption(t("admin.settings.runtime_intro"))
         col_p, col_m = st.columns(2)
         current_model = st.session_state.get("praxia_model", _default_model)
         # Resolve alias to full model id for matching against the provider map.
@@ -2423,7 +2472,6 @@ elif mode == "admin":
         # and observed by all PersonalMemory constructions. Distinct from the
         # session-scoped runtime override above.
         st.subheader(t("admin.settings.memory_policy_h"))
-        st.caption(t("admin.settings.memory_policy_intro"))
 
         from praxia.memory.policy import MemoryAdminPolicy
         _BACKEND_CHOICES = ["json", "mem0", "langmem", "letta", "zep", "hindsight"]

@@ -2984,16 +2984,6 @@ _T: dict[str, dict[str, str]] = {
         "de": "Gespeichert in `.praxia/admin/runtime.json` und beim RUN jedes Nutzers verwendet, bis geändert. Bleibt nach Neustart. Memory-Backend wird separat unter **Memory-Richtlinie** unten konfiguriert.",
         "pt-BR": "Salvo em `.praxia/admin/runtime.json` e usado pelo RUN de todos os usuários até ser alterado. Persiste no reinício. O backend de memória é configurado separadamente em **Política de memória** abaixo.",
     },
-    "admin.settings.runtime_intro": {
-        "en": "These two switches affect the running app immediately. They were previously in the sidebar but are rarely changed at runtime.",
-        "ja": "この 2 つは即座にアプリに反映されます。以前はサイドバーに置いていましたが、頻繁には変更しないので設定タブへ移動しました。",
-        "zh-CN": "这两个开关立即影响运行中的应用。原先位于侧边栏,但因不常更改已移至设置。",
-        "ko": "이 두 가지는 실행 중인 앱에 즉시 반영됩니다. 이전에는 사이드바에 있었지만 자주 바꾸지 않으므로 설정으로 옮겼습니다.",
-        "es": "Estos dos cambios afectan la app en ejecución de inmediato. Antes estaban en la barra lateral, pero rara vez se cambian en runtime.",
-        "fr": "Ces deux options affectent l'app en cours immédiatement. Elles étaient dans la sidebar mais sont rarement changées en runtime.",
-        "de": "Diese beiden Schalter wirken sich sofort aus. Sie waren zuvor in der Sidebar, werden aber selten zur Laufzeit geändert.",
-        "pt-BR": "Estes dois ajustes afetam o app em execução imediatamente. Antes ficavam na sidebar, mas raramente são alterados em runtime.",
-    },
     "admin.settings.provider_label": {
         "en": "Provider",
         "ja": "プロバイダ",
