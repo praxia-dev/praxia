@@ -26,18 +26,72 @@ _log = logging.getLogger(__name__)
 
 _MOBILE_CSS = """
 <style>
-/* --- Praxia UI: enterprise visual tone — restrained typography, square-ish
-       widgets, calm interactions. Goal: looks like business software, not a
-       consumer SaaS landing. */
+/* --- Praxia UI: enterprise visual tone — restrained typography, polished
+       rounded cards, gold accent. Tokens defined as CSS variables so the
+       per-user theme block in app.py only needs to override colors. */
 
-/* Sober, neutral font stack. No stylistic-alternate font-feature-settings
-   (those gave a "designy" feel). Slightly smaller global base size for
-   denser, business-app feel. */
+/* Default token set = warm-ivory light theme. The dark theme block in
+   app.py overrides these via `:root { ... }`. Auto mode (no explicit
+   theme) follows OS preference through the @media block below. */
+:root {
+    --app-bg:            #fafaf7;
+    --sidebar-bg:        #f3f1ea;
+    --card-bg:           #ffffff;
+    --card-bg-elevated:  #ffffff;
+    --card-border:       #e3e0d4;
+    --card-border-strong:#cdc9bb;
+    --text-primary:      #1a1c20;
+    --text-secondary:    #5a5e68;
+    --text-tertiary:     #8a8e96;
+    --accent-gold:       #a8843e;
+    --accent-gold-text:  #7a5e28;
+    --accent-gold-bg:    rgba(168,132,62,0.10);
+    --accent-gold-border:#d4b97a;
+    --info-blue:         #1e6fa8;
+    --info-blue-bg:      rgba(30,111,168,0.08);
+    --info-blue-border:  rgba(30,111,168,0.35);
+    --success:           #1f8a3a;
+    --warn:              #b06000;
+    --danger:            #b03030;
+    --radius-card:       10px;
+    --radius-input:      6px;
+    --radius-pill:       999px;
+    --shadow-card:       0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* "auto" theme — follow OS dark preference. Explicit "dark"/"light"
+   choices in app.py override this via higher-specificity selectors. */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --app-bg:            #0a0a0f;
+        --sidebar-bg:        #0e1018;
+        --card-bg:           #15171f;
+        --card-bg-elevated:  #1a1d28;
+        --card-border:       #23262f;
+        --card-border-strong:#33363f;
+        --text-primary:      #ecedf0;
+        --text-secondary:    #a8acb8;
+        --text-tertiary:     #6f7382;
+        --accent-gold:       #c9a456;
+        --accent-gold-text:  #e9c378;
+        --accent-gold-bg:    rgba(201,164,86,0.12);
+        --accent-gold-border:#8b6f30;
+        --info-blue:         #8cc8ff;
+        --info-blue-bg:      rgba(140,200,255,0.10);
+        --info-blue-border:  rgba(140,200,255,0.35);
+        --success:           #28c941;
+        --warn:              #fbbf24;
+        --danger:            #ef4444;
+        --shadow-card:       0 1px 2px rgba(0,0,0,0.4);
+    }
+}
+
+/* Sober, neutral font stack. */
 html, .stApp, body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
                  "Inter", "Helvetica Neue", "Hiragino Sans", "Noto Sans JP",
                  system-ui, sans-serif !important;
-    font-size: 14px !important;  /* default is 16px */
+    font-size: 14px !important;
 }
 .stMarkdown p, .stMarkdown li, label, [data-testid="stMarkdownContainer"] p {
     font-size: 0.9rem !important;
@@ -82,10 +136,10 @@ small, [data-testid="stCaption"] {
     line-height: 1.4 !important;
 }
 
-/* Buttons: square-ish, no lift, no shadow. Color change on hover only. */
+/* Buttons: gently rounded, no lift, no shadow. Color change on hover. */
 .stButton button, .stDownloadButton button,
 [data-testid="stFormSubmitButton"] button {
-    border-radius: 4px !important;
+    border-radius: var(--radius-input) !important;
     font-weight: 500 !important;
     transition: background-color 120ms ease, border-color 120ms ease !important;
     border-width: 1px !important;
@@ -95,13 +149,13 @@ small, [data-testid="stCaption"] {
     background-color: rgba(127, 127, 127, 0.06) !important;
 }
 
-/* Form inputs: square corners, solid borders. */
+/* Form inputs: matching rounded corners, solid borders. */
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea,
 [data-testid="stSelectbox"] div[role="combobox"],
 [data-testid="stNumberInput"] input,
 [data-testid="stDateInput"] input {
-    border-radius: 4px !important;
+    border-radius: var(--radius-input) !important;
     font-size: 0.9rem !important;
 }
 
@@ -111,33 +165,40 @@ small, [data-testid="stCaption"] {
     font-size: 0.9rem !important;
 }
 
-/* Metrics: square card, subdued border. */
+/* Metrics: rounded card with visible border. */
 [data-testid="stMetric"] {
-    background: rgba(127, 127, 127, 0.03);
-    border-radius: 4px;
+    background: var(--card-bg);
+    border-radius: var(--radius-card);
     padding: 0.85rem 1rem !important;
-    border: 1px solid rgba(127, 127, 127, 0.14);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-card);
 }
 [data-testid="stMetricValue"] {
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     letter-spacing: -0.005em !important;
+    color: var(--text-primary) !important;
+}
+[data-testid="stMetricLabel"] {
+    color: var(--text-secondary) !important;
 }
 
-/* Expanders: squared-off, conservative. */
+/* Expanders: rounded card, visible border. */
 [data-testid="stExpander"] {
-    border-radius: 4px !important;
-    border: 1px solid rgba(127, 127, 127, 0.16) !important;
-    background: transparent;
+    border-radius: var(--radius-card) !important;
+    border: 1px solid var(--card-border) !important;
+    background: var(--card-bg);
+    overflow: hidden;
 }
 [data-testid="stExpander"] summary {
-    padding: 0.6rem 1rem !important;
-    font-weight: 500 !important;
+    padding: 0.7rem 1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
 }
 
-/* Tabs: thin underline, neutral indigo accent (replaces gold). */
+/* Tabs: thin underline + gold accent (replaces neutral indigo). */
 [data-testid="stTabs"] [role="tablist"] {
     gap: 0 !important;
-    border-bottom: 1px solid rgba(127, 127, 127, 0.22);
+    border-bottom: 1px solid var(--card-border);
 }
 [data-testid="stTabs"] [role="tab"] {
     padding: 0.55rem 1rem !important;
@@ -146,39 +207,85 @@ small, [data-testid="stCaption"] {
     border-bottom: 2px solid transparent !important;
     border-radius: 0 !important;
     background: transparent !important;
+    color: var(--text-secondary) !important;
+}
+[data-testid="stTabs"] [role="tab"]:hover {
+    color: var(--text-primary) !important;
 }
 [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
-    color: #1e3a8a !important;
-    border-bottom-color: #1e3a8a !important;
+    color: var(--accent-gold-text) !important;
+    border-bottom-color: var(--accent-gold) !important;
     font-weight: 600 !important;
 }
 
-/* Sidebar: subtle border on the right, slightly less heavy */
+/* Sidebar: matches the design's distinct sidebar tone. */
 [data-testid="stSidebar"] {
-    border-right: 1px solid rgba(127, 127, 127, 0.08);
+    background-color: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--card-border);
     padding-top: 1rem !important;
 }
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
     margin-top: 0 !important;
     font-size: 1.1rem !important;
+    color: var(--text-primary) !important;
 }
 
-/* Chat messages: square, restrained bubble. */
+/* Chat messages: rounded card with visible border. */
 [data-testid="stChatMessage"] {
     padding: 0.85rem 1rem !important;
-    border-radius: 4px !important;
-    border: 1px solid rgba(127, 127, 127, 0.12);
-    background: rgba(127, 127, 127, 0.025);
+    border-radius: var(--radius-card) !important;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
     margin-bottom: 0.6rem !important;
 }
 
-/* Dividers: thinner, calmer */
-hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; }
+/* Forms: rounded card frame. */
+[data-testid="stForm"] {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-card) !important;
+    padding: 1rem !important;
+}
 
-/* Alerts: less shouty */
+/* Dividers: thinner, calmer */
+hr { margin: 1.25rem 0 !important; opacity: 0.6 !important; border-color: var(--card-border) !important; }
+
+/* Alerts: rounded with a subtle accent. */
 [data-testid="stAlert"] {
-    border-radius: 10px !important;
+    border-radius: var(--radius-card) !important;
     border-width: 1px !important;
+}
+
+/* App + main page surfaces: pick up the theme tokens so light / dark
+   colors flow from a single source. */
+.stApp {
+    background-color: var(--app-bg) !important;
+    color: var(--text-primary) !important;
+}
+[data-testid="stHeader"] { background-color: transparent !important; }
+
+/* Pill-style chips — used for inline tags on prompts / users / runs */
+.praxia-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.18rem 0.6rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--accent-gold-bg);
+    color: var(--accent-gold-text);
+    border: 1px solid var(--accent-gold-border);
+}
+.praxia-pill--info {
+    background: var(--info-blue-bg);
+    color: var(--info-blue);
+    border-color: var(--info-blue-border);
+}
+.praxia-pill--muted {
+    background: rgba(127,127,127,0.10);
+    color: var(--text-secondary);
+    border-color: var(--card-border);
 }
 
 /* --- Praxia UI: hide Streamlit's default chrome that's irrelevant to the
@@ -293,11 +400,11 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     width: auto !important;
     max-width: none !important;
     z-index: 9999 !important;
-    background-color: #ffffff;  /* light; dark overrides below */
+    background-color: var(--sidebar-bg) !important;
     padding: 0.5rem 0.5rem !important;
     margin: 0 !important;
-    border-bottom: 1px solid rgba(127, 127, 127, 0.18);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid var(--card-border) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* Reserve clearance at top + bottom of the main content so the
@@ -339,8 +446,8 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     right: 0 !important;
     z-index: 9000 !important;
     padding: 0.5rem 1rem !important;
-    border-top: 1px solid rgba(127, 127, 127, 0.18);
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+    border-top: 1px solid var(--card-border) !important;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* The topnav itself is a horizontal flex container (st.container with
@@ -390,13 +497,13 @@ section.main, [data-testid="stMain"] { padding-top: 0 !important; }
     margin: 0 !important;
 }
 .st-key-praxia_topnav > *:first-child .stButton button {
-    border-top-left-radius: 3px !important;
-    border-bottom-left-radius: 3px !important;
+    border-top-left-radius: var(--radius-input) !important;
+    border-bottom-left-radius: var(--radius-input) !important;
 }
 .st-key-praxia_topnav > *:last-child .stButton button {
-    border-top-right-radius: 3px !important;
-    border-bottom-right-radius: 3px !important;
-    border-right: 1px solid rgba(127, 127, 127, 0.18) !important;
+    border-top-right-radius: var(--radius-input) !important;
+    border-bottom-right-radius: var(--radius-input) !important;
+    border-right: 1px solid var(--card-border) !important;
 }
 
 /* --- Praxia UI mobile / responsive overrides --- */

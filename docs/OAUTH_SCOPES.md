@@ -30,6 +30,7 @@ When you operate `praxia serve` with `PRAXIA_PUBLIC_URL=https://praxia.example.c
 | HubSpot | `HUBSPOT_OAUTH` | `crm.objects.contacts.read crm.objects.contacts.write crm.objects.companies.read crm.objects.deals.read crm.objects.deals.write` | <https://developers.hubspot.com/docs/api/working-with-oauth> |
 | Zendesk | `ZENDESK_OAUTH` | `read write` | `<your-subdomain>.zendesk.com/admin/apps-integrations/apis/zendesk-api/oauth_clients` |
 | Linear | `LINEAR_OAUTH` | `read write` | <https://linear.app/settings/api> |
+| kintone | `KINTONE_OAUTH` | `k:app_record:read k:app_record:write k:app_settings:read k:file:read k:file:write` | `<your-tenant>.cybozu.com` → cybozu.com共通管理 → OAuth クライアント |
 
 ---
 
@@ -319,6 +320,27 @@ read write
 4. `PRAXIA_OAUTH_LINEAR_CLIENT_ID` + `PRAXIA_OAUTH_LINEAR_CLIENT_SECRET`
 
 > Linear also accepts a personal API key without OAuth — pass `api_key=...` to the connector for single-user / scripts.
+
+---
+
+## 13. kintone (`kintone`)
+
+**Default scopes:**
+```
+k:app_record:read k:app_record:write k:app_settings:read k:file:read k:file:write
+```
+
+**Note:** kintone scopes are per-resource: `k:app_record:read|write` for record CRUD, `k:app_settings:read|write` for app schema, `k:file:read|write` for file attachments. Add `k:app_settings:write` only if Praxia needs to modify app forms.
+
+**Per-tenant URL:** kintone OAuth endpoints embed the tenant subdomain. Set `PRAXIA_OAUTH_KINTONE_SUBDOMAIN` to your tenant (e.g. `acme` for `acme.cybozu.com`). The flow then resolves to `https://acme.cybozu.com/oauth2/authorization` and `/token`.
+
+**App registration:**
+1. cybozu.com admin → 「cybozu.com 共通管理」→ OAuth クライアント → 「追加する」
+2. Redirect URL: `https://praxia.example.com/api/v1/oauth/kintone/callback`
+3. Scopes: tick `k:app_record:read`, `k:app_record:write`, `k:app_settings:read`, `k:file:read`, `k:file:write` (uncheck `k:app_settings:write` if Praxia shouldn't modify app schemas).
+4. `PRAXIA_OAUTH_KINTONE_CLIENT_ID` + `PRAXIA_OAUTH_KINTONE_CLIENT_SECRET` + `PRAXIA_OAUTH_KINTONE_SUBDOMAIN`
+
+> kintone also accepts a static `X-Cybozu-API-Token` (per-app, not per-user) or HTTP Basic auth (`username`+`password`). For new deployments, prefer OAuth so each Praxia user only sees records kintone grants to their own account.
 
 ---
 

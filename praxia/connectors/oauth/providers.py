@@ -188,11 +188,30 @@ LINEAR_OAUTH = OAuthProviderConfig(
     pkce=False,
 )
 
+# --- Cybozu kintone ---------------------------------------------------
+# kintone OAuth 2.0 (Authorization Code). Like Zendesk, the endpoints
+# embed the tenant subdomain ({subdomain}.cybozu.com), so callers must
+# pass `url_params={"subdomain": "<tenant>"}` when building the flow.
+
+KINTONE_OAUTH = OAuthProviderConfig(
+    name="kintone",
+    authorize_url="https://{subdomain}.cybozu.com/oauth2/authorization",
+    token_url="https://{subdomain}.cybozu.com/oauth2/token",
+    default_scopes=[
+        "k:app_record:read",
+        "k:app_record:write",
+        "k:app_settings:read",
+        "k:file:read",
+        "k:file:write",
+    ],
+    pkce=False,  # Cybozu uses HTTP Basic auth at the token endpoint
+)
+
 
 PROVIDERS_BY_NAME: dict[str, OAuthProviderConfig] = {
     p.name: p for p in (
         BOX_OAUTH, MICROSOFT_OAUTH, DROPBOX_OAUTH, GOOGLE_OAUTH, SALESFORCE_OAUTH,
         NOTION_OAUTH, ATLASSIAN_OAUTH, SLACK_OAUTH, GITHUB_OAUTH, HUBSPOT_OAUTH,
-        ZENDESK_OAUTH, LINEAR_OAUTH,
+        ZENDESK_OAUTH, LINEAR_OAUTH, KINTONE_OAUTH,
     )
 }

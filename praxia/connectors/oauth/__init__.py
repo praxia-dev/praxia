@@ -34,6 +34,7 @@ from praxia.connectors.oauth.providers import (
     GITHUB_OAUTH,
     GOOGLE_OAUTH,
     HUBSPOT_OAUTH,
+    KINTONE_OAUTH,
     LINEAR_OAUTH,
     MICROSOFT_OAUTH,
     NOTION_OAUTH,
@@ -69,6 +70,7 @@ __all__ = [
     "HUBSPOT_OAUTH",
     "ZENDESK_OAUTH",
     "LINEAR_OAUTH",
+    "KINTONE_OAUTH",
     "PROVIDERS_BY_NAME",
     # KMS
     "KmsAdapter",

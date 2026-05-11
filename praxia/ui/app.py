@@ -561,459 +561,1298 @@ actor_role: str = st.session_state.get("actor_role", "unknown")
 # =====================================================================
 
 theme_choice = st.session_state.get("praxia_theme", "auto")
-if theme_choice == "dark":
-    st.markdown(
-        """
+
+# Theme palettes are defined as CSS variable overrides on :root, with a
+# few hand-targeted selectors for BaseWeb portal widgets and Streamlit
+# internals that don't pick up the vars through normal cascade.
+#
+# Structural rules (radii, padding, typography) live in responsive.py
+# and reference these variables, so changing the palette here re-skins
+# the whole app without touching layout.
+#
+# Palette source: web-publish/images/*.svg mockups. Dark = HP brand
+# (black-charcoal + gold accent). Light = warm ivory companion.
+
+_DARK_THEME_CSS = """
 <style>
-  /* Color tokens — picked for readability over aesthetic darkness.
-     Body raised from near-black (#0a0a0f) to #15181f so that white
-     text doesn't sit directly on pure black (which causes halo /
-     vibration on most monitors). Cards step up to #1d212a so form,
-     expander, metric panels visibly separate from body. Borders
-     bumped from rgba(.06-.12) to rgba(.16-.24) so element edges
-     are actually visible. */
-  :root {
-    --background-color: #15181f;
-    --secondary-background-color: #1d212a;
-    --text-color: #f4f5f7;
+  :root, .stApp {
+    --app-bg:            #0a0a0f;
+    --sidebar-bg:        #0e1018;
+    --card-bg:           #15171f;
+    --card-bg-elevated:  #1a1d28;
+    --card-border:       #23262f;
+    --card-border-strong:#33363f;
+    --text-primary:      #ecedf0;
+    --text-secondary:    #a8acb8;
+    --text-tertiary:     #6f7382;
+    --accent-gold:       #c9a456;
+    --accent-gold-text:  #e9c378;
+    --accent-gold-bg:    rgba(201,164,86,0.12);
+    --accent-gold-border:#8b6f30;
+    --info-blue:         #8cc8ff;
+    --info-blue-bg:      rgba(140,200,255,0.10);
+    --info-blue-border:  rgba(140,200,255,0.35);
+    --success:           #28c941;
+    --warn:              #fbbf24;
+    --danger:            #ef4444;
+    --shadow-card:       0 1px 2px rgba(0,0,0,0.4);
   }
-  .stApp { background-color: #15181f !important; color: #f4f5f7 !important; }
-  [data-testid="stSidebar"] { background-color: #1d212a !important; border-right: 1px solid rgba(255,255,255,0.08) !important; }
-  [data-testid="stHeader"] { background-color: transparent !important; }
-
-  /* Generic text — brighter primary, more readable secondary */
-  .stMarkdown, .stText, p, span, label, h1, h2, h3, h4, h5, h6, li, td, th { color: #f4f5f7 !important; }
-  [data-testid="stCaption"], small, .stCaption { color: #c1c5d0 !important; }
-  code { background-color: rgba(255,200,120,0.12) !important; color: #fbbf24 !important; padding: 0.05rem 0.3rem !important; border-radius: 3px !important; }
-  pre code { background-color: transparent !important; padding: 0 !important; color: #f4f5f7 !important; }
-  pre { background-color: #0f1218 !important; border: 1px solid rgba(255,255,255,0.12) !important; padding: 0.75rem !important; border-radius: 4px !important; }
-  a, a:visited { color: #93c5fd !important; }
+  /* Generic text */
+  .stMarkdown, .stText, p, span, label, h1, h2, h3, h4, h5, h6, li, td, th {
+    color: var(--text-primary) !important;
+  }
+  [data-testid="stCaption"], small, .stCaption { color: var(--text-secondary) !important; }
+  a, a:visited { color: var(--info-blue) !important; }
   a:hover { color: #bfdbfe !important; }
-  /* Disabled labels (e.g. on disabled buttons) need a tint that's
-     darker than primary text but still readable on dark bg. */
-  [disabled] label, [aria-disabled="true"], button[disabled] { color: #8b919f !important; }
-  hr { border-color: rgba(255,255,255,0.14) !important; }
+  [disabled] label, [aria-disabled="true"], button[disabled] { color: var(--text-tertiary) !important; }
 
-  /* Inputs — clearly elevated above body, with stronger border */
+  /* Code / pre */
+  code {
+    background-color: var(--accent-gold-bg) !important;
+    color: var(--accent-gold-text) !important;
+    padding: 0.05rem 0.3rem !important;
+    border-radius: 3px !important;
+  }
+  pre code { background-color: transparent !important; padding: 0 !important; color: var(--text-primary) !important; }
+  pre {
+    background-color: var(--app-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    padding: 0.75rem !important;
+    border-radius: var(--radius-input) !important;
+  }
+
+  /* Inputs — sit on top of body, with stronger border */
   [data-testid="stTextInput"] input,
   [data-testid="stTextArea"] textarea,
   [data-testid="stSelectbox"] div[role="combobox"],
   [data-testid="stNumberInput"] input,
   [data-testid="stDateInput"] input {
-    background-color: #23272f !important; color: #f4f5f7 !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border) !important;
   }
   [data-testid="stTextInput"] input::placeholder,
-  [data-testid="stTextArea"] textarea::placeholder { color: #8b919f !important; }
+  [data-testid="stTextArea"] textarea::placeholder { color: var(--text-tertiary) !important; }
   [data-testid="stTextInput"] input:focus,
   [data-testid="stTextArea"] textarea:focus,
   [data-testid="stSelectbox"] div[role="combobox"]:focus-within {
-    border-color: #93c5fd !important;
-    box-shadow: 0 0 0 2px rgba(147,197,253,0.18) !important;
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 0 2px var(--accent-gold-bg) !important;
   }
 
-  /* Buttons — readable contrast on dark bg */
+  /* Buttons */
   .stButton button,
   .stDownloadButton button,
   [data-testid="stFormSubmitButton"] button {
-    background-color: #23272f !important;
-    color: #f4f5f7 !important;
-    border: 1px solid rgba(255,255,255,0.22) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
   }
   .stButton button:hover,
   .stDownloadButton button:hover,
   [data-testid="stFormSubmitButton"] button:hover {
-    background-color: #2d323d !important;
-    border-color: rgba(255,255,255,0.34) !important;
+    background-color: var(--card-bg-elevated) !important;
+    border-color: var(--accent-gold-border) !important;
   }
-  /* Primary action — brighter blue so it pops against the lighter body */
+  /* Primary action — gold */
   .stButton button[kind="primary"],
   .stDownloadButton button[kind="primary"],
   [data-testid="stFormSubmitButton"] button[kind="primary"] {
-    background-color: #2563eb !important;
-    color: #ffffff !important;
-    border-color: #3b82f6 !important;
+    background-color: var(--accent-gold-bg) !important;
+    color: var(--accent-gold-text) !important;
+    border-color: var(--accent-gold-border) !important;
     font-weight: 600 !important;
   }
   .stButton button[kind="primary"]:hover,
   .stDownloadButton button[kind="primary"]:hover,
   [data-testid="stFormSubmitButton"] button[kind="primary"]:hover {
-    background-color: #3b82f6 !important;
-    border-color: #60a5fa !important;
-  }
-  /* Secondary buttons */
-  .stButton button[kind="secondary"],
-  .stDownloadButton button[kind="secondary"] {
-    background-color: rgba(255,255,255,0.07) !important;
-    color: #f4f5f7 !important;
-    border: 1px solid rgba(255,255,255,0.22) !important;
-  }
-  .stButton button[kind="secondary"]:hover,
-  .stDownloadButton button[kind="secondary"]:hover {
-    background-color: rgba(255,255,255,0.13) !important;
-    border-color: rgba(255,255,255,0.34) !important;
+    background-color: rgba(201,164,86,0.20) !important;
+    border-color: var(--accent-gold) !important;
   }
 
-  /* Containers / structure — visible borders + clearer panel bg */
-  [data-testid="stExpander"] {
-    background-color: #1d212a !important;
-    border: 1px solid rgba(255,255,255,0.14) !important;
-    border-radius: 6px !important;
-  }
-  [data-testid="stExpander"] summary { color: #f4f5f7 !important; }
-  [data-testid="stExpander"] summary:hover { color: #bfdbfe !important; }
-  [data-testid="stTabs"] [data-testid="stMarkdownContainer"] { color: #f4f5f7 !important; }
-  [data-testid="stTabs"] button[role="tab"] { color: #c1c5d0 !important; }
-  [data-testid="stTabs"] button[role="tab"]:hover { color: #f4f5f7 !important; }
-  [data-testid="stTabs"] button[role="tab"][aria-selected="true"] { color: #93c5fd !important; border-color: #93c5fd !important; }
-  [data-testid="stForm"] {
-    background-color: #1d212a !important;
-    border: 1px solid rgba(255,255,255,0.14) !important;
-    border-radius: 6px !important;
-    padding: 1rem !important;
-  }
-  [data-testid="stMetric"] {
-    background-color: #1d212a !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
-    padding: 0.6rem 0.8rem !important;
-    border-radius: 6px !important;
-  }
-  [data-testid="stMetricLabel"] { color: #c1c5d0 !important; }
-  [data-testid="stMetricValue"] { color: #f4f5f7 !important; }
-  [data-testid="stMetricDelta"] { color: #93c5fd !important; }
+  /* Containers — visible borders + clearer panel bg */
+  [data-testid="stExpander"] { background-color: var(--card-bg) !important; }
+  [data-testid="stForm"] { background-color: var(--card-bg) !important; }
+  [data-testid="stMetric"] { background-color: var(--card-bg) !important; }
+  [data-testid="stMetricDelta"] { color: var(--success) !important; }
+
   /* Dataframes / tables */
   [data-testid="stDataFrame"], [data-testid="stTable"] {
-    background-color: #1d212a !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-card) !important;
+    overflow: hidden;
   }
   [data-testid="stDataFrame"] th, [data-testid="stTable"] th {
-    background-color: #23272f !important;
-    color: #f4f5f7 !important;
-    border-color: rgba(255,255,255,0.14) !important;
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border) !important;
   }
   [data-testid="stDataFrame"] td, [data-testid="stTable"] td {
-    color: #f4f5f7 !important;
-    border-color: rgba(255,255,255,0.08) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border) !important;
   }
-  [data-testid="stChatMessage"] {
-    background-color: #1d212a !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-  }
-  [data-testid="stChatMessage"] * { color: #f4f5f7 !important; }
-  /* Dividers */
-  [data-testid="stHorizontalRule"], hr { border-color: rgba(255,255,255,0.14) !important; }
+  [data-testid="stChatMessage"] * { color: var(--text-primary) !important; }
 
   /* Alerts — distinct backgrounds + borders by severity */
-  [data-testid="stAlert"] {
-    border-width: 1px !important;
-    border-style: solid !important;
-  }
-  [data-testid="stAlert"][data-baseweb="notification"] { color: #f4f5f7 !important; }
-  /* info (blue) */
+  [data-testid="stAlert"] { border-width: 1px !important; border-style: solid !important; }
   [data-testid="stAlertContentInfo"], div[data-baseweb="notification"][kind="info"] {
-    background-color: rgba(59,130,246,0.12) !important;
-    border-color: rgba(59,130,246,0.45) !important;
+    background-color: var(--info-blue-bg) !important;
+    border-color: var(--info-blue-border) !important;
   }
-  /* success (green) */
   [data-testid="stAlertContentSuccess"], div[data-baseweb="notification"][kind="positive"] {
-    background-color: rgba(34,197,94,0.12) !important;
-    border-color: rgba(34,197,94,0.45) !important;
+    background-color: rgba(40,201,65,0.10) !important;
+    border-color: rgba(40,201,65,0.40) !important;
   }
-  /* warning (amber) */
   [data-testid="stAlertContentWarning"], div[data-baseweb="notification"][kind="warning"] {
-    background-color: rgba(251,191,36,0.12) !important;
-    border-color: rgba(251,191,36,0.45) !important;
+    background-color: rgba(251,191,36,0.10) !important;
+    border-color: rgba(251,191,36,0.40) !important;
   }
-  /* error (red) */
   [data-testid="stAlertContentError"], div[data-baseweb="notification"][kind="negative"] {
-    background-color: rgba(239,68,68,0.14) !important;
-    border-color: rgba(239,68,68,0.5) !important;
+    background-color: rgba(239,68,68,0.12) !important;
+    border-color: rgba(239,68,68,0.45) !important;
   }
-  [data-testid="stAlert"] *, div[data-baseweb="notification"] * { color: #f4f5f7 !important; }
+  [data-testid="stAlert"] *, div[data-baseweb="notification"] * { color: var(--text-primary) !important; }
 
-  /* Sticky top nav */
-  .st-key-praxia_topnav {
-    background-color: #1d212a !important;
-    border-bottom: 1px solid rgba(147,197,253,0.28) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
-  }
+  /* Sticky top nav — gold accent on the active button */
   .st-key-praxia_topnav .stButton button {
     background-color: transparent !important;
-    border-color: rgba(255,255,255,0.12) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--card-border) !important;
+  }
+  .st-key-praxia_topnav .stButton button:hover {
+    color: var(--text-primary) !important;
+    background-color: var(--card-bg) !important;
   }
   .st-key-praxia_topnav .stButton button[kind="primary"] {
-    background-color: rgba(37,99,235,0.85) !important;
-    border-color: #3b82f6 !important;
+    background-color: var(--accent-gold-bg) !important;
+    color: var(--accent-gold-text) !important;
+    border-color: var(--accent-gold-border) !important;
   }
 
-  /* File uploader — dropzone background + instruction text + size limit
-     ("Limit 200MB per file") all default to white-on-white otherwise. */
+  /* File uploader */
   [data-testid="stFileUploader"],
   [data-testid="stFileUploader"] section,
   [data-testid="stFileUploaderDropzone"] {
-    background-color: #1a1d28 !important;
-    border: 1px dashed rgba(255,255,255,0.18) !important;
-    color: #ecedf0 !important;
+    background-color: var(--card-bg) !important;
+    border: 1px dashed var(--card-border-strong) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--radius-card) !important;
   }
   [data-testid="stFileUploader"] label,
   [data-testid="stFileUploader"] span,
   [data-testid="stFileUploader"] p,
   [data-testid="stFileUploader"] div,
   [data-testid="stFileUploaderDropzoneInstructions"],
-  [data-testid="stFileUploaderDropzoneInstructions"] * {
-    color: #ecedf0 !important;
-  }
+  [data-testid="stFileUploaderDropzoneInstructions"] * { color: var(--text-primary) !important; }
   [data-testid="stFileUploader"] small,
-  [data-testid="stFileUploaderDropzoneInstructions"] small {
-    color: #a8acb8 !important;
-  }
+  [data-testid="stFileUploaderDropzoneInstructions"] small { color: var(--text-secondary) !important; }
   [data-testid="stFileUploader"] button {
-    background-color: rgba(255,255,255,0.08) !important;
-    color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
   }
   [data-testid="stFileUploader"] button:hover {
-    background-color: rgba(255,255,255,0.14) !important;
+    background-color: var(--accent-gold-bg) !important;
+    border-color: var(--accent-gold-border) !important;
   }
-  /* Already-uploaded file rows + their X-remove icons */
   [data-testid="stFileUploaderFile"],
   [data-testid="stFileUploaderFileName"],
-  [data-testid="stFileUploaderDeleteBtn"] {
-    color: #ecedf0 !important;
-  }
+  [data-testid="stFileUploaderDeleteBtn"] { color: var(--text-primary) !important; }
 
-  /* Chat-input bottom bar (autonomous agent etc).
-     Streamlit 1.57 wraps the chat input in MULTIPLE intermediate divs
-     between stBottom and stChatInput that have NO data-testid. Those
-     inherit the default white background and were causing the
-     "white outer / black middle / gray text" stack the user saw.
-     Strategy: force ALL descendants of stBottom + stBottomBlockContainer
-     to a dark surface, then re-elevate the inner textarea and buttons
-     to slightly different tones. */
+  /* Chat-input bottom bar. Streamlit wraps the input in untestiD'd divs
+     that inherit white; force ALL descendants dark, then re-elevate
+     the textarea + buttons. */
   [data-testid="stBottom"],
   [data-testid="stBottomBlockContainer"],
   [data-testid="stBottom"] *,
   [data-testid="stBottomBlockContainer"] * {
-    background-color: #15181f !important;
-    color: #f4f5f7 !important;
-    border-color: rgba(255,255,255,0.18) !important;
+    background-color: var(--app-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border) !important;
   }
-  [data-testid="stBottom"],
-  [data-testid="stBottomBlockContainer"] {
-    border-top: 1px solid rgba(255,255,255,0.10) !important;
-  }
-  /* The chat input wrapper — a slightly elevated card on the bar */
   [data-testid="stChatInput"],
   [data-testid="stChatInputContainer"],
   [data-testid="stChatInputFileUploadDropzone"],
   [data-testid="stChatInputFileUploadDropzoneInstructions"] {
-    background-color: #23272f !important;
-    color: #f4f5f7 !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
-    border-radius: 6px !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+    border-radius: var(--radius-input) !important;
   }
-  /* Make sure the chat input's nested wrappers also pick up the
-     elevated tone — same all-descendants trick. */
   [data-testid="stChatInput"] *,
   [data-testid="stChatInputContainer"] *,
   [data-testid="stChatInputFileUploadDropzone"] *,
   [data-testid="stChatInputFileUploadDropzoneInstructions"] * {
-    background-color: #23272f !important;
-    color: #f4f5f7 !important;
-    border-color: rgba(255,255,255,0.18) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border-strong) !important;
   }
   [data-testid="stChatInput"] small,
-  [data-testid="stChatInputFileUploadDropzoneInstructions"] small,
   [data-testid="stChatInputInstructions"],
   [data-testid="stChatInputInstructions"] * {
-    color: #c1c5d0 !important;
+    color: var(--text-secondary) !important;
     background-color: transparent !important;
   }
-  /* The 📎 / send / mic / cancel / approve buttons */
   [data-testid="stChatInputFileUploadButton"],
   [data-testid="stChatInputSubmitButton"],
   [data-testid="stChatInputMicButton"],
   [data-testid="stChatInputApproveButton"],
   [data-testid="stChatInputCancelButton"],
   [data-testid="stChatInput"] button {
-    background-color: rgba(255,255,255,0.10) !important;
-    color: #f4f5f7 !important;
-    border: 1px solid rgba(255,255,255,0.22) !important;
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
   }
   [data-testid="stChatInputFileUploadButton"] *,
   [data-testid="stChatInputSubmitButton"] *,
   [data-testid="stChatInputMicButton"] *,
   [data-testid="stChatInputApproveButton"] *,
   [data-testid="stChatInputCancelButton"] *,
-  [data-testid="stChatInput"] button * {
-    background-color: transparent !important;
-  }
+  [data-testid="stChatInput"] button * { background-color: transparent !important; }
   [data-testid="stChatInputFileUploadButton"]:hover,
   [data-testid="stChatInputSubmitButton"]:hover,
   [data-testid="stChatInputMicButton"]:hover,
   [data-testid="stChatInputApproveButton"]:hover,
   [data-testid="stChatInputCancelButton"]:hover,
   [data-testid="stChatInput"] button:hover {
-    background-color: rgba(255,255,255,0.18) !important;
-    border-color: rgba(255,255,255,0.34) !important;
+    background-color: var(--accent-gold-bg) !important;
+    border-color: var(--accent-gold-border) !important;
   }
-  /* Already-attached file pill */
   [data-testid="stChatInputFile"],
   [data-testid="stChatInputFileName"],
   [data-testid="stChatInputDeleteBtn"] {
-    color: #f4f5f7 !important;
-    background-color: rgba(147,197,253,0.18) !important;
+    color: var(--accent-gold-text) !important;
+    background-color: var(--accent-gold-bg) !important;
   }
-  /* The textarea — same surface as the wrapper, no inner box-in-box */
   [data-testid="stChatInput"] textarea,
   [data-testid="stChatInputTextArea"],
   [data-testid="stChatInputTextArea"] textarea {
-    background-color: #23272f !important;
-    color: #f4f5f7 !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
     border: none !important;
   }
   [data-testid="stChatInput"] textarea::placeholder,
-  [data-testid="stChatInputTextArea"] textarea::placeholder {
-    color: #9ba0ac !important;
-  }
+  [data-testid="stChatInputTextArea"] textarea::placeholder { color: var(--text-tertiary) !important; }
   [data-testid="stChatInput"] textarea:focus,
   [data-testid="stChatInputTextArea"] textarea:focus {
     outline: none !important;
-    box-shadow: 0 0 0 2px rgba(147,197,253,0.22) inset !important;
+    box-shadow: 0 0 0 2px var(--accent-gold-bg) inset !important;
   }
 
-  /* Popover trigger ("会話履歴 (N)" button) — Streamlit's popover button
-     uses a different DOM than .stButton, so override explicitly. */
+  /* Popover */
   [data-testid="stPopover"] > div > button,
   [data-testid="stPopover"] button,
   button[data-testid="stPopoverButton"] {
-    background-color: #1a1d28 !important;
-    color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border) !important;
   }
   [data-testid="stPopover"] > div > button:hover,
   [data-testid="stPopover"] button:hover,
   button[data-testid="stPopoverButton"]:hover {
-    background-color: #252834 !important;
-    border-color: rgba(255,255,255,0.2) !important;
+    background-color: var(--card-bg-elevated) !important;
+    border-color: var(--card-border-strong) !important;
   }
-
-  /* Popover panel — rendered in a BaseWeb portal at <body> level, so
-     none of our `.stApp` rules cascade. Target the BaseWeb attribute
-     directly. */
   [data-baseweb="popover"],
   [data-baseweb="popover"] > div,
   [data-testid="stPopoverBody"] {
-    background-color: #15171f !important;
-    color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-card) !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
   }
   [data-baseweb="popover"] *,
-  [data-testid="stPopoverBody"] * {
-    color: #ecedf0 !important;
-  }
+  [data-testid="stPopoverBody"] * { color: var(--text-primary) !important; }
   [data-baseweb="popover"] [data-testid="stCaption"],
   [data-baseweb="popover"] small,
-  [data-testid="stPopoverBody"] small {
-    color: #a8acb8 !important;
-  }
-  /* Buttons inside the popover */
+  [data-testid="stPopoverBody"] small { color: var(--text-secondary) !important; }
   [data-baseweb="popover"] button,
   [data-testid="stPopoverBody"] button {
-    background-color: #1a1d28 !important;
-    color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border) !important;
   }
   [data-baseweb="popover"] button[kind="primary"],
   [data-testid="stPopoverBody"] button[kind="primary"] {
-    background-color: #1e3a8a !important;
-    color: #ffffff !important;
-    border-color: #1e3a8a !important;
+    background-color: var(--accent-gold-bg) !important;
+    color: var(--accent-gold-text) !important;
+    border-color: var(--accent-gold-border) !important;
   }
   [data-baseweb="popover"] button:hover,
-  [data-testid="stPopoverBody"] button:hover {
-    background-color: #252834 !important;
-  }
-  /* Text inputs inside the popover (rename field) */
+  [data-testid="stPopoverBody"] button:hover { background-color: var(--accent-gold-bg) !important; }
   [data-baseweb="popover"] input,
   [data-testid="stPopoverBody"] input {
-    background-color: #0f111a !important;
-    color: #ecedf0 !important;
-    border-color: rgba(255,255,255,0.1) !important;
+    background-color: var(--app-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border) !important;
   }
 
-  /* ===== BaseWeb portal widgets (selectbox dropdown, multiselect,
-          datepicker, tooltip) — rendered at <body> level outside .stApp,
-          so .stApp-scoped rules never reach them. White-on-white in dark
-          mode otherwise. ===== */
-
-  /* Selectbox / multiselect dropdown menu */
+  /* BaseWeb portals (dropdown, multiselect, calendar, tooltip) live
+     at <body> level outside .stApp, so they don't inherit our vars
+     either — set values explicitly. */
   [role="listbox"],
   [data-baseweb="menu"],
   ul[data-baseweb="menu"],
   div[data-baseweb="select"] [role="listbox"] {
     background-color: #15171f !important;
     color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    border: 1px solid #23262f !important;
+    border-radius: 10px !important;
     box-shadow: 0 6px 18px rgba(0,0,0,0.5) !important;
   }
   [role="option"],
   [data-baseweb="menu"] li,
-  li[role="option"] {
-    background-color: #15171f !important;
-    color: #ecedf0 !important;
-  }
+  li[role="option"] { background-color: #15171f !important; color: #ecedf0 !important; }
   [role="option"]:hover,
   [data-baseweb="menu"] li:hover,
   li[role="option"]:hover {
-    background-color: rgba(147,197,253,0.12) !important;
-    color: #ffffff !important;
+    background-color: rgba(201,164,86,0.12) !important;
+    color: #e9c378 !important;
   }
   [role="option"][aria-selected="true"],
   li[role="option"][aria-selected="true"] {
-    background-color: rgba(30,58,138,0.55) !important;
-    color: #ffffff !important;
+    background-color: rgba(201,164,86,0.20) !important;
+    color: #e9c378 !important;
   }
-
-  /* Multiselect chips (selected-tag pills inside the input) */
   [data-baseweb="tag"] {
-    background-color: rgba(147,197,253,0.18) !important;
-    color: #ecedf0 !important;
-    border-color: rgba(147,197,253,0.35) !important;
+    background-color: rgba(201,164,86,0.18) !important;
+    color: #e9c378 !important;
+    border-color: rgba(201,164,86,0.45) !important;
+    border-radius: 999px !important;
   }
-
-  /* Datepicker calendar */
   [data-baseweb="calendar"],
   [data-baseweb="datepicker"] {
     background-color: #15171f !important;
     color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    border: 1px solid #23262f !important;
+    border-radius: 10px !important;
   }
   [data-baseweb="calendar"] *,
-  [data-baseweb="datepicker"] * {
-    color: #ecedf0 !important;
-  }
+  [data-baseweb="datepicker"] * { color: #ecedf0 !important; }
   [data-baseweb="calendar"] button[aria-pressed="true"] {
-    background-color: #1e3a8a !important;
-    color: #ffffff !important;
+    background-color: #c9a456 !important;
+    color: #15171f !important;
   }
-
-  /* Tooltips */
   [data-baseweb="tooltip"] {
     background-color: #1a1d28 !important;
     color: #ecedf0 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    border: 1px solid #23262f !important;
+    border-radius: 6px !important;
   }
   [data-baseweb="tooltip"] * { color: #ecedf0 !important; }
 </style>
-        """,
-        unsafe_allow_html=True,
-    )
+"""
+
+_LIGHT_THEME_CSS = """
+<style>
+  /* Tell the browser + BaseWeb to render native widgets (scrollbars,
+     date pickers, checkboxes inside Streamlit components, etc.) in
+     light mode regardless of the OS preference. Without this, a user
+     whose OS is set to dark sees BaseWeb-internal dark fills in
+     widgets we haven't manually overridden. */
+  :root, .stApp, html, body {
+    color-scheme: light !important;
+  }
+  :root, .stApp {
+    --app-bg:            #fafaf7;
+    --sidebar-bg:        #f3f1ea;
+    --card-bg:           #ffffff;
+    --card-bg-elevated:  #faf8f1;
+    --card-border:       #e3e0d4;
+    --card-border-strong:#cdc9bb;
+    --text-primary:      #1a1c20;
+    --text-secondary:    #5a5e68;
+    --text-tertiary:     #8a8e96;
+    --accent-gold:       #a8843e;
+    --accent-gold-text:  #7a5e28;
+    --accent-gold-bg:    rgba(168,132,62,0.10);
+    --accent-gold-border:#d4b97a;
+    --info-blue:         #1e6fa8;
+    --info-blue-bg:      rgba(30,111,168,0.08);
+    --info-blue-border:  rgba(30,111,168,0.35);
+    --success:           #1f8a3a;
+    --warn:              #b06000;
+    --danger:            #b03030;
+    --shadow-card:       0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  /* === Force light on ALL input wrappers + BaseWeb internals ===
+     Streamlit wraps inputs in many intermediate divs without testids;
+     each one inherits BaseWeb's `prefers-color-scheme: dark` default
+     and can paint a dark stripe inside the white border. We force the
+     entire subtree of every input widget to white-bg + dark-text. */
+  [data-testid="stTextInput"],
+  [data-testid="stTextInput"] > div,
+  [data-testid="stTextInput"] > div > div,
+  [data-testid="stTextInput"] [data-baseweb="input"],
+  [data-testid="stTextInput"] [data-baseweb="input"] > div,
+  [data-testid="stTextInput"] [data-baseweb="base-input"],
+  [data-testid="stTextArea"],
+  [data-testid="stTextArea"] > div,
+  [data-testid="stTextArea"] > div > div,
+  [data-testid="stTextArea"] [data-baseweb="textarea"],
+  [data-testid="stTextArea"] [data-baseweb="textarea"] > div,
+  [data-testid="stTextArea"] [data-baseweb="base-input"],
+  [data-testid="stSelectbox"],
+  [data-testid="stSelectbox"] > div,
+  [data-testid="stSelectbox"] > div > div,
+  [data-testid="stSelectbox"] [data-baseweb="select"],
+  [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+  [data-testid="stSelectbox"] [data-baseweb="select"] > div > div,
+  [data-testid="stSelectbox"] div[role="combobox"],
+  [data-testid="stMultiSelect"],
+  [data-testid="stMultiSelect"] > div,
+  [data-testid="stMultiSelect"] > div > div,
+  [data-testid="stMultiSelect"] [data-baseweb="select"],
+  [data-testid="stMultiSelect"] [data-baseweb="select"] > div,
+  [data-testid="stMultiSelect"] [data-baseweb="select"] > div > div,
+  [data-testid="stNumberInput"],
+  [data-testid="stNumberInput"] > div,
+  [data-testid="stNumberInput"] > div > div,
+  [data-testid="stNumberInput"] [data-baseweb="input"],
+  [data-testid="stNumberInput"] [data-baseweb="input"] > div,
+  [data-testid="stDateInput"],
+  [data-testid="stDateInput"] > div,
+  [data-testid="stDateInput"] > div > div,
+  [data-testid="stDateInput"] [data-baseweb="input"],
+  [data-testid="stDateInput"] [data-baseweb="input"] > div,
+  [data-testid="stTimeInput"],
+  [data-testid="stTimeInput"] [data-baseweb="select"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+  }
+  /* Text inside selectbox display (closed state) */
+  [data-testid="stSelectbox"] div[role="combobox"] *,
+  [data-testid="stMultiSelect"] [data-baseweb="select"] > div * {
+    color: #1a1c20 !important;
+    background-color: transparent !important;
+  }
+  /* The visible input box itself + actual textarea/input element */
+  [data-testid="stTextInput"] input,
+  [data-testid="stTextArea"] textarea,
+  [data-testid="stNumberInput"] input,
+  [data-testid="stDateInput"] input,
+  [data-testid="stTimeInput"] input {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+  }
+  /* Number input increment / decrement buttons */
+  [data-testid="stNumberInputContainer"] button,
+  [data-testid="stNumberInput"] button {
+    background-color: #ffffff !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+  }
+  /* Radio group container + each option */
+  [data-testid="stRadio"],
+  [data-testid="stRadio"] > div,
+  [data-testid="stRadio"] [role="radiogroup"],
+  [data-testid="stRadio"] [role="radiogroup"] > div,
+  [data-testid="stRadio"] label,
+  [data-testid="stRadio"] label > div {
+    background-color: transparent !important;
+    color: #1a1c20 !important;
+  }
+  /* Labels for all input widgets — transparent bg, dark text */
+  [data-testid="stTextInput"] label,
+  [data-testid="stTextArea"] label,
+  [data-testid="stSelectbox"] label,
+  [data-testid="stMultiSelect"] label,
+  [data-testid="stNumberInput"] label,
+  [data-testid="stDateInput"] label,
+  [data-testid="stTimeInput"] label,
+  [data-testid="stCheckbox"] label,
+  [data-testid="stRadio"] label,
+  [data-testid="stColorPicker"] label,
+  [data-testid="stSlider"] label,
+  [data-testid="stToggle"] label {
+    background-color: transparent !important;
+    color: #1a1c20 !important;
+  }
+  /* Generic text */
+  .stMarkdown, .stText, p, span, label, h1, h2, h3, h4, h5, h6, li, td, th {
+    color: var(--text-primary) !important;
+  }
+  [data-testid="stCaption"], small, .stCaption { color: var(--text-secondary) !important; }
+  a, a:visited { color: var(--info-blue) !important; }
+  a:hover { color: #154e7a !important; }
+  [disabled] label, [aria-disabled="true"], button[disabled] { color: var(--text-tertiary) !important; }
+
+  /* Code / pre */
+  code {
+    background-color: var(--accent-gold-bg) !important;
+    color: var(--accent-gold-text) !important;
+    padding: 0.05rem 0.3rem !important;
+    border-radius: 3px !important;
+  }
+  pre code { background-color: transparent !important; padding: 0 !important; color: var(--text-primary) !important; }
+  pre {
+    background-color: var(--card-bg-elevated) !important;
+    border: 1px solid var(--card-border) !important;
+    padding: 0.75rem !important;
+    border-radius: var(--radius-input) !important;
+  }
+
+  /* Inputs */
+  [data-testid="stTextInput"] input,
+  [data-testid="stTextArea"] textarea,
+  [data-testid="stSelectbox"] div[role="combobox"],
+  [data-testid="stNumberInput"] input,
+  [data-testid="stDateInput"] input {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+  }
+  [data-testid="stTextInput"] input::placeholder,
+  [data-testid="stTextArea"] textarea::placeholder { color: var(--text-tertiary) !important; }
+  [data-testid="stTextInput"] input:focus,
+  [data-testid="stTextArea"] textarea:focus,
+  [data-testid="stSelectbox"] div[role="combobox"]:focus-within {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 0 2px var(--accent-gold-bg) !important;
+  }
+
+  /* Buttons */
+  .stButton button,
+  .stDownloadButton button,
+  [data-testid="stFormSubmitButton"] button {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+  }
+  .stButton button:hover,
+  .stDownloadButton button:hover,
+  [data-testid="stFormSubmitButton"] button:hover {
+    background-color: var(--card-bg-elevated) !important;
+    border-color: var(--accent-gold-border) !important;
+  }
+  /* Primary action — light mode keeps a white interior with a gold
+     2px border + bold text so it stays uniformly light across the
+     UI. (Avoids the "filled-dark vs white" mix the user disliked.) */
+  .stButton button[kind="primary"],
+  .stDownloadButton button[kind="primary"],
+  [data-testid="stFormSubmitButton"] button[kind="primary"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 2px solid var(--accent-gold) !important;
+    font-weight: 700 !important;
+  }
+  .stButton button[kind="primary"]:hover,
+  .stDownloadButton button[kind="primary"]:hover,
+  [data-testid="stFormSubmitButton"] button[kind="primary"]:hover {
+    background-color: var(--accent-gold-bg) !important;
+    border-color: var(--accent-gold-text) !important;
+  }
+  .stButton button[kind="primary"] *,
+  .stDownloadButton button[kind="primary"] *,
+  [data-testid="stFormSubmitButton"] button[kind="primary"] * {
+    color: #1a1c20 !important;
+  }
+
+  /* Containers */
+  [data-testid="stExpander"] { background-color: var(--card-bg) !important; }
+  [data-testid="stForm"] { background-color: var(--card-bg) !important; }
+  [data-testid="stMetric"] { background-color: var(--card-bg) !important; }
+  [data-testid="stMetricDelta"] { color: var(--success) !important; }
+
+  /* Tables */
+  [data-testid="stDataFrame"], [data-testid="stTable"] {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-card) !important;
+    overflow: hidden;
+  }
+  [data-testid="stDataFrame"] th, [data-testid="stTable"] th {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border) !important;
+  }
+  [data-testid="stDataFrame"] td, [data-testid="stTable"] td {
+    color: var(--text-primary) !important;
+    border-color: var(--card-border) !important;
+  }
+
+  /* Alerts */
+  [data-testid="stAlert"] { border-width: 1px !important; border-style: solid !important; }
+  [data-testid="stAlertContentInfo"], div[data-baseweb="notification"][kind="info"] {
+    background-color: var(--info-blue-bg) !important;
+    border-color: var(--info-blue-border) !important;
+  }
+  [data-testid="stAlertContentSuccess"], div[data-baseweb="notification"][kind="positive"] {
+    background-color: rgba(31,138,58,0.08) !important;
+    border-color: rgba(31,138,58,0.35) !important;
+  }
+  [data-testid="stAlertContentWarning"], div[data-baseweb="notification"][kind="warning"] {
+    background-color: rgba(176,96,0,0.08) !important;
+    border-color: rgba(176,96,0,0.35) !important;
+  }
+  [data-testid="stAlertContentError"], div[data-baseweb="notification"][kind="negative"] {
+    background-color: rgba(176,48,48,0.08) !important;
+    border-color: rgba(176,48,48,0.35) !important;
+  }
+
+  /* Top nav */
+  .st-key-praxia_topnav .stButton button {
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--card-border) !important;
+  }
+  .st-key-praxia_topnav .stButton button:hover {
+    color: var(--text-primary) !important;
+    background-color: var(--card-bg) !important;
+  }
+  .st-key-praxia_topnav .stButton button[kind="primary"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 2px solid var(--accent-gold) !important;
+    font-weight: 700 !important;
+  }
+  .st-key-praxia_topnav .stButton button[kind="primary"] * {
+    color: #1a1c20 !important;
+  }
+
+  /* === File uploader — full light coverage ===
+     The user reported the Browse/Upload button still dark. Streamlit
+     renamed the inner button to [data-testid="stBaseButton-secondary"]
+     in recent versions which our generic .stButton rule didn't catch.
+     Cover all known testids + nested wrappers. */
+  [data-testid="stFileUploader"],
+  [data-testid="stFileUploader"] section,
+  [data-testid="stFileUploaderDropzone"],
+  [data-testid="stFileUploader"] [data-testid="stFileDropzone"],
+  [data-testid="stFileUploader"] > div,
+  [data-testid="stFileUploader"] > div > div {
+    background-color: var(--card-bg) !important;
+    border-color: var(--card-border-strong) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--radius-card) !important;
+  }
+  [data-testid="stFileUploaderDropzone"] {
+    border: 1px dashed var(--card-border-strong) !important;
+  }
+  [data-testid="stFileUploader"] button,
+  [data-testid="stFileUploader"] [data-testid^="stBaseButton"],
+  [data-testid="stFileUploaderDropzone"] button,
+  [data-testid="stFileUploaderDropzone"] [data-testid^="stBaseButton"] {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+    font-weight: 500 !important;
+  }
+  [data-testid="stFileUploader"] button:hover,
+  [data-testid="stFileUploader"] [data-testid^="stBaseButton"]:hover,
+  [data-testid="stFileUploaderDropzone"] button:hover {
+    background-color: var(--accent-gold-bg) !important;
+    border-color: var(--accent-gold-border) !important;
+  }
+  [data-testid="stFileUploader"] button *,
+  [data-testid="stFileUploader"] [data-testid^="stBaseButton"] *,
+  [data-testid="stFileUploaderDropzone"] button * {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+    fill: var(--text-primary) !important;
+  }
+
+  /* === Modern Streamlit button testids ===
+     Recent Streamlit (1.4x+) emits `[data-testid="stBaseButton-primary"]`
+     and `[data-testid="stBaseButton-secondary"]` directly on the <button>.
+     Older versions used `.stButton button`. Both must be covered. */
+  [data-testid="stBaseButton-secondary"],
+  [data-testid="stBaseButton-headerNoPadding"],
+  [data-testid="stBaseButton-tertiary"] {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+  }
+  [data-testid="stBaseButton-secondary"]:hover,
+  [data-testid="stBaseButton-headerNoPadding"]:hover,
+  [data-testid="stBaseButton-tertiary"]:hover {
+    background-color: var(--card-bg-elevated) !important;
+    border-color: var(--accent-gold-border) !important;
+  }
+  [data-testid="stBaseButton-primary"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 2px solid var(--accent-gold) !important;
+    font-weight: 700 !important;
+  }
+  [data-testid="stBaseButton-primary"]:hover {
+    background-color: var(--accent-gold-bg) !important;
+    border-color: var(--accent-gold-text) !important;
+  }
+  [data-testid="stBaseButton-primary"] *,
+  [data-testid="stBaseButton-secondary"] *,
+  [data-testid="stBaseButton-headerNoPadding"] *,
+  [data-testid="stBaseButton-tertiary"] * {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+    fill: var(--text-primary) !important;
+  }
+
+  /* Popover trigger (the button you click to open) */
+  [data-testid="stPopover"] > div > button,
+  [data-testid="stPopover"] button,
+  button[data-testid="stPopoverButton"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 1px solid #cdc9bb !important;
+  }
+  [data-testid="stPopover"] > div > button:hover,
+  [data-testid="stPopover"] button:hover,
+  button[data-testid="stPopoverButton"]:hover {
+    background-color: #faf8f1 !important;
+    border-color: #d4b97a !important;
+  }
+
+  /* Popover body — rendered in a BaseWeb portal at <body> level, so
+     none of our .stApp-scoped rules cascade. Force colors explicitly,
+     and override OS prefers-color-scheme: dark which BaseWeb honors. */
+  [data-baseweb="popover"],
+  [data-baseweb="popover"] > div,
+  [data-testid="stPopoverBody"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 1px solid #e3e0d4 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10) !important;
+  }
+  [data-baseweb="popover"] *,
+  [data-testid="stPopoverBody"] * { color: #1a1c20 !important; }
+  [data-baseweb="popover"] [data-testid="stCaption"],
+  [data-baseweb="popover"] small,
+  [data-testid="stPopoverBody"] small { color: #5a5e68 !important; }
+  [data-baseweb="popover"] button,
+  [data-testid="stPopoverBody"] button {
+    background-color: #faf8f1 !important;
+    color: #1a1c20 !important;
+    border: 1px solid #e3e0d4 !important;
+  }
+  [data-baseweb="popover"] button[kind="primary"],
+  [data-testid="stPopoverBody"] button[kind="primary"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 2px solid #a8843e !important;
+    font-weight: 700 !important;
+  }
+  [data-baseweb="popover"] button[kind="primary"] *,
+  [data-testid="stPopoverBody"] button[kind="primary"] * { color: #1a1c20 !important; }
+  [data-baseweb="popover"] button:hover,
+  [data-testid="stPopoverBody"] button:hover {
+    background-color: rgba(168,132,62,0.10) !important;
+    border-color: #d4b97a !important;
+  }
+  [data-baseweb="popover"] input,
+  [data-testid="stPopoverBody"] input {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border-color: #cdc9bb !important;
+  }
+
+  /* BaseWeb portals — selectbox / multiselect dropdowns. Explicit
+     colors (not vars) because these elements render outside .stApp,
+     and we override OS prefers-color-scheme: dark which BaseWeb's
+     default styling honors. */
+  [role="listbox"],
+  [data-baseweb="menu"],
+  ul[data-baseweb="menu"],
+  div[data-baseweb="select"] [role="listbox"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 1px solid #e3e0d4 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.10) !important;
+  }
+  /* Option default state — critical: without this, OS dark-mode +
+     "light" app theme would render BaseWeb's default dark on dark. */
+  [role="option"],
+  [data-baseweb="menu"] li,
+  li[role="option"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+  }
+  [role="option"] *,
+  [data-baseweb="menu"] li *,
+  li[role="option"] * { color: #1a1c20 !important; }
+  [role="option"]:hover,
+  [data-baseweb="menu"] li:hover,
+  li[role="option"]:hover {
+    background-color: rgba(168,132,62,0.10) !important;
+    color: #7a5e28 !important;
+  }
+  [role="option"]:hover *,
+  [data-baseweb="menu"] li:hover *,
+  li[role="option"]:hover * { color: #7a5e28 !important; }
+  [role="option"][aria-selected="true"],
+  li[role="option"][aria-selected="true"] {
+    background-color: rgba(168,132,62,0.18) !important;
+    color: #7a5e28 !important;
+  }
+  [role="option"][aria-selected="true"] *,
+  li[role="option"][aria-selected="true"] * { color: #7a5e28 !important; }
+
+  /* Selectbox closed-state value text + dropdown caret */
+  [data-testid="stSelectbox"] div[role="combobox"],
+  [data-testid="stSelectbox"] div[role="combobox"] * {
+    color: #1a1c20 !important;
+  }
+
+  /* Multiselect chips (selected-tag pills inside the input) */
+  [data-baseweb="tag"] {
+    background-color: rgba(168,132,62,0.14) !important;
+    color: #7a5e28 !important;
+    border-color: rgba(168,132,62,0.45) !important;
+    border-radius: 999px !important;
+  }
+  [data-baseweb="tag"] * { color: #7a5e28 !important; }
+
+  /* Datepicker calendar */
+  [data-baseweb="calendar"],
+  [data-baseweb="datepicker"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 1px solid #e3e0d4 !important;
+    border-radius: 10px !important;
+  }
+  [data-baseweb="calendar"] *,
+  [data-baseweb="datepicker"] * { color: #1a1c20 !important; }
+  /* Calendar selected date — same uniformity: white interior +
+     gold border instead of a filled-gold pill. */
+  [data-baseweb="calendar"] button[aria-pressed="true"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 2px solid #a8843e !important;
+    font-weight: 700 !important;
+  }
+  [data-baseweb="calendar"] button[aria-pressed="true"] * { color: #1a1c20 !important; }
+
+  /* Tooltips — white interior to match the rest of light mode. */
+  [data-baseweb="tooltip"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 1px solid #e3e0d4 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important;
+  }
+  [data-baseweb="tooltip"] * { color: #1a1c20 !important; }
+
+  /* Streamlit's "?" help popup — different DOM than baseweb tooltip:
+     `[data-testid="stTooltipContent"]` is the body-level portal, and
+     the trigger icon is `[data-testid="stTooltipHoverTarget"]`. Without
+     explicit rules these inherit BaseWeb's dark default. */
+  [data-testid="stTooltipContent"],
+  [data-baseweb="tooltip-inner"],
+  div[role="tooltip"],
+  .stTooltipContent {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 1px solid #e3e0d4 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.10) !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  [data-testid="stTooltipContent"] *,
+  [data-baseweb="tooltip-inner"] *,
+  div[role="tooltip"] *,
+  .stTooltipContent * {
+    background-color: transparent !important;
+    color: #1a1c20 !important;
+  }
+  [data-testid="stTooltipContent"] code,
+  div[role="tooltip"] code {
+    background-color: rgba(168,132,62,0.10) !important;
+    color: #7a5e28 !important;
+    border-radius: 3px !important;
+    padding: 0.05rem 0.3rem !important;
+  }
+
+  /* The "?" icon trigger itself */
+  [data-testid="stTooltipHoverTarget"],
+  [data-testid="stTooltipHoverTarget"] svg {
+    color: #8a8e96 !important;
+    fill: #8a8e96 !important;
+    background-color: transparent !important;
+  }
+  [data-testid="stTooltipHoverTarget"]:hover,
+  [data-testid="stTooltipHoverTarget"]:hover svg {
+    color: #5a5e68 !important;
+    fill: #5a5e68 !important;
+  }
+
+  /* ===== Streamlit primaryColor-driven widgets =====
+     Streamlit fills checkbox / radio / toggle / slider / progress with
+     `theme.primaryColor` (default #FF4B4B). Override to gold tint so
+     none of them paint a dark/red filled block on the ivory canvas. */
+
+  /* Checkbox — base square */
+  [data-testid="stCheckbox"] label > span:first-child,
+  [data-baseweb="checkbox"] > div:first-child,
+  [data-baseweb="checkbox"] > span:first-child {
+    background-color: #ffffff !important;
+    border: 1px solid #cdc9bb !important;
+  }
+  /* Checkbox — checked state: white interior + gold border + gold tick */
+  [data-testid="stCheckbox"] label > span[aria-checked="true"],
+  [data-testid="stCheckbox"] [aria-checked="true"] > div:first-child,
+  [data-baseweb="checkbox"][aria-checked="true"] > div:first-child,
+  [data-baseweb="checkbox"] input:checked ~ div:first-child,
+  [data-baseweb="checkbox"] input:checked ~ span:first-child {
+    background-color: #ffffff !important;
+    border-color: var(--accent-gold) !important;
+  }
+  [data-baseweb="checkbox"] svg,
+  [data-testid="stCheckbox"] svg {
+    color: var(--accent-gold) !important;
+    fill: var(--accent-gold) !important;
+  }
+
+  /* === Radio — full light-mode coverage ===
+     BaseWeb renders the visible circle as the first child wrapper
+     (span or div) inside [data-baseweb="radio"], with an inner wrapper
+     that holds the filled dot when checked. The user reported every
+     unchecked radio rendering as a solid black blob → which means
+     BaseWeb's default dark fill was leaking through. We force the
+     outer wrapper to white, then style the inner dot only when the
+     radio is aria-checked. Combined with color-scheme: light up top,
+     this defeats BaseWeb's prefers-color-scheme: dark default. */
+
+  /* Neutralize: any wrapper inside the radio should NOT have a colored
+     background by default. The visible circle gets its bg explicitly. */
+  [data-testid="stRadio"] [data-baseweb="radio"] span,
+  [data-testid="stRadio"] [data-baseweb="radio"] div {
+    background-color: transparent !important;
+  }
+
+  /* The outer visible circle (first child wrapper of [data-baseweb="radio"]) */
+  [data-testid="stRadio"] [data-baseweb="radio"] > span:first-child,
+  [data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {
+    background-color: #ffffff !important;
+    border: 2px solid #cdc9bb !important;
+    border-radius: 50% !important;
+    box-shadow: none !important;
+  }
+
+  /* Selected circle: gold ring */
+  [data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] > span:first-child,
+  [data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] > div:first-child,
+  [data-testid="stRadio"] [data-baseweb="radio"] input:checked ~ span:first-child,
+  [data-testid="stRadio"] [data-baseweb="radio"] input:checked ~ div:first-child {
+    background-color: #ffffff !important;
+    border-color: var(--accent-gold) !important;
+  }
+
+  /* Inner dot — only visible when checked. The dot is the first
+     descendant span/div of the visible-circle wrapper. */
+  [data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] > span:first-child > span,
+  [data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] > div:first-child > div,
+  [data-testid="stRadio"] [data-baseweb="radio"] input:checked ~ span:first-child > span,
+  [data-testid="stRadio"] [data-baseweb="radio"] input:checked ~ div:first-child > div {
+    background-color: var(--accent-gold) !important;
+    border-radius: 50% !important;
+  }
+  /* Hide the inner dot when NOT checked (BaseWeb may render a zero-size
+     element but some browsers still paint a 1px box) */
+  [data-testid="stRadio"] [data-baseweb="radio"]:not([aria-checked="true"]) > span:first-child > span,
+  [data-testid="stRadio"] [data-baseweb="radio"]:not([aria-checked="true"]) > div:first-child > div {
+    background-color: transparent !important;
+  }
+
+  /* Toggle */
+  [data-testid="stToggle"] [data-baseweb="checkbox"] > div:first-child,
+  [data-baseweb="toggle"] > div:first-child {
+    background-color: #e3e0d4 !important;
+  }
+  [data-testid="stToggle"] [aria-checked="true"] > div:first-child,
+  [data-baseweb="toggle"] [aria-checked="true"] > div:first-child {
+    background-color: var(--accent-gold) !important;
+  }
+
+  /* Slider — track & thumb */
+  [data-baseweb="slider"] [role="slider"],
+  [data-baseweb="slider"] [data-baseweb="thumb"] {
+    background-color: #ffffff !important;
+    border: 2px solid var(--accent-gold) !important;
+  }
+  [data-baseweb="slider"] [data-testid="stTickBarMax"],
+  [data-baseweb="slider"] [data-testid="stTickBarMin"] {
+    color: var(--text-secondary) !important;
+  }
+  [data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child > div:first-child {
+    background-color: var(--accent-gold) !important;
+  }
+
+  /* Progress bar */
+  [data-testid="stProgress"] [role="progressbar"] > div,
+  [data-testid="stProgress"] > div > div > div {
+    background-color: var(--accent-gold) !important;
+  }
+
+  /* ===== Code / JSON / dataframe — keep light bg, dark text ===== */
+
+  pre, pre code,
+  [data-testid="stCode"], [data-testid="stCodeBlock"], .stCodeBlock {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+  }
+  [data-testid="stCode"] *, [data-testid="stCodeBlock"] *, .stCodeBlock * {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+  }
+  /* Syntax highlight tokens (Streamlit uses prism) */
+  pre .token.string, [data-testid="stCode"] .token.string { color: #6a4c1e !important; }
+  pre .token.keyword, [data-testid="stCode"] .token.keyword { color: #1e6fa8 !important; font-weight: 600 !important; }
+  pre .token.comment, [data-testid="stCode"] .token.comment { color: #8a8e96 !important; font-style: italic !important; }
+  pre .token.number, [data-testid="stCode"] .token.number { color: #b06000 !important; }
+  pre .token.function, [data-testid="stCode"] .token.function { color: #1a1c20 !important; font-weight: 600 !important; }
+  /* Copy button on code block */
+  [data-testid="stCodeCopyButton"], button[data-testid="stCodeCopyButton"] {
+    background-color: rgba(0,0,0,0.04) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--card-border) !important;
+  }
+  [data-testid="stCodeCopyButton"] svg { color: var(--text-secondary) !important; fill: var(--text-secondary) !important; }
+
+  /* JSON viewer */
+  [data-testid="stJson"], pre.stJson {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-card) !important;
+  }
+  [data-testid="stJson"] * { color: var(--text-primary) !important; }
+
+  /* ===== Icon-only buttons & SVG color (chevrons, X, dropdown arrows) ===== */
+
+  /* Selectbox dropdown arrow + clear button */
+  [data-baseweb="select"] svg,
+  [data-baseweb="select"] [role="presentation"] svg,
+  [data-baseweb="input"] svg {
+    color: var(--text-secondary) !important;
+    fill: var(--text-secondary) !important;
+  }
+
+  /* Multiselect tag close (✕) button — gold tint so the chip stays uniform */
+  [data-baseweb="tag"] [role="button"],
+  [data-baseweb="tag"] [role="presentation"] {
+    color: var(--accent-gold-text) !important;
+    background-color: transparent !important;
+  }
+  [data-baseweb="tag"] svg {
+    color: var(--accent-gold-text) !important;
+    fill: var(--accent-gold-text) !important;
+  }
+
+  /* Expander chevron icon */
+  [data-testid="stExpander"] summary svg,
+  [data-testid="stExpander"] details summary svg {
+    color: var(--text-secondary) !important;
+    fill: var(--text-secondary) !important;
+  }
+
+  /* File uploader delete (X) on uploaded rows */
+  [data-testid="stFileUploaderDeleteBtn"],
+  [data-testid="stFileUploaderDeleteBtn"] *,
+  [data-testid="stFileUploader"] button[aria-label*="Remove" i],
+  [data-testid="stFileUploader"] button[aria-label*="削除" i] {
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+  }
+  [data-testid="stFileUploaderDeleteBtn"] svg {
+    color: var(--text-secondary) !important;
+    fill: var(--text-secondary) !important;
+  }
+
+  /* Generic Streamlit icon-only buttons that default to dark fill */
+  button[kind="icon"],
+  button[kind="header"],
+  button[kind="headerNoPadding"] {
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--card-border) !important;
+  }
+  button[kind="icon"]:hover,
+  button[kind="header"]:hover {
+    background-color: var(--card-bg-elevated) !important;
+    border-color: var(--card-border-strong) !important;
+  }
+  button[kind="icon"] svg, button[kind="header"] svg {
+    color: var(--text-secondary) !important;
+    fill: var(--text-secondary) !important;
+  }
+
+  /* Chat message avatar */
+  [data-testid="stChatMessage"] [data-testid^="chatAvatarIcon"] {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border) !important;
+  }
+  [data-testid="stChatMessage"] [data-testid^="chatAvatarIcon"] svg {
+    color: var(--text-primary) !important;
+    fill: var(--text-primary) !important;
+  }
+
+  /* Streamlit "running" status / spinner colors */
+  [data-testid="stStatusWidget"] *,
+  [data-testid="stAppRunningIcon"] svg {
+    color: var(--accent-gold) !important;
+    fill: var(--accent-gold) !important;
+  }
+
+  /* Streamlit's link_button (used on Connect buttons) — same as primary
+     button style (white interior + gold border) for consistency. */
+  [data-testid="stLinkButton"] a,
+  a[data-testid="baseLinkButton-primary"],
+  a[data-testid="baseLinkButton-secondary"] {
+    background-color: #ffffff !important;
+    color: #1a1c20 !important;
+    border: 1px solid var(--card-border-strong) !important;
+    border-radius: var(--radius-input) !important;
+    font-weight: 500 !important;
+  }
+  a[data-testid="baseLinkButton-primary"] {
+    border: 2px solid var(--accent-gold) !important;
+    font-weight: 700 !important;
+  }
+  [data-testid="stLinkButton"] a:hover,
+  a[data-testid="baseLinkButton-primary"]:hover,
+  a[data-testid="baseLinkButton-secondary"]:hover {
+    background-color: var(--card-bg-elevated) !important;
+    border-color: var(--accent-gold-text) !important;
+  }
+  [data-testid="stLinkButton"] a *,
+  a[data-testid^="baseLinkButton"] * { color: #1a1c20 !important; }
+
+  /* "Pre-formatted text" containers inside chat / status traces */
+  [data-testid="stMarkdownPre"], div[data-testid="stMarkdownPre"] {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-input) !important;
+  }
+
+  /* ===== Chat input bottom bar — light mode ===== */
+  /* Mirror what the dark theme does but with ivory colors so the
+     chat input row doesn't fall back to a dark stripe on OS-dark. */
+  [data-testid="stBottom"],
+  [data-testid="stBottomBlockContainer"],
+  [data-testid="stBottom"] *,
+  [data-testid="stBottomBlockContainer"] * {
+    background-color: var(--app-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border) !important;
+  }
+  [data-testid="stChatInput"],
+  [data-testid="stChatInputContainer"],
+  [data-testid="stChatInputFileUploadDropzone"],
+  [data-testid="stChatInputFileUploadDropzoneInstructions"] {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+    border-radius: var(--radius-input) !important;
+  }
+  [data-testid="stChatInput"] *,
+  [data-testid="stChatInputContainer"] *,
+  [data-testid="stChatInputFileUploadDropzone"] *,
+  [data-testid="stChatInputFileUploadDropzoneInstructions"] * {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border-strong) !important;
+  }
+  [data-testid="stChatInput"] small,
+  [data-testid="stChatInputInstructions"],
+  [data-testid="stChatInputInstructions"] * {
+    color: var(--text-secondary) !important;
+    background-color: transparent !important;
+  }
+  [data-testid="stChatInputFileUploadButton"],
+  [data-testid="stChatInputSubmitButton"],
+  [data-testid="stChatInputMicButton"],
+  [data-testid="stChatInputApproveButton"],
+  [data-testid="stChatInputCancelButton"],
+  [data-testid="stChatInput"] button {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--card-border-strong) !important;
+  }
+  [data-testid="stChatInputFileUploadButton"] *,
+  [data-testid="stChatInputSubmitButton"] *,
+  [data-testid="stChatInputMicButton"] *,
+  [data-testid="stChatInputApproveButton"] *,
+  [data-testid="stChatInputCancelButton"] *,
+  [data-testid="stChatInput"] button * { background-color: transparent !important; }
+  [data-testid="stChatInputFileUploadButton"] svg,
+  [data-testid="stChatInputSubmitButton"] svg,
+  [data-testid="stChatInput"] button svg {
+    color: var(--text-secondary) !important;
+    fill: var(--text-secondary) !important;
+  }
+  [data-testid="stChatInput"] textarea,
+  [data-testid="stChatInputTextArea"],
+  [data-testid="stChatInputTextArea"] textarea {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+  }
+  [data-testid="stChatInput"] textarea::placeholder,
+  [data-testid="stChatInputTextArea"] textarea::placeholder {
+    color: var(--text-tertiary) !important;
+  }
+  [data-testid="stChatInput"] textarea:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px var(--accent-gold-bg) inset !important;
+  }
+
+  /* ===== Expander interior — force white bg under headers ===== */
+  [data-testid="stExpander"] details,
+  [data-testid="stExpander"] details > div,
+  [data-testid="stExpander"] details[open],
+  [data-testid="stExpander"] details[open] > div {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+  }
+  [data-testid="stExpander"] details summary,
+  [data-testid="stExpander"] summary {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Headers / subheaders text color */
+  [data-testid="stHeading"], [data-testid="stHeading"] * {
+    color: var(--text-primary) !important;
+  }
+
+  /* Form wrappers (st.form) */
+  [data-testid="stForm"], [data-testid="stForm"] > div {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Sidebar internals — labels and captions in user popover etc. */
+  [data-testid="stSidebar"], [data-testid="stSidebar"] * {
+    color: var(--text-primary) !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stCaption"],
+  [data-testid="stSidebar"] small {
+    color: var(--text-secondary) !important;
+  }
+  [data-testid="stSidebar"] input,
+  [data-testid="stSidebar"] textarea,
+  [data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--card-border-strong) !important;
+  }
+</style>
+"""
+
+if theme_choice == "dark":
+    st.markdown(_DARK_THEME_CSS, unsafe_allow_html=True)
 elif theme_choice == "light":
-    # No overrides needed — Streamlit's default light is fine.
-    pass
-# theme_choice == "auto" → no override; Streamlit's default follows OS pref.
+    st.markdown(_LIGHT_THEME_CSS, unsafe_allow_html=True)
+# theme_choice == "auto" → responsive.py's @media (prefers-color-scheme: dark)
+# block flips the :root variables based on the OS preference, so no extra
+# CSS is needed here for auto mode.
 
 
 # Suppress Streamlit's developer keyboard shortcuts ('C' = Clear caches,
@@ -2712,6 +3551,119 @@ elif mode == "preferences":
 
     st.caption(t("preferences.llm_moved_hint"))
 
+    # -----------------------------------------------------------------
+    # 外部サービス連携 (per-user OAuth) — moved into Preferences so each
+    # user manages their own connections without needing the admin nav.
+    # -----------------------------------------------------------------
+    st.divider()
+    st.subheader(t("admin.connections.subtab"))
+    st.markdown(t("admin.connections.intro"))
+
+    from praxia.connectors.oauth import (
+        PROVIDERS_BY_NAME,
+        OAuthTokenStore,
+    )
+    from praxia.config import PraxiaConfig as _PCfg
+
+    _public_url = (
+        os.environ.get("PRAXIA_PUBLIC_URL")
+        or _PCfg.get("PRAXIA_PUBLIC_URL")
+        or ""
+    ).rstrip("/")
+
+    _token_store = OAuthTokenStore(
+        storage_dir=(
+            loom.config.memory_dir / "auth"
+            if hasattr(loom.config, "memory_dir") else ".praxia/auth"
+        )
+    )
+
+    _provider_rows: list[dict] = []
+    for _pname, _pcfg in PROVIDERS_BY_NAME.items():
+        _client_id = (
+            os.environ.get(f"PRAXIA_OAUTH_{_pname.upper()}_CLIENT_ID")
+            or _PCfg.get(f"PRAXIA_OAUTH_{_pname.upper()}_CLIENT_ID")
+            or ""
+        )
+        _has_app = bool(_client_id)
+        try:
+            _tok = _token_store.get(user_id=user_id, provider=_pname)
+        except Exception:
+            _tok = None
+        if _tok is None:
+            _status_key = "admin.connections.status_disconnected"
+        elif _tok.is_expired() and not _tok.refresh_token:
+            _status_key = "admin.connections.status_expired"
+        else:
+            _status_key = "admin.connections.status_connected"
+        _provider_rows.append({
+            "provider": _pname,
+            "has_app": _has_app,
+            "status_key": _status_key,
+            "scopes": ", ".join(_pcfg.default_scopes),
+            "token": _tok,
+        })
+
+    for _row in _provider_rows:
+        _pname = _row["provider"]
+        with st.expander(
+            f"{t(_row['status_key'])} · **{_pname}**", expanded=False
+        ):
+            st.caption(t("admin.connections.scope") + ": `" + _row["scopes"] + "`")
+            if not _row["has_app"]:
+                st.warning(t("admin.connections.client_missing"))
+                continue
+
+            _start_url = (
+                f"{_public_url}/api/v1/oauth/{_pname}/start"
+                if _public_url else ""
+            )
+            col_l, col_r = st.columns(2)
+            with col_l:
+                if _start_url:
+                    st.link_button(
+                        t("admin.connections.connect_btn"),
+                        _start_url,
+                        type="primary",
+                    )
+                else:
+                    st.button(
+                        t("admin.connections.connect_btn"),
+                        disabled=True,
+                        key=f"oauth_conn_disabled_{_pname}",
+                    )
+                    st.caption(t("admin.connections.unavailable_short"))
+            with col_r:
+                if _row["token"] is not None:
+                    if st.button(
+                        t("admin.connections.disconnect_btn"),
+                        key=f"oauth_disconn_{_pname}",
+                    ):
+                        try:
+                            _token_store.delete(user_id, _pname)
+                            if auth is not None:
+                                auth.audit.record(
+                                    actor_id=user_id,
+                                    actor_role=actor_role,
+                                    action="oauth.disconnect",
+                                    resource=f"oauth:{_pname}",
+                                    metadata={"provider": _pname},
+                                )
+                            st.success(
+                                t("admin.connections.disconnected_ok").format(
+                                    provider=_pname
+                                )
+                            )
+                            st.rerun()
+                        except Exception as _exc:
+                            st.error(str(_exc))
+
+    if st.button(
+        t("admin.connections.refresh_btn"),
+        key="oauth_refresh_status",
+    ):
+        st.rerun()
+
 
 # =====================================================================
 # Mode: Dashboard
@@ -3168,12 +4120,18 @@ elif mode == "admin":
     if not users_exist:
         st.warning(t("admin.gate.dev_mode"))
 
+    # Sub-tab order (user-defined, 2026-05): users first, then settings,
+    # then credentials, connectors, policies, consolidate, exports,
+    # themes, about. Service Connections lives in Preferences (per-user)
+    # and is therefore NOT a sub-tab here.
     (
-        tab_settings, tab_users, tab_connectors, tab_policies,
-        tab_consolidate, tab_exports, tab_themes, tab_about,
+        tab_users, tab_settings, tab_credentials,
+        tab_connectors, tab_policies, tab_consolidate,
+        tab_exports, tab_themes, tab_about,
     ) = st.tabs([
-        t("admin.settings.subtab"),
         t("admin.users.subtab"),
+        t("admin.settings.subtab"),
+        t("admin.credentials.subtab"),
         t("admin.connectors.subtab"),
         t("admin.policies.subtab"),
         t("admin.consolidate.subtab"),
@@ -3442,9 +4400,16 @@ elif mode == "admin":
             st.success(t("admin.settings.mp_saved"))
             st.rerun()
 
-        st.divider()
+    # The "Persistent settings" form (LLM provider keys / OAuth app
+    # secrets / KMS / SSO / Memory / Identity env vars) lives in its
+    # own tab below (`tab_credentials`) so the operational Settings
+    # tab stays short. Sub-tabs inside Credentials split the form by
+    # section.
 
-        st.subheader(t("admin.settings.persistent_h"))
+    with tab_credentials:
+        from praxia.config import KNOWN_KEYS, PraxiaConfig
+
+        st.markdown(t("admin.credentials.intro"))
 
         def _mask_for_display(value: str) -> str:
             # Full mask. Showing first/last chars (e.g. "50b6…e652")
@@ -3460,225 +4425,242 @@ elif mode == "admin":
 
         from praxia.ui.settings_guide import category_meta, section_for, TOP_LEVEL_SECTIONS
 
-        # Bucket the categories by top-level section so the UI can
-        # render section headings ("LLM Providers" / "OAuth" /
-        # "Security" / "Runtime defaults" / "Other") with the
-        # related sub-categories grouped underneath. Order is fixed
-        # by TOP_LEVEL_SECTIONS so the layout is stable.
+        # Bucket each category by top-level section so we can render
+        # one inner Streamlit tab per section ("LLM Providers" /
+        # "OAuth Apps" / "Security & SSO" / "Runtime" / "Other"). Order
+        # is fixed by TOP_LEVEL_SECTIONS so the layout is stable.
         _section_buckets: "OrderedDict[str, list[str]]" = OrderedDict()
-        # Pre-seed with declared sections to keep the order stable
         for label_key, _pred in TOP_LEVEL_SECTIONS:
             _section_buckets.setdefault(label_key, [])
         _section_buckets.setdefault("settings.section.other", [])
         for category in grouped.keys():
             _section_buckets[section_for(category)].append(category)
 
-        for section_key, cats in _section_buckets.items():
-            if not cats:
-                continue
-            st.markdown(f"#### {t(section_key)}")
-            for category in cats:
-                keys = grouped[category]
-                _meta = category_meta(category)
-                _required = set(_meta.get("required") or [])
-                _key_help_map = _meta.get("key_help") or {}
-                _intro_key = _meta.get("intro")
-                _cross_refs = _meta.get("cross_refs") or []
+        _populated_sections = [
+            (k, cats) for k, cats in _section_buckets.items() if cats
+        ]
+        if not _populated_sections:
+            st.info("No credential categories registered.")
+            _populated_sections = []
 
-                # Header: set/required progress for multi-key groups.
-                # Sections always start collapsed — the page would
-                # otherwise paint multiple full-screen-tall forms on
-                # first visit. Status icon + count in the header is
-                # enough to show what needs attention.
-                if _required:
-                    _set_required = sum(
-                        1 for k, _ in keys
-                        if k in _required and PraxiaConfig.get(k) is not None
-                    )
-                    _progress = (
-                        f"{_set_required}/{len(_required)} "
-                        + t("admin.settings.keys_required_label")
-                    )
-                    _all_required_set = (_set_required == len(_required))
-                    _icon = "✅" if _all_required_set else ("⚠️" if _set_required else "")
-                else:
-                    _set_count = sum(
-                        1 for k, _ in keys if PraxiaConfig.get(k) is not None
-                    )
-                    _progress = (
-                        f"{_set_count}/{len(keys)} "
-                        + t("admin.settings.keys_set_label")
-                    )
-                    _icon = "✅" if _set_count else ""
-                _hdr = f"{_icon} **{category}**  ·  {_progress}".strip()
+        if _populated_sections:
+            _section_tabs = st.tabs([t(k) for k, _ in _populated_sections])
+        else:
+            _section_tabs = []
+        for _sec_idx, (section_key, cats) in enumerate(_populated_sections):
+            with _section_tabs[_sec_idx]:
+                for category in cats:
+                    keys = grouped[category]
+                    _meta = category_meta(category)
+                    _required = set(_meta.get("required") or [])
+                    _key_help_map = _meta.get("key_help") or {}
+                    _intro_key = _meta.get("intro")
+                    _cross_refs = _meta.get("cross_refs") or []
 
-                with st.expander(_hdr, expanded=False):
-                    if _intro_key:
-                        st.markdown(t(_intro_key))
+                    # Header: set/required progress for multi-key groups.
+                    # Sections always start collapsed — the page would
+                    # otherwise paint multiple full-screen-tall forms on
+                    # first visit.
                     if _required:
-                        _required_md = ", ".join(f"`{k}`" for k in _required)
-                        st.caption(
-                            t("admin.settings.required_label") + ": " + _required_md
+                        _set_required = sum(
+                            1 for k, _ in keys
+                            if k in _required and PraxiaConfig.get(k) is not None
                         )
-                    if _cross_refs:
-                        _cross_md = ", ".join(f"`{k}`" for k in _cross_refs)
-                        st.caption(
-                            "ℹ️ " + t("admin.settings.cross_ref_label").format(keys=_cross_md)
+                        _progress = (
+                            f"{_set_required}/{len(_required)} "
+                            + t("admin.settings.keys_required_label")
                         )
+                        _all_required_set = (_set_required == len(_required))
+                        _icon = "✅" if _all_required_set else ("⚠️" if _set_required else "")
+                    else:
+                        _set_count = sum(
+                            1 for k, _ in keys if PraxiaConfig.get(k) is not None
+                        )
+                        _progress = (
+                            f"{_set_count}/{len(keys)} "
+                            + t("admin.settings.keys_set_label")
+                        )
+                        _icon = "✅" if _set_count else ""
+                    _hdr = f"{_icon} **{category}**  ·  {_progress}".strip()
 
-                    with st.form(f"settings_form_{category}", clear_on_submit=True):
-                        pending: dict[str, str] = {}
-                        delete_keys: list[str] = []
-                        for key, is_secret in keys:
-                            current = PraxiaConfig.get(key)
-                            is_required = key in _required
-                            specific_help_key = _key_help_map.get(key)
-                            if current is None:
-                                label = (("✱ " if is_required else "") + key)
-                                help_text = (
-                                    t(specific_help_key) if specific_help_key
-                                    else t("admin.settings.help.unset")
-                                )
-                                placeholder = t("admin.settings.placeholder.unchanged")
-                            elif is_secret:
-                                label = f"✓ {key}"
-                                help_text = (
-                                    t(specific_help_key) if specific_help_key
-                                    else t("admin.settings.help.secret_set_masked")
-                                )
-                                placeholder = "********"
-                            else:
-                                label = f"✓ {key}  ({current})"
-                                help_text = (
-                                    t(specific_help_key) if specific_help_key
-                                    else t("admin.settings.help.value_set").format(
-                                        value=current
+                    with st.expander(_hdr, expanded=False):
+                        if _intro_key:
+                            st.markdown(t(_intro_key))
+                        if _required:
+                            _required_md = ", ".join(f"`{k}`" for k in _required)
+                            st.caption(
+                                t("admin.settings.required_label") + ": " + _required_md
+                            )
+                        if _cross_refs:
+                            _cross_md = ", ".join(f"`{k}`" for k in _cross_refs)
+                            st.caption(
+                                "ℹ️ " + t("admin.settings.cross_ref_label").format(keys=_cross_md)
+                            )
+
+                        with st.form(f"settings_form_{category}", clear_on_submit=True):
+                            pending: dict[str, str] = {}
+                            delete_keys: list[str] = []
+                            for key, is_secret in keys:
+                                current = PraxiaConfig.get(key)
+                                is_required = key in _required
+                                specific_help_key = _key_help_map.get(key)
+                                if current is None:
+                                    label = (("✱ " if is_required else "") + key)
+                                    help_text = (
+                                        t(specific_help_key) if specific_help_key
+                                        else t("admin.settings.help.unset")
                                     )
-                                )
-                                placeholder = current
-                            col_in, col_del = st.columns([5, 1])
-                            with col_in:
-                                new_val = st.text_input(
-                                    label, value="",
-                                    type="password" if is_secret else "default",
-                                    placeholder=placeholder,
-                                    help=help_text,
-                                    key=f"setting_input_{category}_{key}",
-                                )
-                            with col_del:
-                                if current is not None:
-                                    st.markdown("&nbsp;", unsafe_allow_html=True)
-                                    if st.checkbox(
-                                        t("admin.settings.delete_checkbox"),
-                                        value=False,
-                                        key=f"setting_del_{category}_{key}",
-                                        help=t("admin.settings.delete_checkbox_help"),
-                                    ):
-                                        delete_keys.append(key)
-                            if new_val:
-                                pending[key] = new_val
-                        st.caption(t("admin.settings.save_hint"))
-                        submit = st.form_submit_button(
-                            "💾 " + t("admin.settings.save_btn"),
-                            type="primary",
-                            use_container_width=True,
-                        )
-                        if submit:
-                            if actor_role not in ("admin", "unknown"):
-                                st.error(t("admin.settings.role_required"))
-                            elif not pending and not delete_keys:
-                                st.info(t("admin.settings.no_changes"))
-                            else:
-                                _AZURE_MIRRORS = {
-                                    "AZURE_API_KEY":     "AZURE_OPENAI_API_KEY",
-                                    "AZURE_API_BASE":    "AZURE_OPENAI_ENDPOINT",
-                                    "AZURE_API_VERSION": "OPENAI_API_VERSION",
-                                }
-                                for k, v in pending.items():
-                                    PraxiaConfig.set_persistent(k, v)
-                                    os.environ[k] = v
-                                    # Mirror Azure-OpenAI-canonical env
-                                    # vars so the openai SDK underneath
-                                    # LiteLLM finds the credentials.
-                                    if k in _AZURE_MIRRORS:
-                                        os.environ[_AZURE_MIRRORS[k]] = v
-                                    if auth is not None:
-                                        auth.audit.record(
-                                            actor_id=user_id,
-                                            actor_role=actor_role,
-                                            action="config.set",
-                                            resource=f"config:{k}",
-                                            metadata={
-                                                "category": KNOWN_KEYS[k][0],
-                                                "is_secret": KNOWN_KEYS[k][1],
-                                            },
+                                    placeholder = t("admin.settings.placeholder.unchanged")
+                                elif is_secret:
+                                    label = f"✓ {key}"
+                                    help_text = (
+                                        t(specific_help_key) if specific_help_key
+                                        else t("admin.settings.help.secret_set_masked")
+                                    )
+                                    placeholder = "********"
+                                else:
+                                    label = f"✓ {key}  ({current})"
+                                    help_text = (
+                                        t(specific_help_key) if specific_help_key
+                                        else t("admin.settings.help.value_set").format(
+                                            value=current
                                         )
-                                for k in delete_keys:
-                                    if PraxiaConfig.delete_persistent(k):
-                                        os.environ.pop(k, None)
+                                    )
+                                    placeholder = current
+                                col_in, col_del = st.columns([5, 1])
+                                with col_in:
+                                    new_val = st.text_input(
+                                        label, value="",
+                                        type="password" if is_secret else "default",
+                                        placeholder=placeholder,
+                                        help=help_text,
+                                        key=f"setting_input_{category}_{key}",
+                                    )
+                                with col_del:
+                                    if current is not None:
+                                        st.markdown("&nbsp;", unsafe_allow_html=True)
+                                        if st.checkbox(
+                                            t("admin.settings.delete_checkbox"),
+                                            value=False,
+                                            key=f"setting_del_{category}_{key}",
+                                            help=t("admin.settings.delete_checkbox_help"),
+                                        ):
+                                            delete_keys.append(key)
+                                if new_val:
+                                    pending[key] = new_val
+                            st.caption(t("admin.settings.save_hint"))
+                            submit = st.form_submit_button(
+                                "💾 " + t("admin.settings.save_btn"),
+                                type="primary",
+                                use_container_width=True,
+                            )
+                            if submit:
+                                if actor_role not in ("admin", "unknown"):
+                                    st.error(t("admin.settings.role_required"))
+                                elif not pending and not delete_keys:
+                                    st.info(t("admin.settings.no_changes"))
+                                else:
+                                    _AZURE_MIRRORS = {
+                                        "AZURE_API_KEY":     "AZURE_OPENAI_API_KEY",
+                                        "AZURE_API_BASE":    "AZURE_OPENAI_ENDPOINT",
+                                        "AZURE_API_VERSION": "OPENAI_API_VERSION",
+                                    }
+                                    for k, v in pending.items():
+                                        PraxiaConfig.set_persistent(k, v)
+                                        os.environ[k] = v
+                                        if k in _AZURE_MIRRORS:
+                                            os.environ[_AZURE_MIRRORS[k]] = v
                                         if auth is not None:
                                             auth.audit.record(
                                                 actor_id=user_id,
                                                 actor_role=actor_role,
-                                                action="config.delete",
+                                                action="config.set",
                                                 resource=f"config:{k}",
                                                 metadata={
                                                     "category": KNOWN_KEYS[k][0],
                                                     "is_secret": KNOWN_KEYS[k][1],
                                                 },
                                             )
-                                try:
-                                    st.cache_resource.clear()
-                                except Exception:
-                                    pass
-                                if pending:
-                                    st.success(t("admin.settings.saved").format(count=len(pending)))
-                                if delete_keys:
-                                    st.success(t("admin.settings.deleted").format(count=len(delete_keys)))
-                                st.info(t("admin.settings.applied_immediately"))
+                                    for k in delete_keys:
+                                        if PraxiaConfig.delete_persistent(k):
+                                            os.environ.pop(k, None)
+                                            if auth is not None:
+                                                auth.audit.record(
+                                                    actor_id=user_id,
+                                                    actor_role=actor_role,
+                                                    action="config.delete",
+                                                    resource=f"config:{k}",
+                                                    metadata={
+                                                        "category": KNOWN_KEYS[k][0],
+                                                        "is_secret": KNOWN_KEYS[k][1],
+                                                    },
+                                                )
+                                    try:
+                                        st.cache_resource.clear()
+                                    except Exception:
+                                        pass
+                                    if pending:
+                                        st.success(t("admin.settings.saved").format(count=len(pending)))
+                                    if delete_keys:
+                                        st.success(t("admin.settings.deleted").format(count=len(delete_keys)))
+                                    st.info(t("admin.settings.applied_immediately"))
 
     with tab_users:
-        st.header("👥 User management (admin)")
+        st.header(t("admin.users.header"))
         try:
             from praxia.auth import Role  # noqa: F401
             users_list = auth.users.list_all() if auth is not None else []
         except Exception as e:
-            st.error(f"Auth not available: {e}")
+            st.error(t("admin.users.auth_unavailable").format(error=str(e)))
             users_list = []
 
-        sub_list, sub_create, sub_edit = st.tabs(["List", "Create", "Edit / Delete"])
+        sub_list, sub_create, sub_edit = st.tabs([
+            t("admin.users.sub_list"),
+            t("admin.users.sub_create"),
+            t("admin.users.sub_edit"),
+        ])
 
         with sub_list:
             if users_list:
                 st.table([
                     {
-                        "username": u.username, "role": u.role,
-                        "email": u.email or "—", "active": u.is_active,
+                        t("admin.users.col_username"): u.username,
+                        t("admin.users.col_role"): u.role,
+                        t("admin.users.col_email"): u.email or "—",
+                        t("admin.users.col_active"): u.is_active,
                     }
                     for u in users_list
                 ])
             else:
-                st.info("No users yet.")
+                st.info(t("admin.users.empty"))
 
         with sub_create:
             with st.form("user_create_form"):
-                new_username = st.text_input("Username")
+                new_username = st.text_input(t("admin.users.username_label"))
                 new_role = st.selectbox(
-                    "Role", ["admin", "operator", "member", "viewer"],
+                    t("admin.users.role_label"),
+                    ["admin", "operator", "member", "viewer"],
                 )
-                new_email = st.text_input("Email")
-                submit = st.form_submit_button("Create")
+                new_email = st.text_input(t("admin.users.email_label"))
+                submit = st.form_submit_button(t("admin.users.create_btn"))
                 if submit and new_username and auth is not None:
                     user, raw = auth.create_user(
                         new_username, role=new_role, email=new_email or None,
                     )
-                    st.success(f"Created {user.username} (role={user.role})")
+                    st.success(
+                        t("admin.users.created_ok").format(
+                            username=user.username, role=user.role,
+                        )
+                    )
                     st.code(raw, language="text")
-                    st.warning("Save this API key now — it will not be shown again.")
+                    st.warning(t("admin.users.save_key_warn"))
 
         with sub_edit:
             if users_list:
-                target = st.selectbox("Select user", [u.username for u in users_list])
+                target = st.selectbox(
+                    t("admin.users.select_user"),
+                    [u.username for u in users_list],
+                )
                 user_target = next(
                     (u for u in users_list if u.username == target), None,
                 )
@@ -3686,60 +4668,64 @@ elif mode == "admin":
                     colA, colB = st.columns(2)
                     with colA:
                         new_role = st.selectbox(
-                            "New role",
+                            t("admin.users.new_role"),
                             ["admin", "operator", "member", "viewer"],
                             index=["admin", "operator", "member", "viewer"].index(
                                 user_target.role
                             ),
                         )
                         new_email = st.text_input(
-                            "New email", value=user_target.email or "",
+                            t("admin.users.new_email"),
+                            value=user_target.email or "",
                         )
-                        if st.button("Update") and auth is not None:
+                        if st.button(t("admin.users.update_btn")) and auth is not None:
                             auth.update_user(
                                 target, role=new_role,
                                 email=new_email or None,
                             )
-                            st.success("Updated")
+                            st.success(t("admin.users.updated_ok"))
                             st.rerun()
                     with colB:
-                        if st.button("Rotate API key") and auth is not None:
+                        if st.button(t("admin.users.rotate_btn")) and auth is not None:
                             new_key = auth.users.rotate_api_key(user_target.id)
                             st.code(new_key, language="text")
                         if st.button(
-                            "Deactivate" if user_target.is_active else "Activate"
+                            t("admin.users.deactivate_btn") if user_target.is_active
+                            else t("admin.users.activate_btn")
                         ) and auth is not None:
                             auth.update_user(target, is_active=not user_target.is_active)
-                            st.success("Toggled")
+                            st.success(t("admin.users.toggled_ok"))
                             st.rerun()
                         if st.button(
-                            "🗑 Delete (cannot undo)", type="primary"
+                            t("admin.users.delete_btn"), type="primary"
                         ) and auth is not None:
                             auth.delete_user(target)
-                            st.success("Deleted")
+                            st.success(t("admin.users.deleted_ok"))
                             st.rerun()
 
     with tab_connectors:
-        st.header("🔌 External connectors")
-        st.markdown(
-            "Pull data from external systems for use as context, or push "
-            "Praxia outputs back to your team's systems of record."
-        )
+        st.header(t("admin.connectors.header"))
+        st.markdown(t("admin.connectors.intro"))
         from praxia.connectors.registry import list_builtin
 
         connector_names = list_builtin()
-        sel = st.selectbox("Connector", connector_names)
-        op = st.radio("Operation", ["Pull", "Push"], horizontal=True)
-        path = st.text_input("Path / folder ID / SOQL / app ID")
+        sel = st.selectbox(t("admin.connectors.connector_label"), connector_names)
+        op = st.radio(
+            t("admin.connectors.op_label"),
+            [t("admin.connectors.op_pull"), t("admin.connectors.op_push")],
+            horizontal=True,
+        )
+        path = st.text_input(t("admin.connectors.path_label"))
 
         st.caption(
-            "Credentials are read from environment variables prefixed with "
-            f"`PRAXIA_CONN_{sel.upper()}_*`."
+            t("admin.connectors.creds_hint").format(
+                prefix=f"PRAXIA_CONN_{sel.upper()}_*"
+            )
         )
 
-        if op == "Pull":
-            limit = st.slider("Limit", 5, 200, 20)
-            if st.button("Pull"):
+        if op == t("admin.connectors.op_pull"):
+            limit = st.slider(t("admin.connectors.limit_label"), 5, 200, 20)
+            if st.button(t("admin.connectors.pull_btn")):
                 try:
                     from praxia.connectors import get_connector
                     cfg = {
@@ -3748,7 +4734,9 @@ elif mode == "admin":
                         if k.startswith(f"PRAXIA_CONN_{sel.upper()}_")
                     }
                     items = get_connector(sel, **cfg).pull(path, limit=limit)
-                    st.success(f"Pulled {len(items)} items")
+                    st.success(
+                        t("admin.connectors.pulled_ok").format(count=len(items))
+                    )
                     for it in items[:5]:
                         with st.expander(f"📥 {it.name}"):
                             if isinstance(it.content, str):
@@ -3758,8 +4746,8 @@ elif mode == "admin":
                 except Exception as e:
                     st.error(str(e))
         else:
-            body = st.text_area("Body / payload (text or JSON)", height=200)
-            if st.button("Push"):
+            body = st.text_area(t("admin.connectors.body_label"), height=200)
+            if st.button(t("admin.connectors.push_btn")):
                 try:
                     from praxia.connectors import get_connector
                     from praxia.connectors.base import ConnectorItem
@@ -3771,17 +4759,20 @@ elif mode == "admin":
                     receipt = get_connector(sel, **cfg).push(
                         path, ConnectorItem(id="", name="praxia_output", content=body),
                     )
-                    st.success(f"Pushed: {receipt}")
+                    st.success(
+                        t("admin.connectors.pushed_ok").format(receipt=receipt)
+                    )
                 except Exception as e:
                     st.error(str(e))
 
     with tab_policies:
-        st.header("🛡 Resource Access Policies")
-        st.markdown(
-            "Control which users / roles can access connector paths, memory "
-            "namespaces, prompts, and skills. Designed for enterprise IS departments."
-        )
-        sub_list, sub_add, sub_test = st.tabs(["List", "Add", "Test"])
+        st.header(t("admin.policies.header"))
+        st.markdown(t("admin.policies.intro"))
+        sub_list, sub_add, sub_test = st.tabs([
+            t("admin.policies.sub_list"),
+            t("admin.policies.sub_add"),
+            t("admin.policies.sub_test"),
+        ])
         if auth:
             with sub_list:
                 policies = auth.policies.list()
@@ -3796,37 +4787,43 @@ elif mode == "admin":
                         }
                         for p in policies
                     ])
+                    _placeholder = t("admin.policies.remove_placeholder")
                     target_id = st.selectbox(
-                        "Remove policy by ID",
+                        t("admin.policies.remove_select_h"),
                         options=[""] + [p.id for p in policies],
-                        format_func=lambda x: f"{x[:8]}…" if x else "(select)",
+                        format_func=lambda x, _ph=_placeholder: f"{x[:8]}…" if x else _ph,
                     )
-                    if target_id and st.button("🗑 Remove selected"):
+                    if target_id and st.button(t("admin.policies.remove_btn")):
                         if auth.policies.remove(target_id):
-                            st.success(f"Removed {target_id[:8]}")
+                            st.success(
+                                t("admin.policies.removed_ok").format(id_short=target_id[:8])
+                            )
                             st.rerun()
                 else:
-                    st.info("No policies yet. Defaults to 'allow' when no policy matches.")
+                    st.info(t("admin.policies.empty"))
             with sub_add:
                 with st.form("policy_add_form"):
-                    pa_effect = st.selectbox("Effect", ["allow", "deny"])
+                    pa_effect = st.selectbox(
+                        t("admin.policies.add.effect"), ["allow", "deny"]
+                    )
                     pa_type = st.selectbox(
-                        "Resource type",
+                        t("admin.policies.add.resource_type"),
                         ["connector", "memory", "prompt", "skill", "block", "*"],
                     )
                     pa_pattern = st.text_input(
-                        "Resource pattern (glob)",
+                        t("admin.policies.add.pattern"),
                         placeholder="box:/Confidential/*  or  kintone:42",
                     )
                     pa_actions = st.multiselect(
-                        "Actions", ["read", "write", "list", "*"], default=["*"],
+                        t("admin.policies.add.actions"),
+                        ["read", "write", "list", "*"], default=["*"],
                     )
                     pa_principals = st.text_input(
-                        "Principals (comma-separated user_ids and role:<name>)",
+                        t("admin.policies.add.principals"),
                         value="*",
                     )
-                    pa_description = st.text_input("Description")
-                    if st.form_submit_button("Add policy") and pa_pattern:
+                    pa_description = st.text_input(t("admin.policies.add.description"))
+                    if st.form_submit_button(t("admin.policies.add.submit")) and pa_pattern:
                         p = auth.policies.add(
                             effect=pa_effect, resource_type=pa_type,
                             resource_pattern=pa_pattern,
@@ -3836,32 +4833,42 @@ elif mode == "admin":
                             ],
                             description=pa_description,
                         )
-                        st.success(f"Added policy {p.id[:8]}")
+                        st.success(
+                            t("admin.policies.add.added").format(id_short=p.id[:8])
+                        )
                         st.rerun()
             with sub_test:
                 with st.form("policy_test_form"):
-                    pt_user = st.text_input("user_id", value="alice")
+                    pt_user = st.text_input(t("admin.policies.test.user_id"), value="alice")
                     pt_role = st.selectbox(
-                        "role", ["admin", "operator", "member", "viewer"],
+                        t("admin.policies.test.role"),
+                        ["admin", "operator", "member", "viewer"],
                     )
                     pt_type = st.selectbox(
-                        "resource_type",
+                        t("admin.policies.test.resource_type"),
                         ["connector", "memory", "prompt", "skill", "block"],
                     )
                     pt_id = st.text_input(
-                        "resource_id", placeholder="box:/Praxia/specs",
+                        t("admin.policies.test.resource_id"),
+                        placeholder="box:/Praxia/specs",
                     )
-                    pt_action = st.selectbox("action", ["read", "write", "list"])
-                    if st.form_submit_button("Evaluate") and pt_id:
+                    pt_action = st.selectbox(
+                        t("admin.policies.test.action"), ["read", "write", "list"]
+                    )
+                    if st.form_submit_button(t("admin.policies.test.submit")) and pt_id:
                         decision = auth.policies.evaluate(
                             user_id=pt_user, role=pt_role,
                             resource_type=pt_type, resource_id=pt_id,
                             action=pt_action,
                         )
                         if decision.allowed:
-                            st.success(f"✅ Allowed — {decision.reason}")
+                            st.success(
+                                t("admin.policies.test.allowed").format(reason=decision.reason)
+                            )
                         else:
-                            st.error(f"🚫 Denied — {decision.reason}")
+                            st.error(
+                                t("admin.policies.test.denied").format(reason=decision.reason)
+                            )
 
     with tab_consolidate:
         st.markdown(t("consolidate.intro"))
@@ -3874,56 +4881,62 @@ elif mode == "admin":
             st.json(report)
 
     with tab_exports:
-        st.markdown(
-            "Export audit logs, users, skill usage, memories, and policies for "
-            "compliance, SIEM ingestion, or backups. Every export action is logged."
-        )
+        st.markdown(t("admin.exports.intro"))
         if auth:
-            kind = st.selectbox(
-                "What to export",
-                [
-                    "Audit log", "Users", "Skill usage",
-                    "Personal memory (one user)", "All personal memories",
-                    "Shared memory blocks", "Access policies",
-                ],
-            )
-            fmt = st.selectbox("Format", ["csv", "json", "jsonl"])
+            # Map localized labels back to internal kind identifiers so
+            # we keep stable branching logic regardless of UI language.
+            _KIND_ITEMS = [
+                ("audit",            t("admin.exports.kind.audit")),
+                ("users",            t("admin.exports.kind.users")),
+                ("skill_usage",      t("admin.exports.kind.skill_usage")),
+                ("personal_memory",  t("admin.exports.kind.personal_memory")),
+                ("all_personal",     t("admin.exports.kind.all_personal")),
+                ("shared_memory",    t("admin.exports.kind.shared_memory")),
+                ("policies",         t("admin.exports.kind.policies")),
+            ]
+            _kind_labels = [lbl for _, lbl in _KIND_ITEMS]
+            _kind_ids = [kid for kid, _ in _KIND_ITEMS]
+            picked_label = st.selectbox(t("admin.exports.what"), _kind_labels)
+            kind = _kind_ids[_kind_labels.index(picked_label)]
+            fmt = st.selectbox(t("admin.exports.format_label"), ["csv", "json", "jsonl"])
             out_dir = Path(loom.config.memory_dir) / "exports"
             out_dir.mkdir(parents=True, exist_ok=True)
 
             extra_input = None
-            if kind == "Personal memory (one user)":
-                extra_input = st.text_input("user_id", value="default-user")
-            elif kind == "Skill usage":
-                extra_input = st.text_input("Optional skill name filter")
+            if kind == "personal_memory":
+                extra_input = st.text_input(
+                    t("admin.exports.user_id_label"), value="default-user",
+                )
+            elif kind == "skill_usage":
+                extra_input = st.text_input(t("admin.exports.skill_filter"))
 
-            if st.button("Export"):
+            if st.button(t("admin.exports.export_btn")):
                 ts = int(__import__("time").time())
                 path: Path | list[Path]
-                if kind == "Audit log":
+                if kind == "audit":
                     path = auth.exports.export_audit(
                         output_path=out_dir / f"audit_{ts}.{fmt}", format=fmt,
                     )
-                elif kind == "Users":
+                elif kind == "users":
                     path = auth.exports.export_users(
                         output_path=out_dir / f"users_{ts}.{fmt}", format=fmt,
                     )
-                elif kind == "Skill usage":
+                elif kind == "skill_usage":
                     path = auth.exports.export_skill_usage(
                         output_path=out_dir / f"skill_usage_{ts}.{fmt}",
                         format=fmt, skill_name=extra_input or None,
                     )
-                elif kind == "Personal memory (one user)":
+                elif kind == "personal_memory":
                     path = auth.exports.export_personal_memory(
                         user_id=extra_input or "default-user",
                         output_path=out_dir / f"memory_{extra_input}_{ts}.{fmt}",
                         format=fmt,
                     )
-                elif kind == "All personal memories":
+                elif kind == "all_personal":
                     path = auth.exports.export_all_personal_memory(
                         output_dir=out_dir / f"all_memory_{ts}", format=fmt,
                     )
-                elif kind == "Shared memory blocks":
+                elif kind == "shared_memory":
                     path = auth.exports.export_shared_memory(
                         output_path=out_dir / f"shared_{ts}.{fmt}", format=fmt,
                     )
@@ -3931,10 +4944,10 @@ elif mode == "admin":
                     path = auth.exports.export_policies(
                         output_path=out_dir / f"policies_{ts}.{fmt}", format=fmt,
                     )
-                st.success(f"Exported → {path}")
+                st.success(t("admin.exports.exported_ok").format(path=path))
                 if isinstance(path, Path) and path.exists():
                     st.download_button(
-                        "⬇️ Download",
+                        t("admin.exports.download_btn"),
                         data=path.read_bytes(),
                         file_name=path.name,
                         mime="application/octet-stream",

@@ -18,19 +18,47 @@ class KintoneConnector:
         api_token: str | None = None,
         username: str | None = None,
         password: str | None = None,
+        access_token: str | None = None,
+        user_id: str | None = None,
     ) -> None:
+        """Connect to a kintone tenant.
+
+        Three auth modes (highest priority first):
+
+        1. **Per-user OAuth** (recommended for enterprise) — pass ``user_id``
+           and a previously-stored OAuth token will be used. kintone's native
+           per-user permissions apply, so each Praxia user only sees records
+           their kintone account can access.
+        2. **OAuth access token** — pass ``access_token`` directly.
+        3. **API token** — legacy per-app static token (kintone's
+           ``X-Cybozu-API-Token``). Bound to the app, not the user.
+        4. **Username + password** — Basic auth fallback (kintone's
+           ``X-Cybozu-Authorization``). Discouraged for new deployments.
+        """
         _require("requests", 'pip install requests')
         import requests
         self._requests = requests
         self._base = f"https://{subdomain}.cybozu.com/k/v1"
         self._headers: dict[str, str] = {}
-        if api_token:
+
+        # 1. Per-user OAuth: fetch the stored token (auto-refreshes if expired)
+        if user_id and not access_token:
+            from praxia.connectors.oauth import oauth_token_for
+            tok = oauth_token_for(user_id, "kintone")
+            access_token = tok.access_token
+
+        if access_token:
+            self._headers["Authorization"] = f"Bearer {access_token}"
+        elif api_token:
             self._headers["X-Cybozu-API-Token"] = api_token
         elif username and password:
             auth = base64.b64encode(f"{username}:{password}".encode()).decode()
             self._headers["X-Cybozu-Authorization"] = auth
         else:
-            raise ValueError("Provide api_token or username+password")
+            raise ValueError(
+                "Provide access_token, user_id (with stored OAuth token), "
+                "api_token, or username+password"
+            )
 
     def pull(self, path: str, *, limit: int = 100) -> list[ConnectorItem]:
         """`path` is "<app_id>" or "<app_id>?<query>".

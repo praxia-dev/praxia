@@ -164,10 +164,26 @@ KNOWN_KEYS: dict[str, tuple[str, bool]] = {
     "PRAXIA_OAUTH_GOOGLE_CLIENT_SECRET":      ("OAuth (Google)", True),
     "PRAXIA_OAUTH_SALESFORCE_CLIENT_ID":      ("OAuth (Salesforce)", False),
     "PRAXIA_OAUTH_SALESFORCE_CLIENT_SECRET":  ("OAuth (Salesforce)", True),
+    "PRAXIA_OAUTH_NOTION_CLIENT_ID":          ("OAuth (Notion)", False),
+    "PRAXIA_OAUTH_NOTION_CLIENT_SECRET":      ("OAuth (Notion)", True),
+    "PRAXIA_OAUTH_ATLASSIAN_CLIENT_ID":       ("OAuth (Atlassian)", False),
+    "PRAXIA_OAUTH_ATLASSIAN_CLIENT_SECRET":   ("OAuth (Atlassian)", True),
+    "PRAXIA_OAUTH_SLACK_CLIENT_ID":           ("OAuth (Slack)", False),
+    "PRAXIA_OAUTH_SLACK_CLIENT_SECRET":       ("OAuth (Slack)", True),
+    "PRAXIA_OAUTH_GITHUB_CLIENT_ID":          ("OAuth (GitHub)", False),
+    "PRAXIA_OAUTH_GITHUB_CLIENT_SECRET":      ("OAuth (GitHub)", True),
+    "PRAXIA_OAUTH_HUBSPOT_CLIENT_ID":         ("OAuth (HubSpot)", False),
+    "PRAXIA_OAUTH_HUBSPOT_CLIENT_SECRET":     ("OAuth (HubSpot)", True),
+    "PRAXIA_OAUTH_LINEAR_CLIENT_ID":          ("OAuth (Linear)", False),
+    "PRAXIA_OAUTH_LINEAR_CLIENT_SECRET":      ("OAuth (Linear)", True),
     # Per-tenant URL placeholders — required by some providers (e.g. Zendesk subdomain)
     "PRAXIA_OAUTH_ZENDESK_CLIENT_ID":         ("OAuth (Zendesk)", False),
     "PRAXIA_OAUTH_ZENDESK_CLIENT_SECRET":     ("OAuth (Zendesk)", True),
     "PRAXIA_OAUTH_ZENDESK_SUBDOMAIN":         ("OAuth (Zendesk)", False),
+    # Cybozu kintone — like Zendesk, the endpoints embed the tenant subdomain
+    "PRAXIA_OAUTH_KINTONE_CLIENT_ID":         ("OAuth (kintone)", False),
+    "PRAXIA_OAUTH_KINTONE_CLIENT_SECRET":     ("OAuth (kintone)", True),
+    "PRAXIA_OAUTH_KINTONE_SUBDOMAIN":         ("OAuth (kintone)", False),
 
     # MCP HTTP transport
     "PRAXIA_MCP_TOKEN":               ("MCP", True),
