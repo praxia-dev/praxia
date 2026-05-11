@@ -1485,26 +1485,45 @@ _LIGHT_THEME_CSS = """
      `theme.primaryColor` (default #FF4B4B). Override to gold tint so
      none of them paint a dark/red filled block on the ivory canvas. */
 
-  /* Checkbox — base square */
+  /* Checkbox — base square (unchecked) */
   [data-testid="stCheckbox"] label > span:first-child,
   [data-baseweb="checkbox"] > div:first-child,
   [data-baseweb="checkbox"] > span:first-child {
     background-color: #ffffff !important;
-    border: 1px solid #cdc9bb !important;
+    border: 1.5px solid #cdc9bb !important;
   }
-  /* Checkbox — checked state: white interior + gold border + gold tick */
+  /* Checked: filled gold square + white tick. Filled (not white) gives
+     the clear visual the user needs ("うすすぎて見えない" with white
+     interior + gold ✓). Conventional checkbox look. */
   [data-testid="stCheckbox"] label > span[aria-checked="true"],
   [data-testid="stCheckbox"] [aria-checked="true"] > div:first-child,
   [data-baseweb="checkbox"][aria-checked="true"] > div:first-child,
   [data-baseweb="checkbox"] input:checked ~ div:first-child,
   [data-baseweb="checkbox"] input:checked ~ span:first-child {
-    background-color: #ffffff !important;
-    border-color: var(--accent-gold) !important;
+    background-color: var(--accent-gold) !important;
+    border: 1.5px solid var(--accent-gold) !important;
   }
-  [data-baseweb="checkbox"] svg,
-  [data-testid="stCheckbox"] svg {
-    color: var(--accent-gold) !important;
-    fill: var(--accent-gold) !important;
+  /* Tick mark — white on the gold fill, bold stroke for clear visibility */
+  [data-testid="stCheckbox"] [aria-checked="true"] svg,
+  [data-baseweb="checkbox"][aria-checked="true"] svg,
+  [data-baseweb="checkbox"] input:checked ~ div svg,
+  [data-baseweb="checkbox"] input:checked ~ span svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+    stroke-width: 3 !important;
+  }
+  [data-testid="stCheckbox"] [aria-checked="true"] svg path,
+  [data-baseweb="checkbox"][aria-checked="true"] svg path {
+    stroke: #ffffff !important;
+    fill: #ffffff !important;
+    stroke-width: 3 !important;
+  }
+  /* Hide the unchecked ghost tick (some BaseWeb versions render a faint ✓) */
+  [data-testid="stCheckbox"] [aria-checked="false"] svg,
+  [data-baseweb="checkbox"][aria-checked="false"] svg,
+  [data-baseweb="checkbox"]:not([aria-checked="true"]) > div:first-child svg {
+    opacity: 0 !important;
   }
 
   /* === Radio — full light-mode coverage ===
@@ -1568,7 +1587,7 @@ _LIGHT_THEME_CSS = """
     background-color: var(--accent-gold) !important;
   }
 
-  /* Slider — track & thumb */
+  /* Slider — thumb (the draggable handle) */
   [data-baseweb="slider"] [role="slider"],
   [data-baseweb="slider"] [data-baseweb="thumb"] {
     background-color: #ffffff !important;
@@ -1578,8 +1597,37 @@ _LIGHT_THEME_CSS = """
   [data-baseweb="slider"] [data-testid="stTickBarMin"] {
     color: var(--text-secondary) !important;
   }
-  [data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child > div:first-child {
+  /* Slider track — unfilled (full-width gray) + filled (gold up to thumb).
+     BaseWeb's DOM has varied across versions: the filled portion has been
+     the 1st, 2nd, or last sibling of [role="presentation"]. Rather than
+     guess sibling-index, target any inline-styled background-color div
+     inside the slider — that's how BaseWeb paints the fill width — and
+     re-paint it gold. Then explicitly style the track wrappers. */
+  [data-testid="stSlider"] [data-baseweb="slider"] div[style*="background-color"],
+  [data-testid="stSlider"] [data-baseweb="slider"] div[style*="background:"] {
     background-color: var(--accent-gold) !important;
+    background: var(--accent-gold) !important;
+  }
+  /* The thumb is itself styled with an inline bg-color via BaseWeb on
+     some versions — but we want it white. Restore the thumb override. */
+  [data-testid="stSlider"] [data-baseweb="slider"] [role="slider"][style*="background"],
+  [data-testid="stSlider"] [data-baseweb="slider"] [data-baseweb="thumb"][style*="background"] {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+  }
+  /* Track base (the gray full-width line) — first non-thumb child of the
+     presentation wrapper. We force a clear ivory-grey so the gold fill
+     reads against it. */
+  [data-testid="stSlider"] [data-baseweb="slider"] [role="presentation"] > div:first-child:not([role="slider"]) {
+    background-color: var(--card-border-strong) !important;
+  }
+  /* Current-value floating label above the thumb */
+  [data-testid="stSlider"] [data-testid="stThumbValue"],
+  [data-testid="stSlider"] [data-baseweb="slider"] [data-testid="stThumbValue"] {
+    background-color: var(--accent-gold) !important;
+    color: #ffffff !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
   }
 
   /* Progress bar */
@@ -4876,7 +4924,7 @@ elif mode == "admin":
         dry_run = st.checkbox(t("consolidate.dry_run"), value=True)
         if st.button(t("consolidate.run"), type="primary"):
             loom.config.consolidation_threshold = threshold
-            with st.spinner("Consolidating…"):
+            with st.spinner(t("consolidate.running")):
                 report = loom.consolidate(dry_run=dry_run)
             st.json(report)
 

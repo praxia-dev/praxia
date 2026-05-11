@@ -30,6 +30,7 @@
 | HubSpot | `HUBSPOT_OAUTH` | `crm.objects.contacts.* crm.objects.companies.read crm.objects.deals.*` | <https://developers.hubspot.com/> |
 | Zendesk | `ZENDESK_OAUTH` | `read write` | `<your-subdomain>.zendesk.com/admin/.../oauth_clients` |
 | Linear | `LINEAR_OAUTH` | `read write` | <https://linear.app/settings/api> |
+| kintone | `KINTONE_OAUTH` | `k:app_record:read k:app_record:write k:app_settings:read k:file:read k:file:write` | `<your-tenant>.cybozu.com` → cybozu.com共通管理 → OAuth クライアント |
 
 ---
 
@@ -318,6 +319,27 @@ read write
 4. `PRAXIA_OAUTH_LINEAR_CLIENT_ID` / `PRAXIA_OAUTH_LINEAR_CLIENT_SECRET`
 
 > Linear は OAuth 不要の個人 API key も受け付ける — シングルユーザ / スクリプト用途は connector に `api_key=...`。
+
+---
+
+## 13. kintone (`kintone`)
+
+**既定:**
+```
+k:app_record:read k:app_record:write k:app_settings:read k:file:read k:file:write
+```
+
+**注:** kintone のスコープはリソース別: `k:app_record:read|write` がレコード CRUD、`k:app_settings:read|write` がアプリ設定、`k:file:read|write` が添付ファイル。Praxia にアプリ設定変更を許可しない場合は `k:app_settings:write` を外す。
+
+**テナント別 URL:** kintone OAuth エンドポイントはテナントのサブドメインを埋め込みます。環境変数 `PRAXIA_OAUTH_KINTONE_SUBDOMAIN` に自社テナント(例: `acme` ⇒ `acme.cybozu.com`)を設定。flow が `https://acme.cybozu.com/oauth2/authorization` / `/token` に解決します。
+
+**アプリ登録:**
+1. cybozu.com 管理者 → 「cybozu.com 共通管理」→ OAuth クライアント → 「追加する」
+2. Redirect URL: `https://praxia.example.com/api/v1/oauth/kintone/callback`
+3. スコープにチェック: `k:app_record:read`, `k:app_record:write`, `k:app_settings:read`, `k:file:read`, `k:file:write` (Praxia にアプリ設定変更を許可しないなら `k:app_settings:write` は外す)
+4. `PRAXIA_OAUTH_KINTONE_CLIENT_ID` / `PRAXIA_OAUTH_KINTONE_CLIENT_SECRET` / `PRAXIA_OAUTH_KINTONE_SUBDOMAIN`
+
+> kintone は静的な `X-Cybozu-API-Token` (アプリ単位、ユーザ単位ではない) や HTTP Basic 認証 (`username`+`password`) も受け付けますが、新規導入は OAuth を推奨 — 各 Praxia ユーザは kintone 側で自分のアカウントに許可されたレコードのみアクセスできます。
 
 ---
 

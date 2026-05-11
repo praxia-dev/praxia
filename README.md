@@ -394,7 +394,9 @@ praxia connector pull box 0 --user-id alice
 # alice can only see Box folders alice has access to
 ```
 
-Supported providers: Box, Microsoft (SharePoint/OneDrive), Dropbox, Google Drive, Salesforce. Tokens auto-refresh; access logged in audit log.
+Supported providers (13): **Box**, **Microsoft** (SharePoint/OneDrive/Teams), **Dropbox**, **Google Drive**, **Salesforce**, **Notion**, **Atlassian** (Confluence+Jira), **Slack**, **GitHub**, **HubSpot**, **Zendesk**, **Linear**, **kintone**. Tokens auto-refresh; access logged in audit log.
+
+**End-user UI**: each user manages their own connections under **個人設定 → 外部サービス連携** (Preferences → Service Connections) in the Streamlit UI — one row per provider with status (Connected / Not connected / Expired), Connect button (opens IdP login) and Disconnect button (revokes + clears local token).
 
 **Production HTTP callback** (`praxia serve`): four endpoints under `/api/v1/oauth/{provider}/`: `start`, `callback`, `status`, `revoke` (DELETE). State cache is multi-worker-safe (`PersistentStateStore` — TTL-pruned JSON), so the IdP redirect can land on any FastAPI worker. Set `PRAXIA_PUBLIC_URL` to pin the redirect URI.
 
@@ -486,7 +488,7 @@ Built-in rubrics: keyword match, structure (heading) match, length band, must-no
 
 | Connector | Pull | Push | Auth |
 |---|---|---|---|
-| **kintone** | ✅ | ✅ | API token |
+| **kintone** | ✅ | ✅ | OAuth / API token |
 | **Salesforce** | ✅ SOQL | ✅ sObject create | OAuth |
 | **HubSpot CRM** | ✅ contacts/companies/deals | ✅ note attach | OAuth |
 | **Zendesk** | ✅ ticket search | ✅ create ticket | OAuth or API token |

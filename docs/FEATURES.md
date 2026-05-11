@@ -76,12 +76,12 @@ Everything Praxia ships, organized for evaluators, integrators, and adopters.
 | Resource access policies (ACL) | ✅ | Glob-pattern allow/deny rules per resource type, principal, action — built for IS depts |
 | Admin user CRUD | ✅ | Create / read / update / delete / deactivate / rotate keys |
 | Admin data exports | ✅ | CSV / JSON / JSONL exports of audit, users, usage, memory, policies |
-| External connectors (Pull + Push) | ✅ | Box, SharePoint, Dropbox, Google Drive, kintone, Salesforce |
+| External connectors (Pull + Push) | ✅ | Box, SharePoint/OneDrive/Teams, Dropbox, Google Drive, kintone (OAuth), Salesforce, Notion, Confluence, Jira, Slack, HubSpot, Zendesk, GitHub, Linear, S3, GCS, Azure Blob, WebDAV, Email |
 | Custom prompts (per-user + admin distribute) | ✅ | Personal / org / distributed scopes with role targeting |
 | Personal & organizational dashboards | ✅ | Flow/skill counts, success rate, top users, promoted blocks |
 | File parsing (PDF / Word / PPT / Excel / CSV / HTML) | ✅ | Auto-dispatch parser by extension; pluggable via entry points |
 | Voice input / output (STT + TTS) | ✅ | OpenAI Whisper / TTS by default; ElevenLabs / local Whisper / Piper supported |
-| User-delegated OAuth (per-user connector auth) | ✅ | Box / Microsoft / Dropbox / Google / Salesforce — external ACL enforced per Praxia user |
+| User-delegated OAuth (per-user connector auth) | ✅ | Box / Microsoft / Dropbox / Google / Salesforce / Notion / Atlassian / Slack / GitHub / HubSpot / Zendesk / Linear / kintone — external ACL enforced per Praxia user. Self-service UI under Preferences → Service Connections. |
 | Legal templates (Terms / Privacy / AUP / Cookies) | ✅ | Starter templates in docs/legal/ for portal sign-up + commercial use |
 | Default Streamlit UI | ✅ | 5-tab dashboard for non-technical users |
 | MCP / Claude Skills compatibility | ✅ | Skills serialize to standard `SKILL.md` format |
@@ -1059,7 +1059,7 @@ Six built-in connectors with bi-directional **Pull** + **Push**:
 | **SharePoint / M365** | drive folder → files | upload to folder | Microsoft Entra ID app | `praxia[sharepoint]` |
 | **Dropbox** | folder → files | upload to folder | OAuth2 access token | `praxia[dropbox]` |
 | **Google Drive** | parent folder → files | upload to folder | Service account / OAuth | `praxia[gdrive]` |
-| **kintone** | app + query → records | create record | API token / basic auth | `praxia[kintone]` |
+| **kintone** | app + query → records | create record | OAuth 2.0 / API token / basic auth | `praxia[kintone]` |
 | **Salesforce** | SOQL → records | sObject create | Username/token / OAuth | `praxia[salesforce]` |
 
 ```bash
@@ -1185,15 +1185,25 @@ credentials**. The external system's native ACL is enforced per-user —
 alice can only see Box folders alice has access to, even on the same
 shared Praxia install as bob.
 
-Supported providers (5):
+Supported providers (13):
 
 | Provider | Scopes |
 |---|---|
 | Box | `root_readwrite` |
-| Microsoft (SharePoint / OneDrive) | `Files.ReadWrite.All`, `Sites.ReadWrite.All` |
+| Microsoft (SharePoint / OneDrive / Teams) | `Files.ReadWrite.All`, `Sites.ReadWrite.All` (+Teams scopes) |
 | Dropbox | `files.metadata.read`, `files.content.{read,write}` |
 | Google Drive | `https://www.googleapis.com/auth/drive` |
 | Salesforce | `api`, `refresh_token`, `offline_access` |
+| Notion | workspace-level grant |
+| Atlassian (Confluence + Jira) | `read:confluence-content.*`, `write:confluence-content`, `read:jira-work`, `write:jira-work`, `offline_access` |
+| Slack | `channels:*`, `groups:*`, `files:*`, `chat:write`, `users:read`, `search:read` |
+| GitHub | `repo`, `read:org`, `read:user` |
+| HubSpot | `crm.objects.{contacts,companies,deals}.*` |
+| Zendesk | `read`, `write` (per-subdomain) |
+| Linear | `read`, `write` |
+| kintone (Cybozu) | `k:app_record:{read,write}`, `k:app_settings:read`, `k:file:{read,write}` (per-subdomain) |
+
+**End-user UI**: each user manages their own connections via **Preferences → Service Connections** (`個人設定 → 外部サービス連携`) in the Streamlit UI — one row per provider with status badge (Connected / Not connected / Expired), Connect button (opens IdP login) and Disconnect button (revokes locally + clears token).
 
 Setup:
 
