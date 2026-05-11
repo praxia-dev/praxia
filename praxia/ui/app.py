@@ -1541,45 +1541,69 @@ _LIGHT_THEME_CSS = """
      `theme.primaryColor` (default #FF4B4B). Override to gold tint so
      none of them paint a dark/red filled block on the ivory canvas. */
 
-  /* Checkbox — base square (unchecked) */
-  [data-testid="stCheckbox"] label > span:first-child,
-  [data-baseweb="checkbox"] > div:first-child,
-  [data-baseweb="checkbox"] > span:first-child {
+  /* === Checkbox — direct native input styling ===
+     Previous attempts to style BaseWeb's wrapper spans failed because
+     `:first-child` after `~` (sibling combinator) doesn't match — in
+     <label><input/><div/></label>, the div isn't :first-child since the
+     input is. Switch strategy: style the underlying <input type=checkbox>
+     itself via appearance:none, and hide BaseWeb's visual wrapper. The
+     native input is always present and reliable across BaseWeb versions. */
+
+  /* Hide BaseWeb's own visual checkbox + its SVG check.
+     We render our own visual via the styled <input>. */
+  [data-testid="stCheckbox"] [data-baseweb="checkbox"] > span:first-child,
+  [data-testid="stCheckbox"] [data-baseweb="checkbox"] > div:first-child,
+  [data-testid="stCheckbox"] svg,
+  [data-baseweb="checkbox"] svg {
+    display: none !important;
+  }
+
+  /* Reveal + restyle the underlying native input. BaseWeb hides it
+     (opacity:0 + absolute-position) for accessibility — we make it
+     visible AND keep it accessible by sizing it like a regular box. */
+  [data-testid="stCheckbox"] input[type="checkbox"],
+  [data-baseweb="checkbox"] input[type="checkbox"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    position: relative !important;
+    opacity: 1 !important;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
     background-color: #ffffff !important;
-    border: 1.5px solid #cdc9bb !important;
+    border: 2px solid #b8b3a3 !important;
+    border-radius: 3px !important;
+    margin: 0 0.4rem 0 0 !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    vertical-align: middle !important;
+    flex-shrink: 0 !important;
+    /* Prevent BaseWeb's absolute positioning from hiding the input */
+    left: auto !important;
+    top: auto !important;
+    pointer-events: auto !important;
   }
-  /* Checked: filled gold square + white tick. Filled (not white) gives
-     the clear visual the user needs ("うすすぎて見えない" with white
-     interior + gold ✓). Conventional checkbox look. */
-  [data-testid="stCheckbox"] label > span[aria-checked="true"],
-  [data-testid="stCheckbox"] [aria-checked="true"] > div:first-child,
-  [data-baseweb="checkbox"][aria-checked="true"] > div:first-child,
-  [data-baseweb="checkbox"] input:checked ~ div:first-child,
-  [data-baseweb="checkbox"] input:checked ~ span:first-child {
-    background-color: var(--accent-gold) !important;
-    border: 1.5px solid var(--accent-gold) !important;
+
+  /* Checked: solid gold + clear white ✓ via background-image */
+  [data-testid="stCheckbox"] input[type="checkbox"]:checked,
+  [data-baseweb="checkbox"] input[type="checkbox"]:checked {
+    background-color: #a8843e !important;
+    border-color: #a8843e !important;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><polyline points='5 12 10 17 19 7'/></svg>") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 80% 80% !important;
   }
-  /* Tick mark — white on the gold fill, bold stroke for clear visibility */
-  [data-testid="stCheckbox"] [aria-checked="true"] svg,
-  [data-baseweb="checkbox"][aria-checked="true"] svg,
-  [data-baseweb="checkbox"] input:checked ~ div svg,
-  [data-baseweb="checkbox"] input:checked ~ span svg {
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-    stroke-width: 3 !important;
+  [data-testid="stCheckbox"] input[type="checkbox"]:hover,
+  [data-baseweb="checkbox"] input[type="checkbox"]:hover {
+    border-color: #a8843e !important;
   }
-  [data-testid="stCheckbox"] [aria-checked="true"] svg path,
-  [data-baseweb="checkbox"][aria-checked="true"] svg path {
-    stroke: #ffffff !important;
-    fill: #ffffff !important;
-    stroke-width: 3 !important;
-  }
-  /* Hide the unchecked ghost tick (some BaseWeb versions render a faint ✓) */
-  [data-testid="stCheckbox"] [aria-checked="false"] svg,
-  [data-baseweb="checkbox"][aria-checked="false"] svg,
-  [data-baseweb="checkbox"]:not([aria-checked="true"]) > div:first-child svg {
-    opacity: 0 !important;
+  [data-testid="stCheckbox"] input[type="checkbox"]:focus,
+  [data-baseweb="checkbox"] input[type="checkbox"]:focus {
+    outline: 2px solid rgba(168,132,62,0.35) !important;
+    outline-offset: 1px !important;
   }
 
   /* === Radio — full light-mode coverage ===
