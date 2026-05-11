@@ -1364,33 +1364,89 @@ _LIGHT_THEME_CSS = """
     border-radius: 10px !important;
     box-shadow: 0 6px 18px rgba(0,0,0,0.10) !important;
   }
-  /* Option default state — critical: without this, OS dark-mode +
-     "light" app theme would render BaseWeb's default dark on dark. */
+  /* === Dropdown option states — base / hover / highlighted / selected ===
+     The user reported the hover band reads as "almost black" — this
+     means a BaseWeb inner wrapper is painting an opaque dark fill that
+     a half-transparent gold rgba() cannot mask. Fix: use SOLID colors
+     and force every descendant to a transparent background AND a
+     readable text color. Solid gold #a8843e + white text gives the
+     same look regardless of whatever inner div BaseWeb stacks on top. */
+
+  /* Base (not hovered, not selected) */
   [role="option"],
   [data-baseweb="menu"] li,
   li[role="option"] {
     background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #1a1c20 !important;
   }
   [role="option"] *,
   [data-baseweb="menu"] li *,
-  li[role="option"] * { color: #1a1c20 !important; }
+  li[role="option"] * {
+    background-color: transparent !important;
+    background: transparent !important;
+    color: #1a1c20 !important;
+  }
+
+  /* Mouse-hovered or keyboard-highlighted option. SOLID gold + white text.
+     White text is readable on either gold (intended) or dark (fallback
+     if BaseWeb still wins the bg fight on some version). */
   [role="option"]:hover,
+  [role="option"][aria-highlighted="true"],
+  [role="option"][data-highlighted="true"],
   [data-baseweb="menu"] li:hover,
+  [data-baseweb="menu"] li[aria-highlighted="true"],
   li[role="option"]:hover {
-    background-color: rgba(168,132,62,0.10) !important;
-    color: #7a5e28 !important;
+    background-color: #a8843e !important;
+    background: #a8843e !important;
+    color: #ffffff !important;
   }
   [role="option"]:hover *,
+  [role="option"][aria-highlighted="true"] *,
+  [role="option"][data-highlighted="true"] *,
   [data-baseweb="menu"] li:hover *,
-  li[role="option"]:hover * { color: #7a5e28 !important; }
-  [role="option"][aria-selected="true"],
-  li[role="option"][aria-selected="true"] {
-    background-color: rgba(168,132,62,0.18) !important;
-    color: #7a5e28 !important;
+  [data-baseweb="menu"] li[aria-highlighted="true"] *,
+  li[role="option"]:hover * {
+    background-color: transparent !important;
+    background: transparent !important;
+    color: #ffffff !important;
+    fill: #ffffff !important;
   }
-  [role="option"][aria-selected="true"] *,
-  li[role="option"][aria-selected="true"] * { color: #7a5e28 !important; }
+
+  /* Already-selected option (the chosen value when the dropdown re-opens).
+     Use a lighter gold tint (solid, not rgba) with dark text — keeps it
+     visually distinct from the hover state but still readable. */
+  [role="option"][aria-selected="true"]:not(:hover):not([aria-highlighted="true"]),
+  li[role="option"][aria-selected="true"]:not(:hover):not([aria-highlighted="true"]) {
+    background-color: #f0e4c4 !important;
+    background: #f0e4c4 !important;
+    color: #1a1c20 !important;
+    font-weight: 600 !important;
+  }
+  [role="option"][aria-selected="true"]:not(:hover):not([aria-highlighted="true"]) *,
+  li[role="option"][aria-selected="true"]:not(:hover):not([aria-highlighted="true"]) * {
+    background-color: transparent !important;
+    background: transparent !important;
+    color: #1a1c20 !important;
+  }
+
+  /* Selected AND currently-hovered — full solid gold + white (same as hover) */
+  [role="option"][aria-selected="true"]:hover,
+  [role="option"][aria-selected="true"][aria-highlighted="true"],
+  li[role="option"][aria-selected="true"]:hover {
+    background-color: #8c6f30 !important;  /* darker gold to distinguish from plain hover */
+    background: #8c6f30 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+  }
+  [role="option"][aria-selected="true"]:hover *,
+  [role="option"][aria-selected="true"][aria-highlighted="true"] *,
+  li[role="option"][aria-selected="true"]:hover * {
+    background-color: transparent !important;
+    background: transparent !important;
+    color: #ffffff !important;
+    fill: #ffffff !important;
+  }
 
   /* Selectbox closed-state value text + dropdown caret */
   [data-testid="stSelectbox"] div[role="combobox"],
