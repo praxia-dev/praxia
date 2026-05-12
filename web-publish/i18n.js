@@ -185,6 +185,16 @@
       de: "Loslegen",
       "pt-BR": "Começar",
     },
+    "hero.video.full": {
+      en: "Watch the full version on YouTube (60s)",
+      ja: "YouTube でフル版を見る (60秒)",
+      "zh-CN": "在 YouTube 上观看完整版 (60秒)",
+      ko: "YouTube에서 전체 영상 보기 (60초)",
+      es: "Ver la versión completa en YouTube (60s)",
+      fr: "Voir la version complète sur YouTube (60s)",
+      de: "Vollversion auf YouTube ansehen (60s)",
+      "pt-BR": "Assistir versão completa no YouTube (60s)",
+    },
     "hero.cta_star": {
       en: "★ Star on GitHub",
       ja: "★ GitHub で Star",
