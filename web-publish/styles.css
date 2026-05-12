@@ -1381,23 +1381,31 @@ pre .str     { color: var(--accent-bright); }
   }
 }
 
-/* ===== Hero video (Praxia 60-second walkthrough) ===== */
+/* ===== Hero video (Praxia 60-second walkthrough) =====
+   Sized to slot between hero-sub (720px) and hero-cta without
+   blowing out the layout. The video is 16:9 (1920×1080 source). */
 .hero-video-wrap {
-  max-width: 900px;
-  margin: 2rem auto 1.5rem auto;
+  max-width: 640px;
+  width: 100%;
+  margin: 1.75rem auto 1.25rem auto;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   background: #0a0a0f;
+  box-sizing: border-box;
 }
 .hero-video {
   width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
   display: block;
+  object-fit: cover;
 }
 .hero-video-cta {
   text-align: center;
-  margin: 0.6rem 0 0 0;
-  font-size: 0.92rem;
+  margin: 0.55rem 0 0 0;
+  padding: 0 0.5rem;
+  font-size: 0.88rem;
   color: rgba(168, 172, 184, 0.9);
 }
 .hero-video-cta a {
@@ -1408,6 +1416,23 @@ pre .str     { color: var(--accent-bright); }
   text-decoration: underline;
   color: #e9c378;
 }
-@media (max-width: 768px) {
-  .hero-video-wrap { border-radius: 8px; margin: 1rem 0; }
+
+/* Tablet — shrink margins, keep ratio */
+@media (max-width: 900px) {
+  .hero-video-wrap {
+    max-width: 92%;
+    margin: 1.25rem auto 1rem auto;
+    border-radius: 10px;
+  }
+}
+
+/* Mobile — full-width with edge padding via .hero */
+@media (max-width: 600px) {
+  .hero-video-wrap {
+    max-width: 100%;
+    margin: 1rem 0 0.75rem 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  }
+  .hero-video-cta { font-size: 0.82rem; }
 }
