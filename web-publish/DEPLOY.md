@@ -154,15 +154,48 @@ To disable GitHub Pages: `Settings → Pages → Source: None`.
 
 ---
 
-## G. Analytics (optional)
+## G. Analytics
 
-For privacy-friendly analytics on the Cloudflare mirror, add Cloudflare Web Analytics (free, no cookies):
+### Currently configured — Google Analytics 4 (opt-in gated)
 
-1. Dashboard → Analytics & Logs → Web Analytics → Add a site
-2. Copy the snippet
-3. Paste into `index.html` just before `</body>`
+`web-publish/analytics.js` loads GA4 only after the visitor opts into "Analytics" in the consent banner. Privacy posture:
 
-Or use a self-hosted analytics solution (Plausible, Umami) if you want full data sovereignty.
+- `gtag.js` is **not loaded on initial page render**
+- IP anonymization on (`anonymize_ip: true`)
+- Cookies hardened: `SameSite=Lax;Secure`
+- Visitor can revoke at any time via the "Cookie preferences" link in the footer (handled by `consent.js`)
+
+**Tracked events**:
+- Standard page views
+- `click_github` — outbound clicks to `github.com/praxia-dev/*`
+- `click_youtube` — outbound clicks to the demo video / YouTube channel
+- `click_x` — outbound clicks to the X / Twitter account
+
+**Measurement ID**: stored in `web-publish/analytics.js` as `GA_ID`. To rotate, edit that constant and redeploy. Both Cloudflare and GitHub Pages mirrors pick up the change automatically.
+
+**Where to see the data**:
+- Real-time: <https://analytics.google.com/> → property `praxia.tools` → Reports → Realtime
+- Acquisition: Reports → Life cycle → Acquisition (referrer / source / medium)
+- Engagement: Reports → Life cycle → Engagement → Events (filter by `click_github` etc.)
+
+### GitHub repo metrics (parallel signal, not GA)
+
+GA cannot run inside github.com README pages. For repository-side metrics use **GitHub Insights**:
+
+- Repo → Insights → **Traffic**: clones + visitors (14-day rolling window — bookmark the page or weekly screenshot if longer history matters)
+- Repo → Insights → **Referrers**: shows `praxia.tools` and other sites that link in
+- Repo → **Star history**: <https://star-history.com/#praxia-dev/praxia>
+
+Together they give the full picture: GA on praxia.tools shows the funnel TOP, GitHub Insights shows what happened after they click through.
+
+### Alternative analytics (not currently wired)
+
+If you ever want to swap or supplement:
+
+- **Cloudflare Web Analytics** — free, no cookies, no opt-in needed. Dashboard → Analytics & Logs → Web Analytics → copy snippet → paste in `index.html`.
+- **Plausible / Umami** — self-hostable, GDPR-friendly. Same drop-in script pattern.
+
+To disable GA entirely: delete the `<script src="analytics.js">` line in `index.html` + `portal/index.html`.
 
 ---
 
