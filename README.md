@@ -570,6 +570,10 @@ praxia config path      # show key resolution order
 
 # 3. Initialize
 praxia init --backend json --model auto
+# ↑ also bootstraps an `admin` user and writes its API key (one-time only)
+#   to `.praxia/auth/BOOTSTRAP_API_KEY.txt`. Save it somewhere safe and
+#   delete the file. Lost it? `rm -rf .praxia/auth && praxia init` issues
+#   a fresh key. See docs/quickstart.md § 3a for the full first-login flow.
 
 # 4. Run a flow (auto-parses .pdf / .docx / .xlsx / .pptx if attached)
 praxia run sales --customer-name "Acme" --product "BizFlow"

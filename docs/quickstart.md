@@ -87,6 +87,53 @@ praxia init --user-id alice --backend json --model auto
 This creates `.praxia/` with personal memory storage, registers the 6 default
 business skills with the org registry, and bootstraps an admin user.
 
+## 3a. First login (read this once)
+
+`praxia init` creates a single admin user named `admin` and writes its API
+key to a one-time file:
+
+```
+.praxia/auth/BOOTSTRAP_API_KEY.txt
+```
+
+That file is the **only place** the raw key is ever stored. The
+`users.jsonl` next to it only keeps the SHA-256 hash. What to do on first
+install:
+
+1. Open the file, copy the API key (`r19Kf88…` 43-character string).
+2. Save it somewhere safe (password manager / secret store).
+3. Delete `BOOTSTRAP_API_KEY.txt` — leaving it on disk is a credential
+   leak.
+
+### Logging in
+
+| Scenario | What you enter on the `praxia ui` login screen |
+|---|---|
+| **Single-user dev** (`.praxia/auth/users.jsonl` empty / not present) | any User ID — instant pass-through, all features unlocked |
+| **You ran `praxia init`** (the bootstrap admin is the only user) | User ID: `admin` · Password: the API key from `BOOTSTRAP_API_KEY.txt` |
+| **Multi-user prod** (admin has created more users via `praxia user create alice …` or the Admin → Users tab) | User ID: that username · Password: API key issued when the user was created (shown once, then hashed) |
+| **SSO** (`PRAXIA_SSO_PROVIDER` set) | "Sign in with \<provider\>" button above the API-key form |
+
+### Adding more users
+
+After logging in as `admin`:
+
+- **UI**: Admin → Users → Create — fill username / role / email → success
+  toast shows the new user's API key once, copy it then dismiss.
+- **CLI**: `praxia user create alice --role member` — prints the key to
+  stdout, same one-shot rule.
+
+### Lost the bootstrap key?
+
+```bash
+rm -rf .praxia/auth        # wipe the auth store
+praxia init                # re-bootstraps a fresh admin + new key
+```
+
+This is destructive (deletes every existing user record), so do it only
+for a brand-new install. For production, use `praxia user rotate-key
+<user>` instead.
+
 ## 4. Run a flow
 
 Three pre-built multi-agent flows ship with Praxia:

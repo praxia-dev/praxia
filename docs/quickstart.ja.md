@@ -85,6 +85,45 @@ praxia init --user-id alice --backend json --model auto
 
 `.praxia/` ディレクトリに個人メモリ・スキルレジストリ・admin ユーザが作成されます。
 
+## 3a. 初回ログイン (一度だけ読む)
+
+`praxia init` は **`admin` ユーザ 1 件 + ランダム API キー** を作成し、その平文を**一度だけ**以下のファイルに書き出します:
+
+```
+.praxia/auth/BOOTSTRAP_API_KEY.txt
+```
+
+`users.jsonl` (同ディレクトリ) には SHA-256 ハッシュしか残らないので、生の API キーが手元に残るのはこのファイルだけです。**初回インストール直後にやること**:
+
+1. ファイルを開いて API キー(43 文字の `r19Kf88…` のような文字列)をコピー
+2. パスワードマネージャ等の安全な場所に保管
+3. **`BOOTSTRAP_API_KEY.txt` を削除** — ディスクに残すと資格情報漏洩
+
+### ログイン方法
+
+| 状況 | `praxia ui` ログイン画面に入れる値 |
+|------|---|
+| **単一ユーザ開発モード** (`.praxia/auth/users.jsonl` 未生成 / 空) | 任意の User ID → 即パススルー、全機能アクセス可 |
+| **`praxia init` 実行直後** (bootstrap admin のみ) | User ID: `admin` · Password: `BOOTSTRAP_API_KEY.txt` に書かれた API キー |
+| **複数ユーザモード** (admin が `praxia user create alice …` または UI で追加した後) | User ID: そのユーザ名 · Password: 作成時に発行された API キー(発行は 1 回限り、その後はハッシュのみ保存) |
+| **SSO モード** (`PRAXIA_SSO_PROVIDER` 設定済) | API キー欄の上に表示される「**Sign in with \<プロバイダ\>**」ボタンから |
+
+### ユーザ追加
+
+admin としてログイン後:
+
+- **UI**: 管理 → ユーザ → 新規作成 → ユーザ名・ロール・メールを入力 → 成功トーストに **新しい API キーが 1 回だけ表示** されるのでコピーして安全に保管
+- **CLI**: `praxia user create alice --role member` → 同じく標準出力に 1 回だけキー表示
+
+### bootstrap キーを失くした場合
+
+```bash
+rm -rf .praxia/auth        # 認証ストアごと削除
+praxia init                # 新しい admin + 新しい API キーを再発行
+```
+
+これは破壊的(既存ユーザ全消去)です。新規インストール直後のみ使用してください。本番運用中は `praxia user rotate-key <username>` で個別に再発行してください。
+
 ## 4. フロー実行
 
 3 つの組み込みマルチエージェント・フロー:
