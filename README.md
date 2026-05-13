@@ -1,4 +1,6 @@
 # Praxia
+[![PyPI](https://img.shields.io/pypi/v/praxia.svg)](https://pypi.org/project/praxia/)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/praxia.svg)](https://pypi.org/project/praxia/)
 [![tests](https://github.com/praxia-dev/praxia/actions/workflows/test.yml/badge.svg)](https://github.com/praxia-dev/praxia/actions/workflows/test.yml)
 [![Follow on X](https://img.shields.io/twitter/follow/praxia_dev?style=social)](https://x.com/praxia_dev)
 
