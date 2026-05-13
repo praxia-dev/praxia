@@ -8,9 +8,9 @@
 
 ![Praxia hero](docs/images/hero-banner.svg)
 
-[![Praxia — 60-second walkthrough](docs/images/demo-thumb.png)](https://youtu.be/Al7N9SpOPZY "▶ Click to watch (60s)")
+[![Praxia — 60-second walkthrough](docs/images/demo-thumb.png)](https://youtu.be/o_6NbjJU1AA "▶ Click to watch (60s)")
 
-<sub>📺 [Watch the 60-second walkthrough](https://youtu.be/Al7N9SpOPZY) · 🚀 [Quickstart](docs/quickstart.md) · 💬 [Discussions](https://github.com/praxia-dev/praxia/discussions)</sub>
+<sub>📺 [Watch the 60-second walkthrough](https://youtu.be/o_6NbjJU1AA) · 🚀 [Quickstart](docs/quickstart.md) · 💬 [Discussions](https://github.com/praxia-dev/praxia/discussions)</sub>
 
 > **Specialized Multi-Agent Orchestrator with Cyclic Personal/Organizational Memory**
 >
