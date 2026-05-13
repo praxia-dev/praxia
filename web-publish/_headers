@@ -9,7 +9,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: https://raw.githubusercontent.com https://tally.so; style-src 'self' 'unsafe-inline' https://tally.so; script-src 'self' 'unsafe-inline' https://tally.so; font-src 'self' https://tally.so; connect-src 'self' https://tally.so https://api.tally.so; frame-src 'self' https://tally.so
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https://raw.githubusercontent.com https://tally.so https://www.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net; style-src 'self' 'unsafe-inline' https://tally.so; script-src 'self' 'unsafe-inline' https://tally.so https://www.googletagmanager.com https://static.cloudflareinsights.com; font-src 'self' https://tally.so; connect-src 'self' https://tally.so https://api.tally.so https://www.google-analytics.com https://*.analytics.google.com https://*.g.doubleclick.net https://stats.g.doubleclick.net https://static.cloudflareinsights.com https://cloudflareinsights.com; frame-src 'self' https://tally.so; media-src 'self'
 
 # --- Aggressive caching for static assets (1 year, immutable) ---
 /*.svg

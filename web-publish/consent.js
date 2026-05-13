@@ -179,8 +179,10 @@
     }
   });
 
-  // Re-translate on language switch
-  document.addEventListener("praxia-lang-changed", () => {
-    if (window.praxiaApplyI18n) window.praxiaApplyI18n();
-  });
+  // NOTE: We intentionally do NOT listen for `praxia-lang-changed` to
+  // re-call praxiaApplyI18n(). The event is dispatched FROM inside
+  // applyLang() — calling applyLang() again from within its event
+  // handler causes infinite recursion (stack overflow → whole-page
+  // JS halt). applyLang() already walks the entire document including
+  // any open consent banner, so no extra hook is needed here.
 })();
