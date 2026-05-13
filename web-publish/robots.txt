@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
 
-# Sitemap (set canonical to whichever URL is primary)
+# Sitemaps — one per origin. praxia.tools/ is canonical; the
+# github.io/praxia/ mirror also serves the same content so we list its
+# sitemap too. Both are referenced here so each origin's robots.txt
+# (they share this file) advertises both.
 Sitemap: https://praxia.tools/sitemap.xml
+Sitemap: https://praxia-dev.github.io/praxia/sitemap-mirror.xml

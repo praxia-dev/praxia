@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sitemap for the GitHub Pages mirror.
+
+  praxia.tools and praxia-dev.github.io/praxia/ serve the same HTML, but
+  search engines treat them as separate origins. Each origin needs its
+  own sitemap so each can be indexed independently in Search Console.
+
+  praxia.tools/ is the canonical (set via <link rel="canonical"> in the
+  HTML head). Google will deduplicate, but this sitemap still helps the
+  mirror's pages get discovered + lets you track its traffic in GSC.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://praxia-dev.github.io/praxia/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://praxia-dev.github.io/praxia/portal/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

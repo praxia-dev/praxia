@@ -21,7 +21,9 @@
   <meta name="twitter:image" content="https://praxia.tools/images/brand/mark-square.svg" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪡%3C/text%3E%3C/svg%3E" />
   <link rel="canonical" href="https://praxia.tools/" />
-  <link rel="alternate" href="https://praxia-dev.github.io/praxia/" hreflang="en" />
+  <link rel="alternate" href="https://praxia.tools/" hreflang="x-default" />
+  <link rel="alternate" href="https://praxia.tools/" hreflang="en" />
+  <link rel="alternate" href="https://praxia-dev.github.io/praxia/" hreflang="en-x-mirror" />
   <link rel="alternate" href="https://praxia.tools/?lang=ja" hreflang="ja" />
   <link rel="alternate" href="https://praxia.tools/?lang=zh-CN" hreflang="zh-CN" />
   <link rel="alternate" href="https://praxia.tools/?lang=ko" hreflang="ko" />
@@ -29,6 +31,49 @@
   <link rel="alternate" href="https://praxia.tools/?lang=fr" hreflang="fr" />
   <link rel="alternate" href="https://praxia.tools/?lang=de" hreflang="de" />
   <link rel="alternate" href="https://praxia.tools/?lang=pt-BR" hreflang="pt-BR" />
+
+  <!-- Structured data — helps Google render richer search results
+       (software listing, license badge, free-to-use marker). -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Praxia",
+    "alternateName": "agentloom",
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "AI / Multi-Agent Framework",
+    "operatingSystem": "Cross-platform (Python 3.11+)",
+    "description": "Specialized multi-agent orchestrator with cyclic personal-to-organizational memory. 5-layer memory stack with three independent promotion paths. Multi-LTM fusion, per-user OAuth across 13 providers, KMS-backed token encryption.",
+    "url": "https://praxia.tools/",
+    "downloadUrl": "https://pypi.org/project/praxia/",
+    "softwareVersion": "alpha",
+    "datePublished": "2026-05-04",
+    "inLanguage": ["en", "ja", "zh-CN", "ko", "es", "fr", "de", "pt-BR"],
+    "license": "https://www.apache.org/licenses/LICENSE-2.0",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "praxia-dev",
+      "url": "https://github.com/praxia-dev"
+    },
+    "codeRepository": "https://github.com/praxia-dev/praxia",
+    "programmingLanguage": "Python",
+    "video": {
+      "@type": "VideoObject",
+      "name": "Praxia — 60-second walkthrough",
+      "description": "Where senior engineers' prompts live forever. 5-layer memory + 3-path promotion engine demo.",
+      "thumbnailUrl": "https://praxia.tools/images/demo-thumb.png",
+      "uploadDate": "2026-05-12",
+      "embedUrl": "https://youtu.be/Al7N9SpOPZY",
+      "contentUrl": "https://youtu.be/Al7N9SpOPZY"
+    }
+  }
+  </script>
+
   <link rel="stylesheet" href="styles.css" />
   <script>
     // Cross-mirror awareness — show the OTHER mirror's URL in the banner
