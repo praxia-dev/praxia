@@ -49,11 +49,14 @@ dependencies = [
     "python-frontmatter>=1.1",
     # YAML for flow definitions
     "pyyaml>=6.0",
-    # Transitive pin: urllib3 < 2.7.0 has HIGH-severity advisories
-    # (GHSA-mf9v-mfxr-j63j decompression-bomb bypass + GHSA-qccp-gfcp-xxvc
-    # sensitive-header forwarding). Pin directly so the resolver lifts the
-    # floor even when transitive packages allow older versions.
-    "urllib3>=2.7.0",
+    # Transitive pins for pip-audit cleanliness. These are transitive deps
+    # of litellm / mem0ai / chromadb / requests etc., pinned directly so the
+    # resolver lifts the floor even when older transitive constraints allow
+    # vulnerable versions.
+    "urllib3>=2.7.0",      # GHSA-mf9v-mfxr-j63j, GHSA-qccp-gfcp-xxvc (HIGH)
+    "idna>=3.15",          # GHSA-65pc-fj4g-8rjx
+    "requests>=2.33.0",    # GHSA-gc5v-m9x4-r6x2 (insecure temp file reuse)
+    "python-dotenv>=1.2.2", # GHSA-mf9w-mj56-hr94 (symlink-following set_key)
 ]
 
 [project.optional-dependencies]

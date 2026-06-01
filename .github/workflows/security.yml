@@ -48,14 +48,26 @@ jobs:
         run: pip install pip-audit==2.7.3
       - name: Audit installed dependencies
         # --strict fails on warnings too; --vulnerability-service=osv (default)
-        # covers OSV.dev. We deliberately ignore pip-itself advisories that
-        # cannot be fixed by upgrading (pip is the installer, not a runtime
-        # dependency of Praxia, so a vuln in pip does not affect Praxia
-        # consumers). When pip publishes a fix, drop the matching --ignore-vuln.
+        # covers OSV.dev.
+        #
+        # Ignored vulnerabilities (each with explicit justification):
+        #
+        # - GHSA-58qw-9mgm-455v (pip itself): pip is the installer, not a
+        #   runtime dependency of Praxia, so a vuln in pip does not affect
+        #   Praxia consumers. Drop when pip publishes a fix.
+        #
+        # - GHSA-f4j7-r4q5-qw2c (chromadb CRITICAL, pre-auth code injection):
+        #   the vulnerable endpoint is /api/v2/.../collections with
+        #   trust_remote_code=true on the chromadb server. Praxia uses
+        #   chromadb as a library only (no HTTP server, no /api/v2/* exposed),
+        #   so this is not exploitable in Praxia's deployment shape.
+        #   No fixed version on PyPI yet (latest 1.5.9 is still last_affected).
+        #   Drop this --ignore when chromadb publishes a fix.
         run: |
           pip install -e ".[dev]"
           pip-audit --strict --vulnerability-service osv \
-              --ignore-vuln GHSA-58qw-9mgm-455v
+              --ignore-vuln GHSA-58qw-9mgm-455v \
+              --ignore-vuln GHSA-f4j7-r4q5-qw2c
 
   gitleaks:
     name: Secret scan (gitleaks)
