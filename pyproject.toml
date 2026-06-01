@@ -49,6 +49,11 @@ dependencies = [
     "python-frontmatter>=1.1",
     # YAML for flow definitions
     "pyyaml>=6.0",
+    # Transitive pin: urllib3 < 2.7.0 has HIGH-severity advisories
+    # (GHSA-mf9v-mfxr-j63j decompression-bomb bypass + GHSA-qccp-gfcp-xxvc
+    # sensitive-header forwarding). Pin directly so the resolver lifts the
+    # floor even when transitive packages allow older versions.
+    "urllib3>=2.7.0",
 ]
 
 [project.optional-dependencies]
