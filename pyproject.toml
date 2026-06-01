@@ -32,7 +32,10 @@ classifiers = [
 ]
 dependencies = [
     # Multi-provider LLM abstraction (OpenAI / Anthropic / Gemini / Qwen / Ollama / etc.)
-    "litellm>=1.51.0",
+    # >=1.83.10 fixes GHSA-wxxx-gvqv-xp7p (sandbox escape in proxy guardrail
+    # endpoint — Praxia doesn't run the proxy so not exploitable here, but
+    # we keep the floor up for pip-audit cleanliness).
+    "litellm>=1.83.10",
     # Personal memory layer
     "mem0ai>=0.1.40",
     # Embeddings / vector store
