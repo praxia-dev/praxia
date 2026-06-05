@@ -284,12 +284,22 @@ def freeze(
 @app.command()
 def serve(
     host: str = typer.Option("127.0.0.1", help="Host to bind"),
-    port: int = typer.Option(8000, help="Port to bind"),
+    port: int = typer.Option(8000, help="Port to bind (use 0 to let OS pick a free port — typically combined with --bootstrap)"),
     storage_dir: str = typer.Option(".praxia"),
     cors_origin: list[str] = typer.Option(
         [], help="Allowed CORS origin (repeatable)"
     ),
     reload: bool = typer.Option(False, "--reload", help="Auto-reload on code change (dev only)"),
+    bootstrap: bool = typer.Option(
+        False,
+        "--bootstrap",
+        help="Embedded-sidecar mode: auto-create a `__local__` admin user, rotate its API key, and write {port, api_key, url} to --bootstrap-info-path once the server is listening. Used by the desktop installer.",
+    ),
+    bootstrap_info_path: str = typer.Option(
+        "",
+        "--bootstrap-info-path",
+        help="Path to a JSON file the sidecar will write port/api_key info to. Required when --bootstrap is set.",
+    ),
 ) -> None:
     """Run the FastAPI HTTP backend (mode B in deployment-modes.md).
 
@@ -311,7 +321,77 @@ def serve(
         storage_dir=storage_dir,
         cors_origins=list(cors_origin) or None,
     )
-    uvicorn.run(fastapi_app, host=host, port=port, reload=reload)
+
+    if not bootstrap:
+        uvicorn.run(fastapi_app, host=host, port=port, reload=reload)
+        return
+
+    # --- Embedded sidecar bootstrap path -------------------------------------
+    # The Tauri desktop launcher spawns us with --bootstrap so it can read
+    # back the port (chosen by the OS via port=0) and the rotated API key
+    # without exposing either to the end user. We:
+    #   1. Ensure a `__local__` admin user exists and rotate its API key
+    #      (rotation = stale keys leaked via prior crashes/log captures
+    #      stop working on the next launch).
+    #   2. Start uvicorn in-process (no `reload`), wait for the bound port,
+    #      then atomically write {port, api_key, url} to --bootstrap-info-path.
+    if not bootstrap_info_path:
+        console.print("[red]--bootstrap-info-path is required when --bootstrap is set.[/red]")
+        raise typer.Exit(2)
+
+    import asyncio
+    import json
+    from pathlib import Path
+
+    from praxia.auth.manager import AuthManager
+
+    auth_storage = Path(storage_dir) / "auth"
+    auth = AuthManager(storage_dir=auth_storage)
+    local = auth.users.get_by_username("__local__")
+    if local is None:
+        local, api_key = auth.users.create(username="__local__", role="admin")
+    else:
+        api_key = auth.users.rotate_api_key(local.id)
+
+    config = uvicorn.Config(
+        fastapi_app, host=host, port=port, log_level="info", access_log=False
+    )
+    server = uvicorn.Server(config)
+
+    async def _run() -> None:
+        # server.serve() blocks until shutdown; run as a task so we can
+        # observe `server.started` and harvest the bound port from the
+        # server's open sockets, then atomically publish info to the
+        # bootstrap file.
+        task = asyncio.create_task(server.serve())
+        while not server.started:
+            await asyncio.sleep(0.05)
+        actual_port = port
+        try:
+            for srv in getattr(server, "servers", []):
+                socks = getattr(srv, "sockets", None) or []
+                if socks:
+                    actual_port = socks[0].getsockname()[1]
+                    break
+        except Exception:
+            pass
+        info_path = Path(bootstrap_info_path)
+        info_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = info_path.with_suffix(info_path.suffix + ".tmp")
+        tmp.write_text(
+            json.dumps(
+                {
+                    "port": actual_port,
+                    "api_key": api_key,
+                    "url": f"http://{host}:{actual_port}",
+                }
+            ),
+            encoding="utf-8",
+        )
+        tmp.replace(info_path)
+        await task
+
+    asyncio.run(_run())
 
 
 # --- MCP server -------------------------------------------------------------
