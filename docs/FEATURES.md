@@ -280,11 +280,11 @@ praxia freeze --block manufacturing_pain_hypotheses
 | Backend | Auto-extract | Vector search | Entity linking | Relationship graph | Production-ready | Cost |
 |---|---|---|---|---|---|---|
 | **json** (default) | ❌ | BM25-like | ❌ | ❌ | Dev / SMB | Free |
-| **mem0** | ✅ | ✅ hybrid | ✅ | ❌ (since 2026-04) | ✅ recommended | LLM tokens |
-| **langmem** | ✅ | ✅ | ✅ | ❌ | ✅ (LangChain shop) | LLM tokens |
-| **letta** | ✅ | ✅ | ❌ | ❌ | ✅ | Letta service |
-| **zep** | ✅ | ✅ | ✅ | ✅ temporal KG | ✅ (Layer 5) | Zep service |
-| **hindsight** | ✅ | ✅ | ❌ | ❌ | ✅ | Vectorize service / self-host |
+| **[mem0](https://github.com/mem0ai/mem0)** | ✅ | ✅ hybrid | ✅ | ❌ (since 2026-04) | ✅ recommended | LLM tokens |
+| **[langmem](https://github.com/langchain-ai/langmem)** | ✅ | ✅ | ✅ | ❌ | ✅ (LangChain shop) | LLM tokens |
+| **[letta](https://github.com/letta-ai/letta)** | ✅ | ✅ | ❌ | ❌ | ✅ | Letta service |
+| **[zep](https://github.com/getzep/zep)** | ✅ | ✅ | ✅ | ✅ temporal KG | ✅ (Layer 5) | Zep service |
+| **[hindsight](https://github.com/vectorize-io/hindsight)** | ✅ | ✅ | ❌ | ❌ | ✅ | Vectorize service / self-host |
 
 ```python
 PersonalMemory(user_id="alice", backend="mem0")          # recommended

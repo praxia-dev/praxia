@@ -920,14 +920,15 @@ Full model + worked examples: [docs/FEATURES.md#roi-projection-model](docs/FEATU
 - [Mem0](https://github.com/mem0ai/mem0) — personal memory layer
 - [Letta](https://github.com/letta-ai/letta) — shared memory blocks concept
 - [LangMem](https://github.com/langchain-ai/langmem) — long-term memory SDK
+- [Zep](https://github.com/getzep/zep) — temporal knowledge graph for agent memory
+- [HindSight](https://github.com/vectorize-io/hindsight) — Experience / Entity Summary / Belief model
 - [LiteLLM](https://github.com/BerriAI/litellm) — unified provider abstraction
 - [Claude Skills](https://docs.claude.com/) — skills registry conventions
 - [Model Context Protocol](https://modelcontextprotocol.io) — tool/skill interop
-- HindSight — Experience / Entity Summary / Belief model
 
 Theoretical groundwork:
 - LinkedIn Cognitive Memory Agent (Episodic + Semantic + Procedural)
-- Mem0 paper (arXiv:2504.19413)
+- [Mem0 paper](https://arxiv.org/abs/2504.19413) (arXiv:2504.19413)
 - Letta sleep-time agents
 
 ---

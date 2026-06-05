@@ -44,7 +44,7 @@
 
 ### Layer 1: Personal Memory (`PersonalMemory`)
 - Auto-extracts tacit knowledge from conversations as a side effect of normal use.
-- Pluggable backend: `json` (default) / `mem0` / `langmem` / `letta` / `zep` / `hindsight`.
+- Pluggable backend: `json` (default) / [`mem0`](https://github.com/mem0ai/mem0) / [`langmem`](https://github.com/langchain-ai/langmem) / [`letta`](https://github.com/letta-ai/letta) / [`zep`](https://github.com/getzep/zep) / [`hindsight`](https://github.com/vectorize-io/hindsight).
 - **Multi-backend composition**: wrap several backends in `CompositeBackend` for parallel fan-out + Reciprocal Rank Fusion, or `RoutedBackend` for query-aware dispatch (temporal → Zep, audit → JSON, entity → Mem0, similarity → HindSight). See [FEATURES.md § 5.1](FEATURES.md#51-multi-ltm-fusion--dynamic-routing-accuracy-boost).
 - Namespaced by `user_id`.
 
