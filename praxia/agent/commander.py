@@ -51,6 +51,21 @@ the host wires up, or any object that walks like one.
 """
 
 
+TaskClassifier = Callable[[str], str]
+"""Signature: ``(user_input: str) -> task_kind: str``.
+
+Returned kinds: ``"knowledge"`` (default — grounded verification applies)
+or ``"action"`` (skip verifier, let the bare inner agent + environment
+feedback handle correctness — appropriate for code/tool/command flows).
+
+Verification finding K6: questions that the *environment* can self-verify
+(tests pass, command exits 0, file exists) don't need a grounding gate.
+Knowledge-QA over private corpora does. The default classifier is
+keyword-based and intentionally conservative — when in doubt, treat as
+``knowledge`` so the verifier still runs.
+"""
+
+
 # ---------------------------------------------------------------------------
 # Default abstention text
 # ---------------------------------------------------------------------------
@@ -60,6 +75,36 @@ DEFAULT_ABSTAIN_MESSAGE = (
     "answer this confidently. Please add more context, point me at the right "
     "documents, or rephrase the question."
 )
+
+
+# Tokens that strongly suggest the user is asking for code / a command /
+# a tool invocation rather than a knowledge-QA answer. Bilingual (EN/JA)
+# because Praxia's primary deployments are both. Kept narrow on purpose:
+# the verifier is a safety net, so a false negative here (knowledge
+# wrongly classified as action) is much worse than a false positive
+# (action wrongly classified as knowledge).
+_ACTION_KEYWORDS = (
+    # English — imperative / coding / tool verbs
+    "write code", "implement", "refactor", "debug",
+    "run the", "run this", "execute", "deploy",
+    "fix the bug", "patch", "compile", "build the",
+    "install", "rebase", "git ", "npm ", "pip install",
+    # Japanese
+    "コードを書", "実装して", "リファクタ", "デバッグ",
+    "実行して", "走らせて", "ビルドして", "コンパイル",
+    "インストール", "デプロイ",
+)
+
+
+def default_task_classifier(user_input: str) -> str:
+    """Cheap regex-free classifier. Returns "action" iff the input contains
+    a clearly imperative coding/tool keyword, else "knowledge".
+    """
+    lowered = user_input.lower()
+    for kw in _ACTION_KEYWORDS:
+        if kw in lowered:
+            return "action"
+    return "knowledge"
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +125,8 @@ class CommandedResult:
     sources: list[Source] = field(default_factory=list)
     citations: list[str] = field(default_factory=list)
     rounds: list["CommandedRound"] = field(default_factory=list)
-    stopped_reason: str = "accept"            # accept | abstain | max_rounds
+    stopped_reason: str = "accept"            # accept | abstain | max_rounds | no_improvement | bypass_action
+    task_kind: str = "knowledge"              # knowledge | action — picked by TaskClassifier
     usage: dict[str, int] = field(default_factory=dict)
 
     def add_usage(self, more: dict[str, int]) -> None:
@@ -111,6 +157,11 @@ class DefaultMemoryRetriever:
     Each Source gets a stable id of the form ``<layer>#<index>`` so the
     verifier can attribute claims unambiguously. Documents use the ``D#``
     prefix to keep them distinct from L1-L4 memory.
+
+    When a ``decomposer`` is supplied, the retriever splits the query into
+    sub-questions and unions the per-sub retrieval results, deduplicated
+    by Source id. Single-hop questions pass through as-is, so adding a
+    decomposer does not penalise simple lookups (verification finding K2).
     """
     personal: "PersonalMemory | None" = None
     shared: "SharedMemory | None" = None
@@ -119,15 +170,70 @@ class DefaultMemoryRetriever:
     # text / doc_id / relative_path / score. Wired in by hosts that have a
     # local-document store (see praxia.server.routers.documents.search_for_user).
     documents_search: "Any" = None        # Callable[[str], list[dict]] | None
+    decomposer: "Any" = None              # QueryDecomposer | None
     per_layer_limit: int = 5
 
     def __call__(self, query: str) -> list[Source]:
-        sources: list[Source] = []
-        sources.extend(self._from_personal(query))
-        sources.extend(self._from_shared(query))
-        sources.extend(self._from_frozen(query))
-        sources.extend(self._from_documents(query))
-        return sources
+        sub_queries = self._sub_queries(query)
+
+        # Single-hop: original behaviour, including stable L1#0/L3#0 ids.
+        if len(sub_queries) <= 1:
+            q = sub_queries[0] if sub_queries else query
+            sources: list[Source] = []
+            sources.extend(self._from_personal(q))
+            sources.extend(self._from_shared(q))
+            sources.extend(self._from_frozen(q))
+            sources.extend(self._from_documents(q))
+            return sources
+
+        # Multi-hop: retrieve per sub-question, union with stable ids.
+        # We index Sources by (layer, source-of-truth key) so the same
+        # memory chunk surfaced by two sub-questions only appears once.
+        seen: dict[tuple[str, str], Source] = {}
+        ordered_keys: list[tuple[str, str]] = []
+        for sq in sub_queries:
+            for layer_get in (self._from_personal, self._from_shared,
+                              self._from_frozen, self._from_documents):
+                for src in layer_get(sq):
+                    key = (src.kind, src.text)
+                    if key in seen:
+                        continue
+                    seen[key] = src
+                    ordered_keys.append(key)
+
+        # Rewrite ids so they remain sequential and human-readable
+        # across the unioned set: L1#0, L1#1, L3#0, ...
+        per_kind_counter: dict[str, int] = {}
+        prefix_for_kind = {
+            "personal_memory": "L1",
+            "shared_memory": "L3",
+            "frozen": "L4",
+            "local_document": "D",
+        }
+        out: list[Source] = []
+        for key in ordered_keys:
+            src = seen[key]
+            prefix = prefix_for_kind.get(src.kind, src.kind[:2].upper() or "X")
+            idx = per_kind_counter.get(prefix, 0)
+            per_kind_counter[prefix] = idx + 1
+            out.append(Source(
+                id=f"{prefix}#{idx}",
+                text=src.text,
+                kind=src.kind,
+                metadata=src.metadata,
+            ))
+        return out
+
+    def _sub_queries(self, query: str) -> list[str]:
+        if self.decomposer is None:
+            return [query]
+        try:
+            subs = self.decomposer.decompose(query) or []
+        except Exception:  # pragma: no cover - retriever must never crash
+            _log.exception("Decomposer failed; falling back to single-pass")
+            return [query]
+        subs = [s for s in subs if isinstance(s, str) and s.strip()]
+        return subs or [query]
 
     def _from_personal(self, query: str) -> list[Source]:
         if self.personal is None:
@@ -236,6 +342,10 @@ class CommandedAgent:
         abstain_on_max_rounds: when the budget is exhausted with a
             verdict still in "redraft", emit the abstention message instead
             of forwarding the last unsupported draft. Default True.
+        min_groundedness_improvement: minimum increase in
+            ``Verdict.groundedness`` that a redraft must produce over the
+            previous round to be considered making progress. Default 0.05
+            (5 pt on a 0..1 scale). Set to 0 to disable early stopping.
         abstain_message: text used when the commander abstains.
         require_citations: append a ``[source_id, …]`` footer to accepted
             answers. Default True.
@@ -249,19 +359,25 @@ class CommandedAgent:
         *,
         verifier: Verifier | None = None,
         retriever: Retriever | None = None,
+        task_classifier: TaskClassifier | None = None,
         max_verify_rounds: int = 3,
         abstain_on_max_rounds: bool = True,
+        min_groundedness_improvement: float = 0.05,
         abstain_message: str = DEFAULT_ABSTAIN_MESSAGE,
         require_citations: bool = True,
         per_layer_limit: int = 5,
     ) -> None:
         if max_verify_rounds < 1:
             raise ValueError("max_verify_rounds must be >= 1")
+        if min_groundedness_improvement < 0:
+            raise ValueError("min_groundedness_improvement must be >= 0")
         self.inner = inner
         self.verifier = verifier or LLMGroundingVerifier(llm=inner.llm)
         self.retriever = retriever or self._build_default_retriever(per_layer_limit)
+        self.task_classifier = task_classifier or default_task_classifier
         self.max_verify_rounds = int(max_verify_rounds)
         self.abstain_on_max_rounds = bool(abstain_on_max_rounds)
+        self.min_groundedness_improvement = float(min_groundedness_improvement)
         self.abstain_message = abstain_message
         self.require_citations = bool(require_citations)
 
@@ -282,6 +398,34 @@ class CommandedAgent:
             sources: pre-computed sources to skip retrieval — useful for
                 tests and for hosts that have already done the retrieval.
         """
+        task_kind = self.task_classifier(user_input)
+
+        # K6: action-class tasks (code, tool, command) don't benefit from
+        # the grounding gate — the environment is the verifier. Hand
+        # straight to the inner agent and return its draft as-is.
+        if task_kind == "action":
+            inner_result = self.inner.run(user_input, history=history)
+            self._audit(
+                "commander.bypass_action",
+                f"user:{self.inner.user_id}",
+                metadata={"input_chars": str(len(user_input))},
+            )
+            result = CommandedResult(
+                answer=(inner_result.final_text or "").strip(),
+                verdict=Verdict(
+                    groundedness=0.0,
+                    per_claim=[],
+                    unsupported_claims=[],
+                    decision="accept",
+                    rationale="Action-class task; grounding verifier bypassed.",
+                ),
+                sources=[],
+                stopped_reason="bypass_action",
+                task_kind=task_kind,
+            )
+            result.add_usage(inner_result.usage)
+            return result
+
         if sources is None:
             sources = self.retriever(user_input)
 
@@ -296,6 +440,7 @@ class CommandedAgent:
                 rationale="not yet evaluated",
             ),
             sources=sources,
+            task_kind=task_kind,
         )
 
         self._audit(
@@ -311,6 +456,7 @@ class CommandedAgent:
         augmented_input = self._build_initial_prompt(user_input, sources)
         last_draft = ""
         last_verdict: Verdict | None = None
+        prev_groundedness: float | None = None
 
         for round_i in range(self.max_verify_rounds):
             inner_result = self.inner.run(augmented_input, history=history)
@@ -318,7 +464,6 @@ class CommandedAgent:
             last_draft = (inner_result.final_text or "").strip()
 
             verdict = self.verifier.verify(last_draft, sources)
-            last_verdict = verdict
             rounds.append(CommandedRound(
                 round=round_i,
                 draft=last_draft,
@@ -354,6 +499,38 @@ class CommandedAgent:
                 result.stopped_reason = "abstain"
                 self._audit_end(result)
                 return result
+
+            # decision == "redraft": before queueing another draft, check
+            # whether the previous redraft actually moved the needle. If
+            # groundedness didn't improve by at least
+            # `min_groundedness_improvement`, the loop is stuck — bail out
+            # with `abstain` rather than burning more rounds for nothing
+            # (verification finding K4: self-evaluation loops without an
+            # external improvement signal cannot decide when to stop).
+            if (
+                self.min_groundedness_improvement > 0.0
+                and prev_groundedness is not None
+                and verdict.groundedness - prev_groundedness < self.min_groundedness_improvement
+            ):
+                self._audit(
+                    "commander.no_improvement",
+                    f"user:{self.inner.user_id}",
+                    metadata={
+                        "round": str(round_i),
+                        "groundedness_prev": f"{prev_groundedness:.3f}",
+                        "groundedness_now": f"{verdict.groundedness:.3f}",
+                    },
+                )
+                result.answer = self.abstain_message
+                result.verdict = verdict
+                result.citations = []
+                result.rounds = rounds
+                result.stopped_reason = "no_improvement"
+                self._audit_end(result)
+                return result
+
+            prev_groundedness = verdict.groundedness
+            last_verdict = verdict
 
             # decision == "redraft": loop with feedback (unless it's the
             # last round, in which case the next iteration won't happen)

@@ -32,20 +32,35 @@ class PromotionVerdict:
 class PromotionEngine:
     """Compute a promotion verdict for a candidate memory.
 
-    Weights are tunable; defaults give frequency and self-eval most weight,
-    outcome only when explicitly available.
+    Weights are (frequency, outcome, self_eval). Default favours external
+    signals — frequency across users and measured outcome — and uses the
+    LLM self-evaluation only as a tie-breaker.
+
+    Rationale: multi-hop RAG / external-verification benchmarks
+    (HotpotQA, SQuAD v2) show that LLM self-evaluation is biased toward
+    its own outputs (self-preference bias) and cannot reliably grade
+    correctness on its own. Promotion decisions therefore lean on
+    independent signals — recurrence across users and outcome
+    correlation when available — and only use self_eval to break ties
+    when those are inconclusive. See `agentic_rag_verification_lessons.md`
+    in the project's memory, principle K4.
     """
+
+    # Old default was (0.4, 0.3, 0.3); reweighted so self_eval cannot
+    # carry a verdict on its own when outcome data is absent.
+    DEFAULT_WEIGHTS: tuple[float, float, float] = (0.5, 0.4, 0.1)
 
     def __init__(
         self,
         llm: LLM,
         *,
-        weights: tuple[float, float, float] = (0.4, 0.3, 0.3),
+        weights: tuple[float, float, float] | None = None,
         auto_threshold: float = 0.75,
         review_threshold: float = 0.5,
     ) -> None:
         self.llm = llm
-        self.weight_freq, self.weight_outcome, self.weight_self = weights
+        w = weights if weights is not None else self.DEFAULT_WEIGHTS
+        self.weight_freq, self.weight_outcome, self.weight_self = w
         self.auto_threshold = auto_threshold
         self.review_threshold = review_threshold
 

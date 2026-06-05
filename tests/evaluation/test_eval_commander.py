@@ -278,7 +278,9 @@ class TestRedraftLoop:
 
 class TestMaxRoundsBudget:
     def test_max_rounds_with_abstain_default(self):
-        # 2 rounds, both redraft → exhausted → default policy abstains
+        # 2 rounds, both redraft → exhausted → default policy abstains.
+        # min_groundedness_improvement=0 disables the no-improvement
+        # early-stop so we can specifically exercise the max-rounds path.
         inner = _FakeInnerAgent(drafts=["d1", "d2"])
         verifier = _ScriptedVerifier(verdicts=[
             _verdict_redraft(["a"]),
@@ -289,6 +291,7 @@ class TestMaxRoundsBudget:
             verifier=verifier,
             retriever=lambda q: _sources(("L1#0", "x")),
             max_verify_rounds=2,
+            min_groundedness_improvement=0.0,
         )
         result = agent.run("q?")
         assert result.stopped_reason == "abstain"
@@ -307,6 +310,7 @@ class TestMaxRoundsBudget:
             retriever=lambda q: _sources(("L1#0", "x")),
             max_verify_rounds=2,
             abstain_on_max_rounds=False,
+            min_groundedness_improvement=0.0,
         )
         result = agent.run("q?")
         assert result.stopped_reason == "max_rounds"
