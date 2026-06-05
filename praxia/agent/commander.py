@@ -104,14 +104,21 @@ class CommandedRound:
 
 @dataclass
 class DefaultMemoryRetriever:
-    """Pulls evidence from PersonalMemory (L1) + SharedMemory (L3) + MarkdownStore (L4).
+    """Pulls evidence from PersonalMemory (L1) + SharedMemory (L3) + MarkdownStore (L4)
+    and, optionally, from local-folder documents the user has ingested via the
+    desktop app (search callable wired in by the host).
 
     Each Source gets a stable id of the form ``<layer>#<index>`` so the
-    verifier can attribute claims unambiguously.
+    verifier can attribute claims unambiguously. Documents use the ``D#``
+    prefix to keep them distinct from L1-L4 memory.
     """
     personal: "PersonalMemory | None" = None
     shared: "SharedMemory | None" = None
     frozen: "MarkdownStore | None" = None
+    # When set, called as documents_search(query) -> list[dict] with keys
+    # text / doc_id / relative_path / score. Wired in by hosts that have a
+    # local-document store (see praxia.server.routers.documents.search_for_user).
+    documents_search: "Any" = None        # Callable[[str], list[dict]] | None
     per_layer_limit: int = 5
 
     def __call__(self, query: str) -> list[Source]:
@@ -119,6 +126,7 @@ class DefaultMemoryRetriever:
         sources.extend(self._from_personal(query))
         sources.extend(self._from_shared(query))
         sources.extend(self._from_frozen(query))
+        sources.extend(self._from_documents(query))
         return sources
 
     def _from_personal(self, query: str) -> list[Source]:
@@ -177,6 +185,33 @@ class DefaultMemoryRetriever:
                 text=f"# {title}\n\n{body}",
                 kind="frozen",
                 metadata={"title": title},
+            ))
+        return out
+
+    def _from_documents(self, query: str) -> list[Source]:
+        if self.documents_search is None:
+            return []
+        try:
+            hits = self.documents_search(query) or []
+        except Exception:  # pragma: no cover
+            _log.exception("documents_search callable failed")
+            return []
+        out: list[Source] = []
+        for i, h in enumerate(hits[: self.per_layer_limit]):
+            text = h.get("text") if isinstance(h, dict) else None
+            if not text:
+                continue
+            out.append(Source(
+                id=f"D#{i}",
+                text=str(text),
+                kind="local_document",
+                metadata={
+                    "doc_id": h.get("doc_id"),
+                    "folder_id": h.get("folder_id"),
+                    "relative_path": h.get("relative_path"),
+                    "chunk_index": h.get("chunk_index"),
+                    "score": h.get("score"),
+                },
             ))
         return out
 
@@ -427,10 +462,26 @@ class CommandedAgent:
         except Exception:  # pragma: no cover
             _log.debug("MarkdownStore unavailable for default retriever")
 
+        # Local-document store (populated by the desktop app's folder
+        # ingestion). The search helper has no FastAPI dependency, but the
+        # try/except keeps this safe if the module shape ever changes.
+        documents_search = None
+        try:
+            from praxia.server.routers.documents import search_for_user
+            user_id = self.inner.user_id
+
+            def _docs_search(q: str):
+                return search_for_user(memory_dir, user_id, q, limit=per_layer_limit)
+
+            documents_search = _docs_search
+        except Exception:  # pragma: no cover
+            _log.debug("Document store unavailable for default retriever")
+
         return DefaultMemoryRetriever(
             personal=personal,
             shared=shared,
             frozen=frozen,
+            documents_search=documents_search,
             per_layer_limit=per_layer_limit,
         )
 
