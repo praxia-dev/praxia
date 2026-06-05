@@ -159,6 +159,38 @@ remote clients (Claude Desktop, Cursor) can delegate an entire investigation
 without orchestrating individual tools by hand. See
 [FEATURES § 38](docs/FEATURES.md#38-autonomous-agent-llm-driven-tool-use-loop).
 
+### CommandedAgent — autonomous agent with external verification
+
+`AutonomousAgent` is a free-running tool-use loop — perfect when the
+environment *is* the answer key (tests pass / fail, commands exit 0 /
+non-zero). For workloads where the environment doesn't give you that
+free check — private-corpus fact QA, SOP / compliance, customer
+support over manuals, technical-knowledge transfer — `CommandedAgent`
+wraps it with three guards: **pre-retrieval + grounding verification +
+bounded retry**, with an explicit `abstain` path when the sources
+don't support a confident answer.
+
+```python
+from praxia.agent import AutonomousAgent, CommandedAgent
+from praxia.core.llm import LLM
+
+inner = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
+agent = CommandedAgent(inner, max_verify_rounds=3, require_citations=True)
+
+result = agent.run(
+    "How do we handle Customer X's stamping-press alarm code E-204?"
+)
+# result.answer carries [L1#0, L3#2, ...] citations
+# result.verdict.decision ∈ {"accept", "redraft", "abstain"}
+# result.rounds is the per-round draft + verdict trace
+```
+
+Pluggable everything: `Verifier` is a `Protocol` and `Retriever` is a
+callable, so you can drop in TiDB Vector / pgvector / hybrid BM25+ANN
+/ GraphRAG or your own grounding scorer without touching core. See
+[FEATURES § 38b](docs/FEATURES.md#38b-commandedagent--autonomous-agent-with-external-grounding-commander)
+and [`docs/COMMANDED_AGENT.md`](docs/COMMANDED_AGENT.md).
+
 ### 3 Specialized Multi-Agent Flows
 
 | Flow | What it does |

@@ -102,6 +102,46 @@ The agent is also exposed as a single MCP meta-tool `autonomous_agent`
 so remote clients (Claude Desktop / Cursor) can delegate an entire
 investigation rather than orchestrating individual tools.
 
+## CommandedAgent (`praxia.agent.CommandedAgent`)
+
+`AutonomousAgent` is a free-running loop — appropriate when the
+environment itself answers the question (tests pass / fail, commands
+exit 0 / non-zero). For workloads where the environment does NOT give
+you that free check — private-corpus fact QA, SOP / compliance,
+customer support over manuals — `CommandedAgent` wraps the inner agent
+with three guards:
+
+1. **Pre-retrieval** — a `Retriever` callable fetches evidence from
+   L1 / L3 / L4 before the agent drafts. Each piece gets a stable id
+   (`L1#0`, `L3#2`, …) for citation.
+2. **Verification** — a `Verifier` scores the draft against those
+   sources and returns a `Verdict` with decision ∈ {`accept`,
+   `redraft`, `abstain`}, per-claim grounding scores, and cited
+   source ids.
+3. **Bounded retry** — at most `max_verify_rounds` redrafts; every
+   round logged under `commander.round`. When the budget exhausts on
+   a `redraft` verdict, the default policy is to abstain rather than
+   forward an unsupported draft.
+
+```python
+from praxia.agent import AutonomousAgent, CommandedAgent
+from praxia.core.llm import LLM
+
+inner = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
+agent = CommandedAgent(inner, max_verify_rounds=3, require_citations=True)
+
+result = agent.run("How do we handle the E-204 alarm on Customer X's press?")
+print(result.answer)              # carries [L1#0, L3#2, …] citations
+print(result.verdict.decision)    # accept | redraft | abstain
+```
+
+Both `Verifier` and `Retriever` are extension points — the default
+`LLMGroundingVerifier` and `DefaultMemoryRetriever` (L1 + L3 + L4) can
+be swapped for embedding overlap / rule-based / hosted-verification or
+TiDB Vector / pgvector / hybrid BM25+ANN / GraphRAG without touching
+core. See [`COMMANDED_AGENT.md`](COMMANDED_AGENT.md) for the full
+design.
+
 The Streamlit UI (`praxia ui`) wraps `AutonomousAgent` with two extras:
 **vision input** (`run(..., images=[{"data": <base64>, "mime": ...}])` —
 PNG / JPG / GIF / WebP attached via the chat input's 📎 button, forwarded

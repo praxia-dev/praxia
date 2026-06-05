@@ -44,6 +44,39 @@ Example:
         print(tc.name, tc.arguments_text[:100], "->", tc.result_text[:100])
 """
 from praxia.agent.autonomous import AutonomousAgent
+from praxia.agent.commander import (
+    CommandedAgent,
+    CommandedResult,
+    CommandedRound,
+    DEFAULT_ABSTAIN_MESSAGE,
+    DefaultMemoryRetriever,
+    Retriever,
+)
 from praxia.agent.result import AgentResult, ToolCallTrace
+from praxia.agent.verifier import (
+    ClaimScore,
+    LLMGroundingVerifier,
+    Source,
+    Verdict,
+    Verifier,
+)
 
-__all__ = ["AutonomousAgent", "AgentResult", "ToolCallTrace"]
+__all__ = [
+    # Inner agent (bare tool-use loop)
+    "AutonomousAgent",
+    "AgentResult",
+    "ToolCallTrace",
+    # Commanded agent (outer verification + retrieval loop)
+    "CommandedAgent",
+    "CommandedResult",
+    "CommandedRound",
+    "DEFAULT_ABSTAIN_MESSAGE",
+    "DefaultMemoryRetriever",
+    "Retriever",
+    # Verifier protocol + default impl + dataclasses
+    "Verifier",
+    "LLMGroundingVerifier",
+    "Verdict",
+    "ClaimScore",
+    "Source",
+]

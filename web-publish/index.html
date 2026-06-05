@@ -286,6 +286,11 @@
           <p data-i18n="feat.autonomous_agent.body">An LLM-driven tool-use loop over your full Praxia stack — personal memory, org memory, frozen layer, skills, connectors. The agent picks tools on its own (search → run skill → pull connector → answer) with ACL gates and audit logging. Ships as <code>praxia.agent.AutonomousAgent</code>, <code>praxia agent run</code>, and an MCP meta-tool for remote clients.</p>
         </article>
         <article class="card">
+          <div class="card-icon">🛡️</div>
+          <h3 data-i18n="feat.commanded_agent">CommandedAgent — autonomous agent with external verification</h3>
+          <p data-i18n="feat.commanded_agent.body">For workloads where the environment doesn't give you a free answer key — private-corpus fact QA, SOP / compliance, customer support over manuals. Wraps the autonomous agent with <strong>pre-retrieval + grounding verification + bounded retry</strong>, plus an explicit <code>abstain</code> path when sources don't support a confident answer. Every accepted claim carries <code>[L1#0, L3#2, …]</code> source citations; every round is in the audit log. <code>Verifier</code> is a <code>Protocol</code> and <code>Retriever</code> is a callable — drop in TiDB Vector / pgvector / hybrid BM25+ANN / GraphRAG without touching core.</p>
+        </article>
+        <article class="card">
           <div class="card-icon">✨</div>
           <h3 data-i18n="feat.prompt_designer">Prompt Designer — turn intent into a polished template</h3>
           <p data-i18n="feat.prompt_designer.body">Describe the task in one line ("score contract risk 1-5 in JSON") → get a production-grade prompt design back: tuned system message, <code>${variable}</code> user template, 2-3 few-shot examples, 5-criterion rubric. Per-LLM idioms applied automatically (Claude XML / OpenAI JSON-mode / DeepSeek-R1 reasoning / Mistral concise / Llama numbered steps).</p>

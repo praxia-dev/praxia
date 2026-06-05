@@ -1604,6 +1604,105 @@ tools by hand. See `praxia.mcp.server.build_tools` for the schema.
 
 ---
 
+## 38b. CommandedAgent — autonomous agent with external grounding commander
+
+The bare `AutonomousAgent` is the right shape when the environment
+itself answers the question — coding agents whose tests pass or fail,
+DevOps agents whose commands exit non-zero, automation that can see a
+file appear on disk. `CommandedAgent` (`praxia.agent.CommandedAgent`)
+is for the cases where the **environment does not give you a free
+answer key** — private-corpus fact QA, compliance / SOP questions,
+customer support over manuals, technical-knowledge transfer.
+
+It wraps the inner `AutonomousAgent` with three guards:
+
+1. **Pre-retrieval** — a `Retriever` callable fetches evidence from
+   L1 / L3 / L4 before the agent drafts. Each piece gets a stable id
+   (`L1#0`, `L3#2`, …).
+2. **Verification** — a `Verifier` scores the draft against those
+   sources and returns a structured `Verdict` (groundedness, per-claim
+   breakdown, decision ∈ {`accept`, `redraft`, `abstain`}, cited source
+   ids).
+3. **Bounded retry** — at most `max_verify_rounds` redrafts. Every
+   round is recorded under the `commander.round` audit action.
+
+```python
+from praxia.agent import AutonomousAgent, CommandedAgent
+from praxia.core.llm import LLM
+
+inner = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
+agent = CommandedAgent(inner, max_verify_rounds=3, require_citations=True)
+
+result = agent.run(
+    "How do we handle Customer X's stamping-press alarm code E-204?"
+)
+print(result.answer)                    # answer with [L1#0, L3#2, ...] footer
+print(result.verdict.decision)          # 'accept' | 'redraft' | 'abstain'
+print(result.verdict.groundedness)      # 0..1
+for r in result.rounds:
+    print(r.round, r.verdict.decision, r.verdict.groundedness)
+```
+
+### When to use it
+
+| Use case | Inner agent alone | CommandedAgent |
+|---|---|---|
+| Coding agent: tests are the verifier | ✅ | overkill |
+| DevOps agent: exit codes are the verifier | ✅ | overkill |
+| Personal automation, low blast radius | ✅ | overkill |
+| Maintenance / runbook QA over manuals | risky | **✅** |
+| Compliance / SOP / regulatory QA | risky | **✅** |
+| Customer support over product docs | risky | **✅** |
+| Sales support — proposal grounding | risky | **✅** |
+| Technical knowledge transfer (private vocab) | risky | **✅** |
+
+Rule of thumb: **if a wrong answer costs something — a stoppage, a
+regulatory finding, a missed compliance check, a customer escalation —
+the verification round earns its cost.**
+
+### Pluggable everything
+
+- **`Verifier` is a `Protocol`** — the default `LLMGroundingVerifier`
+  extracts and scores atomic claims in one LLM call, but anyone can
+  replace it (embedding overlap, rule-based, hosted verification API).
+- **`Retriever` is a callable** `(query) -> list[Source]` — wire in
+  TiDB Vector, pgvector, hybrid BM25+ANN, GraphRAG, or any connector
+  pull. Default uses L1 + L3 + L4.
+- **Thresholds are configurable** — `accept_threshold` (0.75) and
+  `abstain_threshold` (0.35) control the decision band; tighten for
+  regulated domains, loosen for exploratory chat.
+
+### Three default behaviours that matter
+
+- **No sources → immediate abstain (no LLM call).** Better to surface
+  "I have no sources" than to silently ground against thin air.
+- **Phantom source ids are dropped.** Any `supporting_ids` the verifier
+  returns that doesn't match a real `Source.id` is filtered. Hallucinated
+  citations cannot pass through.
+- **Exhausted budget → default abstain.** When `max_verify_rounds`
+  runs out with a verdict still in `redraft`, the commander abstains
+  rather than forwarding the last unsupported draft. Flip
+  `abstain_on_max_rounds=False` to forward instead — the
+  `stopped_reason` will say `max_rounds` so callers can route to a
+  human reviewer.
+
+### Audit actions
+
+| Action | When | Metadata |
+|---|---|---|
+| `commander.run.start` | first call | `input_chars`, `sources`, `max_rounds` |
+| `commander.round` | each verification round | `round`, `decision`, `groundedness`, `unsupported` |
+| `commander.run.end` | terminal | `stopped_reason`, `rounds`, `final_groundedness`, `citations` |
+
+These layer on top of the inner agent's `agent.run.*` actions, so a
+single user question can be replayed end-to-end from the JSONL audit
+log.
+
+See [`docs/COMMANDED_AGENT.md`](COMMANDED_AGENT.md) for the full design,
+the pluggable extension points, and the failure-mode catalogue.
+
+---
+
 ## 39. Prompt Designer (intent → polished template)
 
 `praxia.skills.PromptDesignerSkill` turns a one-line task description into a
