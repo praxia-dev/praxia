@@ -170,24 +170,57 @@ wraps it with three guards: **pre-retrieval + grounding verification +
 bounded retry**, with an explicit `abstain` path when the sources
 don't support a confident answer.
 
+Calibrated against an in-house multi-hop RAG harness
+(HotpotQA / SQuAD v2 / JEMHopQA) — see
+[`docs/VERIFICATION_FINDINGS.md`](docs/VERIFICATION_FINDINGS.md) — and
+the resulting defaults:
+
+- **Task-type router** — `default_task_classifier` sends coding /
+  command / tool prompts straight through (the environment is the
+  verifier for those), and routes knowledge-QA through the grounding
+  gate. Bilingual (EN/JA) keyword classifier; pluggable.
+- **Query decomposition** — wire a `QueryDecomposer` into the
+  retriever and multi-hop questions are split into sub-questions,
+  retrieved per hop, and unioned (deduped). +12pt on HotpotQA-distractor
+  40q in the source benchmark; single-hop queries pass through
+  unchanged.
+- **No-improvement early stop** — a redraft that fails to lift
+  groundedness by `min_groundedness_improvement` (default 0.05) aborts
+  to abstain instead of burning the whole round budget on a loop that
+  isn't making progress.
+- **Promotion engine reweighted** — `PromotionEngine` defaults are now
+  `0.5·freq + 0.4·outcome + 0.1·self_eval` so the LLM's own
+  self-assessment can no longer carry a memory promotion on its own.
+
 ```python
 from praxia.agent import AutonomousAgent, CommandedAgent
+from praxia.agent.decomposer import LLMQueryDecomposer
+from praxia.agent.commander import DefaultMemoryRetriever
 from praxia.core.llm import LLM
 
-inner = AutonomousAgent(user_id="alice", org_id="acme", llm=LLM("claude"))
-agent = CommandedAgent(inner, max_verify_rounds=3, require_citations=True)
+llm = LLM("claude")
+inner = AutonomousAgent(user_id="alice", org_id="acme", llm=llm)
+retriever = DefaultMemoryRetriever(
+    personal=inner.memory,                  # L1
+    decomposer=LLMQueryDecomposer(llm=llm), # K2: multi-hop split
+)
+agent = CommandedAgent(inner, retriever=retriever, max_verify_rounds=3)
 
 result = agent.run(
     "How do we handle Customer X's stamping-press alarm code E-204?"
 )
 # result.answer carries [L1#0, L3#2, ...] citations
 # result.verdict.decision ∈ {"accept", "redraft", "abstain"}
-# result.rounds is the per-round draft + verdict trace
+# result.stopped_reason ∈ {"accept", "abstain", "no_improvement",
+#                          "max_rounds", "bypass_action"}
+# result.task_kind         ∈ {"knowledge", "action"}
+# result.rounds            is the per-round draft + verdict trace
 ```
 
-Pluggable everything: `Verifier` is a `Protocol` and `Retriever` is a
-callable, so you can drop in TiDB Vector / pgvector / hybrid BM25+ANN
-/ GraphRAG or your own grounding scorer without touching core. See
+Pluggable everything: `Verifier` / `Retriever` / `QueryDecomposer` /
+`TaskClassifier` are all protocols or callables, so you can drop in
+TiDB Vector / pgvector / hybrid BM25+ANN / GraphRAG or your own
+grounding scorer / decomposer without touching core. See
 [FEATURES § 38b](docs/FEATURES.md#38b-commandedagent--autonomous-agent-with-external-grounding-commander)
 and [`docs/COMMANDED_AGENT.md`](docs/COMMANDED_AGENT.md).
 
