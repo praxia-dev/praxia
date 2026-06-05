@@ -594,6 +594,45 @@ CLI users get the same functionality with rich-formatted output:
 
 ## 🚀 Quickstart
 
+> ### 🖥 Native desktop app (no Python required)
+>
+> The easiest way to try Praxia is the native desktop installer.
+>
+> | Platform | Installer | Status |
+> |---|---|---|
+> | Windows 10 / 11 | `.msi` / `.exe` | 🚧 alpha — beta in Phase 1b |
+> | macOS 12+ | `.dmg` | 🚧 alpha — beta in Phase 1b |
+> | Linux (Debian / Ubuntu) | `.deb` / `.AppImage` | 🚧 alpha — beta in Phase 1b |
+>
+> 📦 **Download:** [github.com/praxia-dev/praxia/releases](https://github.com/praxia-dev/praxia/releases)
+>
+> The desktop app is a thin client that talks to a `praxia serve` instance —
+> your own laptop, a NAS, or a shared company server. **Multi-user
+> organizational deployment works today**: point several users' desktop apps
+> at the same `praxia serve` and each gets their own L1 personal memory plus
+> the shared L3 organizational memory and L4 frozen layer, with SSO / RBAC /
+> audit / KMS-encrypted OAuth tokens — all in the OSS core.
+>
+> **Desktop-only features (in addition to everything the server offers):**
+>
+> - **🗂 Local folder ingestion with auto-discovery** — point Praxia at a
+>   folder on your machine (e.g. `~/Documents/Contracts/`); the desktop app
+>   walks it recursively, parses every supported file (PDF / DOCX / PPTX /
+>   XLSX / TXT / MD / code), and makes the contents searchable by the agent
+>   alongside L1 / L3 / L4 memory. Skips files above a size cap, watches
+>   for new / changed files, re-indexes incrementally by mtime + content
+>   hash. Useful for confidential documents you don't want uploaded to
+>   cloud storage. (🚧 Phase 1b)
+> - **🔔 Native notifications** when a long-running agent task finishes (🚧 Phase 1b)
+> - **🪟 Native file dialogs** for drag-and-drop attachments
+>
+> *Cross-device continuity (PC ↔ phone handoff) and a mobile companion land
+> in Phase 1b / Phase 2.*
+>
+> ---
+>
+> For library / SDK / CLI use, the Python install below is the developer path.
+
 ```bash
 # 1. Install (pick the extras you actually need)
 pip install praxia                              # Core

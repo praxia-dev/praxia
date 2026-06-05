@@ -870,9 +870,24 @@ p.run(SalesAgentFlow, inputs={...})
   <section id="install" class="section">
     <div class="container">
       <div class="section-head">
-        <span class="kicker">5-minute Quickstart</span>
-        <h2>From <code>pip install</code> to live agent in under 5 minutes.</h2>
+        <span class="kicker" data-i18n="install.kicker">5-minute Quickstart</span>
+        <h2 data-i18n="install.h2">From <code>pip install</code> to live agent in under 5 minutes.</h2>
       </div>
+
+      <!-- Desktop app — the easiest entry point -->
+      <article class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #a8843e;">
+        <div class="card-icon">🖥</div>
+        <h3 data-i18n="install.desktop_h3">Native desktop app (no Python required)</h3>
+        <p data-i18n="install.desktop_body">The easiest way to try Praxia is the native desktop installer. The app is a thin client that talks to a <code>praxia serve</code> instance — your own laptop, a NAS, or a shared company server. <strong>Multi-user organizational deployment works today</strong>: point several users' desktop apps at the same <code>praxia serve</code> and each gets their own L1 personal memory plus the shared L3 organizational memory and L4 frozen layer.</p>
+        <p data-i18n="install.desktop_features"><strong>Desktop-only features:</strong> <strong>🗂 Local folder ingestion with auto-discovery</strong> — point Praxia at a folder (e.g. <code>~/Documents/Contracts/</code>) and the app walks it recursively, parses every supported file (PDF / DOCX / PPTX / XLSX / TXT / MD / code) and makes the contents searchable by the agent alongside L1 / L3 / L4 memory. Useful for confidential documents you don't want uploaded to cloud storage. Plus native notifications when a long-running agent task finishes, and native file dialogs for drag-and-drop attachments. <em>(🚧 Phase 1b)</em></p>
+        <p>
+          <a href="https://github.com/praxia-dev/praxia/releases" class="btn btn-primary" target="_blank" rel="noopener" data-i18n="install.desktop_cta">📦 Download for Windows / macOS / Linux</a>
+        </p>
+        <p style="font-size: 0.85em; color: #6b7280; margin-top: 0.5rem;" data-i18n="install.desktop_note">Cross-device continuity (PC ↔ phone handoff + push notifications) and a mobile companion land in Phase 1b / Phase 2.</p>
+      </article>
+
+      <p style="margin: 1.5rem 0 0.5rem; color: #6b7280;" data-i18n="install.dev_path">For library / SDK / CLI use, the Python install:</p>
+
       <pre class="install-block"><code><span class="comment"># Install (with UI + connectors + office parsers)</span>
 pip install <span class="str">"praxia[ui,connectors,office]"</span>
 
