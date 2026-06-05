@@ -639,11 +639,20 @@ CLI users get the same functionality with rich-formatted output:
 >
 > 📦 **Download:** [github.com/praxia-dev/praxia/releases](https://github.com/praxia-dev/praxia/releases)
 >
-> The desktop app is a thin client that talks to a `praxia serve` instance —
-> your own laptop, a NAS, or a shared company server. **Multi-user
-> organizational deployment works today**: point several users' desktop apps
-> at the same `praxia serve` and each gets their own L1 personal memory plus
-> the shared L3 organizational memory and L4 frozen layer, with SSO / RBAC /
+> The desktop app **embeds the Praxia server inside the installer** —
+> install, launch, paste an LLM provider key, and you're running. No
+> separate `praxia serve` process to start, no `pip install`, no Python
+> on the user's machine. Settings exposes only the three things a user
+> actually controls: LLM provider keys (Anthropic / OpenAI / Google /
+> Azure OpenAI / Qwen DashScope / Hugging Face — Gemma covered via all
+> three cloud paths), local LLM (Ollama URL + model), and optional SSO
+> tenant URL for org connection. Everything else (port, API key,
+> storage layout, CORS) is managed by the app.
+>
+> **Multi-user organizational deployment** still works the same way:
+> install Praxia on a shared host as `praxia serve`, point a custom
+> frontend or SDK consumer at it, and several users share L3
+> organizational memory + the L4 frozen layer with SSO / RBAC /
 > audit / KMS-encrypted OAuth tokens — all in the OSS core.
 >
 > **Desktop-only features (in addition to everything the server offers):**
