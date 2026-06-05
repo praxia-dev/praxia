@@ -927,9 +927,9 @@ Full model + worked examples: [docs/FEATURES.md#roi-projection-model](docs/FEATU
 - [Model Context Protocol](https://modelcontextprotocol.io) — tool/skill interop
 
 Theoretical groundwork:
-- LinkedIn Cognitive Memory Agent (Episodic + Semantic + Procedural)
+- [LinkedIn Cognitive Memory Agent](https://www.infoq.com/news/2026/04/linkedin-cognitive-memory-agent/) (Episodic + Semantic + Procedural)
 - [Mem0 paper](https://arxiv.org/abs/2504.19413) (arXiv:2504.19413)
-- Letta sleep-time agents
+- [Letta sleep-time agents](https://docs.letta.com/guides/agents/architectures/sleeptime/)
 
 ---
 
