@@ -21,6 +21,12 @@ Endpoints exposed (versioned under `/api/v1` unless noted):
     GET  /oauth/{p}/callback  → IdP redirect handler
     GET  /oauth/{p}/status    → token presence + expiry
     DELETE /oauth/{p}         → revoke locally
+    GET    /threads                       → list user's chat threads
+    POST   /threads                       → create a new thread
+    GET    /threads/{thread_id}           → full thread + messages
+    POST   /threads/{thread_id}/messages  → append a message
+    DELETE /threads/{thread_id}           → remove a thread
+    POST /agent/run           → run autonomous (or commanded) agent
     POST /mcp                 → MCP Streamable HTTP
     GET  /mcp                 → MCP SSE
     POST /mcp/messages        → MCP legacy HTTP+SSE messages
@@ -84,12 +90,14 @@ def create_app(
 
     # --- Per-feature routers under /api/v1 ---------------------------------
 
+    from praxia.server.routers import agent as agent_router
     from praxia.server.routers import auth as auth_router
     from praxia.server.routers import export_ as export_router
     from praxia.server.routers import flows as flows_router
     from praxia.server.routers import memory as memory_router
     from praxia.server.routers import oauth as oauth_router
     from praxia.server.routers import skills as skills_router
+    from praxia.server.routers import threads as threads_router
 
     app.include_router(
         auth_router.build_router(auth=auth, current_user=current_user),
@@ -113,6 +121,14 @@ def create_app(
     )
     app.include_router(
         oauth_router.build_router(current_user=current_user, storage=storage),
+        prefix="/api/v1",
+    )
+    app.include_router(
+        threads_router.build_router(current_user=current_user, storage=storage),
+        prefix="/api/v1",
+    )
+    app.include_router(
+        agent_router.build_router(current_user=current_user, storage=storage),
         prefix="/api/v1",
     )
 
