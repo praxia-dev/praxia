@@ -286,9 +286,10 @@ class TestDeleteFile:
 
 
 class TestToolRegistry:
-    def test_exports_five_tools(self, tools):
+    def test_exports_six_tools(self, tools):
         assert set(tools.keys()) == {
-            "read_file", "write_file", "edit_file", "list_files", "delete_file",
+            "read_file", "write_file", "edit_file", "list_files",
+            "delete_file", "render_document",
         }
 
     def test_tools_are_litellm_serializable(self, tools):
@@ -446,3 +447,101 @@ class TestApplyPendingOp:
         assert any(r.get("action") == "file_tools.apply.write" for r in spy.records)
         rec = next(r for r in spy.records if "action" in r)
         assert rec["actor"] == "user:alice"
+
+
+# ---------------------------------------------------------------------------
+# render_document — deliverable formats (md / html / json / pptx / docx)
+# ---------------------------------------------------------------------------
+
+
+class TestRenderDocument:
+    """The render_document tool wraps praxia.io.exporters so the LLM can
+    say 'make me a 5-slide deck about X' / 'write a Word report'. Same
+    workspace scoping + approval gate as the rest of file_tools.
+    """
+
+    def test_queues_in_confirmation_mode_does_not_touch_disk(self, agent, workspace):
+        pending: list[dict] = []
+        t = workspace_tools(workspace, pending_sink=pending)  # default confirm ON
+        r = t["render_document"].handler(
+            agent,
+            path="slides/q3.pptx",
+            format="pptx",
+            source_markdown="# Q3\n\n## Revenue\n- up 12%",
+        )
+        assert r["pending"] is True
+        assert r["op"] == "render_document"
+        assert r["format"] == "pptx"
+        # Nothing on disk yet
+        assert not (workspace / "slides" / "q3.pptx").exists()
+        assert pending and pending[0]["op"] == "render_document"
+
+    def test_immediate_mode_writes_html(self, agent, workspace):
+        t = workspace_tools(workspace, require_confirmation=False)
+        r = t["render_document"].handler(
+            agent,
+            path="out.html",
+            format="html",
+            source_markdown="# Hello\n\nworld",
+        )
+        assert r["rendered"] is True
+        assert r["format"] == "html"
+        # File exists and looks like HTML
+        body = (workspace / "out.html").read_bytes()
+        assert body.startswith(b"<") or b"<html" in body.lower() or b"<h1" in body.lower()
+
+    def test_immediate_mode_writes_md(self, agent, workspace):
+        t = workspace_tools(workspace, require_confirmation=False)
+        r = t["render_document"].handler(
+            agent,
+            path="note.md",
+            format="md",
+            source_markdown="# Note\n\nbody",
+        )
+        assert r["rendered"] is True
+        assert (workspace / "note.md").read_text(encoding="utf-8").startswith("# Note")
+
+    def test_rejects_unsupported_format(self, agent, workspace):
+        t = workspace_tools(workspace, require_confirmation=False)
+        r = t["render_document"].handler(
+            agent, path="x.weird", format="xyz", source_markdown="hi"
+        )
+        assert "error" in r and "unsupported" in r["error"].lower()
+
+    def test_rejects_escape_path(self, agent, workspace):
+        t = workspace_tools(workspace, require_confirmation=False)
+        r = t["render_document"].handler(
+            agent, path="../escape.md", format="md", source_markdown="x"
+        )
+        assert "error" in r and "outside" in r["error"]
+
+    def test_apply_pending_render_writes_html(self, workspace):
+        from praxia.agent.file_tools import apply_pending_op
+        op = {
+            "op": "render_document",
+            "path": "report.html",
+            "format": "html",
+            "source_markdown": "# Title\n\nbody",
+        }
+        r = apply_pending_op(workspace, op, actor_id="alice")
+        assert r["applied"] is True
+        assert r["format"] == "html"
+        body = (workspace / "report.html").read_bytes()
+        assert len(body) > 0
+
+    def test_apply_pending_render_rejects_escape(self, workspace):
+        from praxia.agent.file_tools import apply_pending_op
+        r = apply_pending_op(workspace, {
+            "op": "render_document",
+            "path": "../sneaky.md",
+            "format": "md",
+            "source_markdown": "x",
+        })
+        assert "error" in r
+
+    def test_tool_registered(self, tools):
+        assert "render_document" in tools
+        schema = tools["render_document"].to_litellm_schema()
+        assert schema["function"]["name"] == "render_document"
+        props = schema["function"]["parameters"]["properties"]
+        assert "format" in props and "source_markdown" in props

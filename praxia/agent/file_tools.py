@@ -188,6 +188,46 @@ def apply_pending_op(
             "replacements": occurrences if count == 0 else count,
         }
 
+    if op_kind == "render_document":
+        source = op.get("source_markdown")
+        fmt = (op.get("format") or "").lower().lstrip(".").strip()
+        if not isinstance(source, str):
+            return {"error": "op.source_markdown is required for render_document"}
+        if fmt not in ("md", "markdown", "html", "json", "pptx", "docx"):
+            return {"error": f"unsupported format: {fmt!r}"}
+        try:
+            from praxia.io.exporters import export_as
+            result = export_as(source, format=fmt)
+            payload = result.bytes
+        except ImportError as e:
+            return {"error": f"exporter for {fmt!r} not available: {e}"}
+        except Exception as e:
+            return {"error": f"render failed: {e}"}
+        if len(payload) > MAX_WRITE_BYTES:
+            return {"error": f"rendered output exceeds {MAX_WRITE_BYTES} bytes"}
+        created = not abs_path.exists()
+        try:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = abs_path.with_suffix(abs_path.suffix + ".praxia-tmp")
+            tmp.write_bytes(payload)
+            os.replace(tmp, abs_path)
+        except OSError as e:
+            return {"error": f"write failed: {e}"}
+        _audit(
+            "file_tools.apply.render",
+            path=abs_path.relative_to(root),
+            format=fmt,
+            bytes=len(payload),
+            created=created,
+        )
+        return {
+            "applied": True,
+            "path": str(abs_path.relative_to(root)),
+            "format": fmt,
+            "bytes": len(payload),
+            "created": created,
+        }
+
     if op_kind == "delete_file":
         if not abs_path.exists():
             return {"applied": False, "reason": "already gone"}
@@ -520,6 +560,82 @@ def workspace_tools(
         entries.sort(key=lambda e: e["path"])
         return {"entries": entries, "count": len(entries), "truncated": truncated}
 
+    # --- render to a deliverable format (md/html/pptx/docx/json) ------------
+
+    _SUPPORTED_RENDER_FORMATS = ("md", "markdown", "html", "json", "pptx", "docx")
+
+    def _render_document(
+        agent: "AutonomousAgent",
+        *,
+        path: str,
+        format: str,
+        source_markdown: str,
+    ) -> dict[str, Any]:
+        if not isinstance(source_markdown, str):
+            return {"error": "source_markdown must be a string"}
+        fmt = (format or "").lower().lstrip(".").strip()
+        if fmt not in _SUPPORTED_RENDER_FORMATS:
+            return {
+                "error": (
+                    f"unsupported format: {format!r}. Supported: "
+                    f"{', '.join(_SUPPORTED_RENDER_FORMATS)}"
+                ),
+            }
+        try:
+            abs_path = _resolve_in(root, path)
+        except _OutsideWorkspaceError as e:
+            return {"error": str(e)}
+
+        if require_confirmation:
+            # Defer the actual rendering until apply time — the
+            # source markdown is what the user reviews; the bytes
+            # are produced fresh against the latest exporter on
+            # approval. Show the user a markdown preview only;
+            # binary preview wouldn't be meaningful pre-render.
+            preview = source_markdown[:4096]
+            return _queue(
+                "render_document",
+                path=str(abs_path.relative_to(root)),
+                format=fmt,
+                source_markdown=source_markdown,
+                source_markdown_preview=preview,
+                source_truncated=len(source_markdown) > 4096,
+                source_bytes=len(source_markdown.encode("utf-8")),
+            )
+
+        # Immediate-execution path (require_confirmation=False) — tests
+        # and non-interactive batch use. Same rendering, no queue.
+        try:
+            from praxia.io.exporters import export_as
+            result = export_as(source_markdown, format=fmt)
+            payload = result.bytes
+        except ImportError as e:
+            return {"error": f"exporter for {fmt!r} not available: {e}"}
+        except Exception as e:
+            return {"error": f"render failed: {e}"}
+        if len(payload) > MAX_WRITE_BYTES:
+            return {"error": f"rendered output exceeds {MAX_WRITE_BYTES} bytes"}
+        try:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = abs_path.with_suffix(abs_path.suffix + ".praxia-tmp")
+            tmp.write_bytes(payload)
+            os.replace(tmp, abs_path)
+        except OSError as e:
+            return {"error": f"write failed: {e}"}
+        _audit(
+            agent,
+            "file_tools.render",
+            path=abs_path.relative_to(root),
+            format=fmt,
+            bytes=len(payload),
+        )
+        return {
+            "path": str(abs_path.relative_to(root)),
+            "format": fmt,
+            "bytes": len(payload),
+            "rendered": True,
+        }
+
     # --- delete (audit, opt-in via caller wiring) ---------------------------
 
     def _delete_file(agent: "AutonomousAgent", *, path: str) -> dict[str, Any]:
@@ -628,6 +744,48 @@ def workspace_tools(
                 },
             },
             handler=_list_files,
+        ),
+        AgentTool(
+            name="render_document",
+            description=(
+                "Render a Markdown source into a deliverable file format "
+                "(md / html / json / pptx / docx) and save it to the "
+                "workspace. Use this when the user asks for slides "
+                "('make a 5-slide presentation about X'), a Word doc "
+                "('write a report'), an HTML page, or just clean "
+                "Markdown. PPTX auto-segments by `##` headings. Subject "
+                "to the same Apply-by-the-user approval gate as "
+                "write_file — nothing lands on disk until the user "
+                "clicks Apply in the chat panel."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": (
+                            "Workspace-relative output path. Include the "
+                            "file extension you want, e.g. "
+                            "`slides/q3.pptx` or `notes/summary.md`."
+                        ),
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["md", "markdown", "html", "json", "pptx", "docx"],
+                        "description": "Target render format.",
+                    },
+                    "source_markdown": {
+                        "type": "string",
+                        "description": (
+                            "The Markdown content to render. For PPTX, "
+                            "use `##` for slide titles. For DOCX/HTML, "
+                            "use standard Markdown headings + lists."
+                        ),
+                    },
+                },
+                "required": ["path", "format", "source_markdown"],
+            },
+            handler=_render_document,
         ),
         AgentTool(
             name="delete_file",
