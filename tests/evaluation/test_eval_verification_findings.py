@@ -417,3 +417,86 @@ class TestLLMQueryDecomposerBypass:
         assert dec.decompose("What is the capital of France?") == [
             "What is the capital of France?"
         ]
+
+
+# ---------------------------------------------------------------------------
+# Scout LLM split — small model for decomposer + verifier sub-calls
+# ---------------------------------------------------------------------------
+
+
+class TestScoutLLMSplit:
+    """CommandedAgent's optional ``scout_llm`` parameter lets callers pin
+    decomposition + verifier claim-extraction to a cheaper LLM while the
+    main answer still runs on the big one. This split is the K7 cost-vs-
+    quality lever from `agentic_rag_verification_lessons.md`.
+    """
+
+    def test_scout_llm_used_for_default_verifier(self) -> None:
+        from praxia.agent.verifier import LLMGroundingVerifier
+
+        class _MarkedLLM:
+            def __init__(self, tag: str) -> None:
+                self.tag = tag
+
+        main_llm = _MarkedLLM("main")
+        scout = _MarkedLLM("scout")
+
+        inner = _FakeInnerAgent(drafts=[])
+        inner.llm = main_llm  # type: ignore[assignment]
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            retriever=lambda q: [],
+            scout_llm=scout,
+        )
+        # Default verifier is auto-constructed — it should pick up the
+        # scout LLM, not the main inner.llm.
+        assert isinstance(agent.verifier, LLMGroundingVerifier)
+        assert agent.verifier.llm is scout
+
+    def test_scout_llm_attaches_decomposer_to_default_retriever(self) -> None:
+        """When scout_llm is provided AND no explicit retriever is passed,
+        the auto-built DefaultMemoryRetriever should carry a decomposer
+        bound to the scout LLM."""
+        class _MarkedLLM:
+            def __init__(self, tag: str) -> None:
+                self.tag = tag
+
+        scout = _MarkedLLM("scout")
+
+        inner = _FakeInnerAgent(drafts=[])
+        inner.llm = _MarkedLLM("main")  # type: ignore[assignment]
+        agent = CommandedAgent(inner, scout_llm=scout)  # type: ignore[arg-type]
+
+        retr = agent.retriever
+        # DefaultMemoryRetriever exposes the decomposer it was built with.
+        assert getattr(retr, "decomposer", None) is not None
+        assert retr.decomposer.llm is scout  # type: ignore[union-attr]
+
+    def test_no_scout_llm_no_decomposer_by_default(self) -> None:
+        """Without scout_llm, the existing default behaviour is preserved
+        — no decomposer is auto-attached, so single-LLM setups don't
+        suddenly start paying for decomposition calls."""
+        class _MarkedLLM:
+            pass
+
+        inner = _FakeInnerAgent(drafts=[])
+        inner.llm = _MarkedLLM()  # type: ignore[assignment]
+        agent = CommandedAgent(inner)  # type: ignore[arg-type]
+        retr = agent.retriever
+        assert getattr(retr, "decomposer", None) is None
+
+    def test_explicit_verifier_wins_over_scout_llm(self) -> None:
+        """If the caller passes a verifier, scout_llm doesn't override it
+        — explicit beats implicit."""
+        class _MarkedLLM:
+            pass
+
+        explicit = _ScriptedVerifier(verdicts=[])
+        inner = _FakeInnerAgent(drafts=[])
+        inner.llm = _MarkedLLM()  # type: ignore[assignment]
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=explicit,
+            scout_llm=_MarkedLLM(),
+        )
+        assert agent.verifier is explicit

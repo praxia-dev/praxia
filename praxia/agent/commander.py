@@ -333,9 +333,17 @@ class CommandedAgent:
     Args:
         inner: the underlying autonomous agent that produces the draft.
         verifier: anything satisfying the :class:`Verifier` protocol.
-            Default: :class:`LLMGroundingVerifier` using ``inner.llm``.
+            Default: :class:`LLMGroundingVerifier` using ``scout_llm`` if
+            provided, else ``inner.llm``.
         retriever: a callable ``(query) -> list[Source]``. Default:
-            :class:`DefaultMemoryRetriever` wired against ``inner``.
+            :class:`DefaultMemoryRetriever` wired against ``inner``. When
+            ``scout_llm`` is set, the default retriever auto-attaches an
+            :class:`LLMQueryDecomposer` so multi-hop questions get split
+            into sub-queries.
+        scout_llm: a smaller / cheaper LLM used for "scout" sub-calls —
+            grounding-verifier claim extraction and query decomposition.
+            The main answer still goes through ``inner.llm``. Set to
+            ``None`` (default) to use one LLM for everything.
         max_verify_rounds: maximum redrafts before stopping. Default 3.
             (Round 1 is the first verification of the initial draft; up to
             ``max_verify_rounds - 1`` redrafts will follow.)
@@ -360,6 +368,7 @@ class CommandedAgent:
         verifier: Verifier | None = None,
         retriever: Retriever | None = None,
         task_classifier: TaskClassifier | None = None,
+        scout_llm: Any = None,
         max_verify_rounds: int = 3,
         abstain_on_max_rounds: bool = True,
         min_groundedness_improvement: float = 0.05,
@@ -372,8 +381,15 @@ class CommandedAgent:
         if min_groundedness_improvement < 0:
             raise ValueError("min_groundedness_improvement must be >= 0")
         self.inner = inner
-        self.verifier = verifier or LLMGroundingVerifier(llm=inner.llm)
-        self.retriever = retriever or self._build_default_retriever(per_layer_limit)
+        self.scout_llm = scout_llm
+        # The grounding verifier and the query decomposer are the
+        # "scout" sub-calls — they extract structured JSON / split a
+        # question into atomic claims. A smaller LLM is fine for these.
+        sub_llm = scout_llm if scout_llm is not None else inner.llm
+        self.verifier = verifier or LLMGroundingVerifier(llm=sub_llm)
+        self.retriever = retriever or self._build_default_retriever(
+            per_layer_limit, decomposer_llm=sub_llm if scout_llm is not None else None
+        )
         self.task_classifier = task_classifier or default_task_classifier
         self.max_verify_rounds = int(max_verify_rounds)
         self.abstain_on_max_rounds = bool(abstain_on_max_rounds)
@@ -613,9 +629,21 @@ class CommandedAgent:
 
     # --- defaults ---------------------------------------------------------
 
-    def _build_default_retriever(self, per_layer_limit: int) -> Retriever:
+    def _build_default_retriever(
+        self,
+        per_layer_limit: int,
+        *,
+        decomposer_llm: Any = None,
+    ) -> Retriever:
         """Construct a :class:`DefaultMemoryRetriever` wired to the inner
-        agent's memory layers."""
+        agent's memory layers.
+
+        When ``decomposer_llm`` is provided, an
+        :class:`LLMQueryDecomposer` is auto-attached so multi-hop
+        questions are split into sub-queries before retrieval. This is
+        how a CommandedAgent with a ``scout_llm`` ends up doing
+        decomposition without callers having to wire it manually.
+        """
         memory_dir = Path(self.inner.memory_dir)
         personal = None
         shared = None
@@ -654,11 +682,20 @@ class CommandedAgent:
         except Exception:  # pragma: no cover
             _log.debug("Document store unavailable for default retriever")
 
+        decomposer = None
+        if decomposer_llm is not None:
+            try:
+                from praxia.agent.decomposer import LLMQueryDecomposer
+                decomposer = LLMQueryDecomposer(llm=decomposer_llm)
+            except Exception:  # pragma: no cover
+                _log.debug("LLMQueryDecomposer unavailable for default retriever")
+
         return DefaultMemoryRetriever(
             personal=personal,
             shared=shared,
             frozen=frozen,
             documents_search=documents_search,
+            decomposer=decomposer,
             per_layer_limit=per_layer_limit,
         )
 

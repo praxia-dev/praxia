@@ -32,6 +32,12 @@ class AgentRunRequest(BaseModel):
     thread_id: str | None = None      # if set, append both user msg + reply
     org_id: str = "default-org"
     model: str = "claude"
+    # Optional: a smaller / cheaper LLM used for "scout" sub-calls —
+    # query decomposition, grounding-verifier claim extraction, task
+    # classification. Defaults to `model` (one LLM for everything).
+    # Picking a smaller model here saves cost and latency on the
+    # exploratory steps without hurting final-answer quality.
+    scout_model: str | None = None
     max_steps: int = 8
     verified: bool = False            # use CommandedAgent if True
     max_verify_rounds: int = 3
@@ -115,6 +121,19 @@ def build_router(*, current_user: Any, storage: Path):
         except Exception as e:
             raise HTTPException(500, f"LLM init failed: {e}")
 
+        # Optional scout LLM — used by the decomposer + verifier when
+        # CommandedAgent is enabled below. If not provided (or set to the
+        # same string as `model`), the main LLM doubles as scout.
+        scout_llm = None
+        if req.scout_model and req.scout_model != req.model:
+            try:
+                scout_llm = LLM(req.scout_model)
+            except Exception as e:  # pragma: no cover
+                # Soft-fail: a bad scout_model shouldn't kill the request,
+                # just fall back to the main LLM for sub-calls.
+                _log.warning("scout LLM init failed (%s); using main LLM", e)
+                scout_llm = None
+
         inner = AutonomousAgent(
             user_id=user.id,
             role=user.role,
@@ -137,6 +156,7 @@ def build_router(*, current_user: Any, storage: Path):
             if req.verified:
                 agent = CommandedAgent(
                     inner,
+                    scout_llm=scout_llm,
                     max_verify_rounds=max(1, int(req.max_verify_rounds)),
                     require_citations=True,
                 )
