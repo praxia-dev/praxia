@@ -31,7 +31,7 @@
 
 ## ⬇ **Try Praxia in 30 seconds — no Python, no setup**
 
-### 👉 [**📦 Download Praxia Desktop for Windows (.exe, 147 MB)**](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-4_x64-setup.exe)
+### 👉 [**📦 Download Praxia Desktop for Windows (.exe, 147 MB)**](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-5_x64-setup.exe)
 
 Windows 10 / 11 x64 alpha · Tauri + embedded Python sidecar · zero
 `pip install`, zero `praxia serve`. Paste an LLM API key (Anthropic /
@@ -39,7 +39,7 @@ OpenAI / Azure / Google / Qwen / HF / Ollama) and you're chatting.
 Unsigned alpha — SmartScreen will warn on first launch, click
 **"More info" → "Run anyway"**.
 
-Other downloads · [`.msi` for managed deployment](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-4_x64_en-US.msi)
+Other downloads · [`.msi` for managed deployment](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-5_x64_en-US.msi)
 · [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest)
 · macOS / Linux coming in Phase 1b.
 
@@ -654,8 +654,8 @@ CLI users get the same functionality with rich-formatted output:
 > | Linux (Debian / Ubuntu) | `.deb` / `.AppImage` | 🚧 next alpha drop |
 >
 > 📦 **Direct download (Windows, ~147 MB):**
-> [`Praxia.Desktop_0.1.0-4_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-4_x64-setup.exe)
-> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-4_x64_en-US.msi) for managed deployment ·
+> [`Praxia.Desktop_0.1.0-5_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-5_x64-setup.exe)
+> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-5_x64_en-US.msi) for managed deployment ·
 > [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest).
 > The installer is unsigned during alpha, so Windows SmartScreen will warn on
 > first launch — click **"More info" → "Run anyway"** (signed builds land
