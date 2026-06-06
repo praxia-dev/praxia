@@ -226,6 +226,32 @@ def _search_frozen_layer(agent: AutonomousAgent, query: str, limit: int = 5) -> 
     return {"hits": hits[: int(limit)], "count": len(hits)}
 
 
+def _search_documents(agent: AutonomousAgent, query: str, limit: int = 5) -> dict[str, Any]:
+    """Search local-document chunks the user ingested via the desktop
+    app's Documents tab.
+
+    These are files the user dropped onto a Praxia folder — PDFs,
+    Word docs, code, etc. — pre-parsed into searchable chunks and
+    scoped to the user (no cross-user leakage). Distinct from the
+    L1/L3/L4 memory layers in that the content is *the user's own
+    files*, not promoted memory blocks or frozen org knowledge.
+
+    Returns up to ``limit`` hits, each with ``text``, ``relative_path``,
+    ``doc_id``, ``folder_id``, and ``score``.
+    """
+    try:
+        from praxia.server.routers.documents import search_for_user
+    except ImportError:
+        return {"hits": [], "count": 0, "note": "praxia[server] not installed"}
+    try:
+        hits = search_for_user(
+            Path(agent.memory_dir), agent.user_id, query, limit=int(limit)
+        ) or []
+    except Exception:  # pragma: no cover
+        return {"hits": [], "count": 0}
+    return {"hits": list(hits), "count": len(hits)}
+
+
 def _final_answer(agent: AutonomousAgent, answer: str) -> dict[str, Any]:
     """Sentinel tool — its presence in the loop signals "done, here is my answer"."""
     return {"answer": answer}
@@ -373,6 +399,27 @@ def builtin_tools() -> dict[str, AgentTool]:
                 "required": ["text"],
             },
             handler=_record_fact,
+        ),
+        AgentTool(
+            name="search_documents",
+            description=(
+                "Search the user's ingested LOCAL DOCUMENTS — the files "
+                "they dropped onto the Praxia desktop app's Documents "
+                "tab (PDFs, Word docs, code, manuals…). Use this when "
+                "the user's question is about content they own / "
+                "imported, NOT the agent's memory layers. Often the "
+                "right first call for 'what does my contract say about "
+                "X' / 'find the section in those PDFs about Y'."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string"},
+                    "limit": {"type": "integer", "default": 5, "minimum": 1, "maximum": 20},
+                },
+                "required": ["query"],
+            },
+            handler=_search_documents,
         ),
         AgentTool(
             name="final_answer",

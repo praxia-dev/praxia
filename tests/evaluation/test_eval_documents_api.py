@@ -431,3 +431,91 @@ class TestRetrieverIntegration:
         assert sources[0].kind == "local_document"
         # Metadata carries the path
         assert sources[0].metadata.get("relative_path") == "policies/audit.txt"
+
+
+# ---------------------------------------------------------------------------
+# search_documents tool — bare AutonomousAgent reach into documents
+# ---------------------------------------------------------------------------
+
+
+class TestSearchDocumentsTool:
+    """The bare AutonomousAgent (no CommandedAgent verifier wrap) needs
+    direct access to user-ingested documents via a tool. Without this,
+    the Documents tab "works" (folder is ingested, search endpoint
+    returns hits) but a normal chat never reaches into them.
+    """
+
+    def test_tool_is_registered_by_default(self):
+        from praxia.agent.tools import builtin_tools
+        tools = builtin_tools()
+        assert "search_documents" in tools
+        sd = tools["search_documents"]
+        # Schema is litellm-callable
+        s = sd.to_litellm_schema()
+        assert s["function"]["name"] == "search_documents"
+        assert "query" in s["function"]["parameters"]["properties"]
+
+    def test_tool_returns_hits_from_user_documents(self, server):
+        """End-to-end: upload a doc → call search_documents handler →
+        it should find the chunk just uploaded."""
+        from praxia.agent.tools import builtin_tools
+
+        client, hdr, user, storage = server
+        fid = client.post("/api/v1/documents/folder",
+                          json={"path": "/x"}, headers=hdr).json()["id"]
+        client.post(
+            f"/api/v1/documents/folder/{fid}/upload",
+            headers=hdr,
+            files={"file": ("note.txt", io.BytesIO(
+                b"Customer renewal terms require 30 day written notice."
+            ), "text/plain")},
+            data={"relative_path": "note.txt"},
+        )
+
+        # Minimal agent stub — search_documents only needs user_id +
+        # memory_dir off the agent.
+        from dataclasses import dataclass
+
+        @dataclass
+        class _StubAgent:
+            user_id: str
+            memory_dir: str
+
+        agent = _StubAgent(user_id=user.id, memory_dir=str(storage))
+        handler = builtin_tools()["search_documents"].handler
+        result = handler(agent, query="customer renewal", limit=5)
+        assert result["count"] >= 1
+        first = result["hits"][0]
+        assert "renewal" in first["text"].lower()
+        assert first["relative_path"] == "note.txt"
+
+    def test_tool_isolates_by_user(self, server, tmp_path):
+        """search_documents must scope to agent.user_id — Bob can't
+        see Alice's docs even though they share the same storage."""
+        from praxia.agent.tools import builtin_tools
+        from dataclasses import dataclass
+
+        client, hdr_alice, alice, storage = server
+        fid = client.post("/api/v1/documents/folder",
+                          json={"path": "/x"}, headers=hdr_alice).json()["id"]
+        client.post(
+            f"/api/v1/documents/folder/{fid}/upload",
+            headers=hdr_alice,
+            files={"file": ("a.txt", io.BytesIO(b"alice private notes"), "text/plain")},
+            data={"relative_path": "a.txt"},
+        )
+
+        auth = AuthManager(storage_dir=storage / "auth")
+        bob, _ = auth.users.create(username="bob", role="member", password=None)
+
+        @dataclass
+        class _StubAgent:
+            user_id: str
+            memory_dir: str
+
+        handler = builtin_tools()["search_documents"].handler
+        bob_result = handler(
+            _StubAgent(user_id=bob.id, memory_dir=str(storage)),
+            query="private notes",
+        )
+        assert bob_result["count"] == 0
