@@ -638,8 +638,8 @@ CLI users get the same functionality with rich-formatted output:
 > | Linux (Debian / Ubuntu) | `.deb` / `.AppImage` | 🚧 next alpha drop |
 >
 > 📦 **Direct download (Windows, ~147 MB):**
-> [`Praxia.Desktop_0.1.0-2_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-2_x64-setup.exe)
-> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-2_x64_en-US.msi) for managed deployment ·
+> [`Praxia.Desktop_0.1.0-3_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-3_x64-setup.exe)
+> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-3_x64_en-US.msi) for managed deployment ·
 > [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest).
 > The installer is unsigned during alpha, so Windows SmartScreen will warn on
 > first launch — click **"More info" → "Run anyway"** (signed builds land
