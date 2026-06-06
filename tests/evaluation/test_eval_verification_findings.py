@@ -500,3 +500,91 @@ class TestScoutLLMSplit:
             scout_llm=_MarkedLLM(),
         )
         assert agent.verifier is explicit
+
+
+# ---------------------------------------------------------------------------
+# fallback_when_no_sources — verified mode is usable as a default
+# ---------------------------------------------------------------------------
+
+
+class TestNoSourcesFallback:
+    """With ``fallback_when_no_sources=True`` (the default since the
+    fix), a CommandedAgent run that retrieves zero sources must NOT
+    abstain — it should pass through to the bare inner agent, so a
+    first-launch user with no documents / memory ingested still gets
+    real chat answers instead of "I don't have enough grounded
+    information". The abstain-on-no-sources branch is preserved as
+    opt-in for compliance deployments that prefer an explicit refusal.
+    """
+
+    def test_default_falls_through_when_retriever_empty(self) -> None:
+        inner = _FakeInnerAgent(drafts=["unverified hello"])
+        verifier_calls: list[str] = []
+
+        class _SpyVerifier:
+            def verify(self, draft: str, sources: list[Source]) -> Verdict:
+                verifier_calls.append(draft)
+                return _accept()
+
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=_SpyVerifier(),
+            retriever=lambda q: [],  # zero sources
+        )
+        result = agent.run("hi")
+        assert result.stopped_reason == "no_sources_fallback"
+        assert result.answer == "unverified hello"
+        # Verifier never invoked — there was nothing to verify against
+        assert verifier_calls == []
+        # task_kind stays "knowledge" so the audit trail is honest
+        assert result.task_kind == "knowledge"
+
+    def test_disabling_fallback_keeps_strict_abstain(self) -> None:
+        """Compliance-mode deployments can flip the flag off and get
+        the old strict-abstain behaviour back — the verifier sees the
+        empty source list and abstains explicitly."""
+        inner = _FakeInnerAgent(drafts=["d1"])
+        # Verifier returns abstain on the empty-source draft (exactly
+        # what LLMGroundingVerifier does in production with no sources).
+        verifier = _ScriptedVerifier(verdicts=[_accept_or_abstain := _abstain_verdict()])
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=verifier,
+            retriever=lambda q: [],
+            fallback_when_no_sources=False,
+        )
+        result = agent.run("hi")
+        # Fallback path NOT taken — the verifier abstain decided it.
+        assert result.stopped_reason == "abstain"
+        assert result.stopped_reason != "no_sources_fallback"
+
+
+    def test_fallback_skipped_when_sources_present(self) -> None:
+        """Sanity: fallback ONLY kicks in when sources are empty. With
+        any source, the verifier path runs normally."""
+        inner = _FakeInnerAgent(drafts=["d1"])
+        verifier_calls: list[str] = []
+
+        class _SpyVerifier:
+            def verify(self, draft: str, sources: list[Source]) -> Verdict:
+                verifier_calls.append(draft)
+                return _accept(cited=("L1#0",))
+
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=_SpyVerifier(),
+            retriever=lambda q: _src(("L1#0", "evidence")),
+        )
+        result = agent.run("hi")
+        assert result.stopped_reason == "accept"
+        assert verifier_calls == ["d1"]
+
+
+def _abstain_verdict() -> Verdict:
+    return Verdict(
+        groundedness=0.0,
+        per_claim=[],
+        unsupported_claims=["no sources"],
+        decision="abstain",
+        rationale="no sources",
+    )

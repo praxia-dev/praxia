@@ -125,7 +125,7 @@ class CommandedResult:
     sources: list[Source] = field(default_factory=list)
     citations: list[str] = field(default_factory=list)
     rounds: list["CommandedRound"] = field(default_factory=list)
-    stopped_reason: str = "accept"            # accept | abstain | max_rounds | no_improvement | bypass_action
+    stopped_reason: str = "accept"            # accept | abstain | max_rounds | no_improvement | bypass_action | no_sources_fallback
     task_kind: str = "knowledge"              # knowledge | action — picked by TaskClassifier
     usage: dict[str, int] = field(default_factory=dict)
 
@@ -372,6 +372,7 @@ class CommandedAgent:
         max_verify_rounds: int = 3,
         abstain_on_max_rounds: bool = True,
         min_groundedness_improvement: float = 0.05,
+        fallback_when_no_sources: bool = True,
         abstain_message: str = DEFAULT_ABSTAIN_MESSAGE,
         require_citations: bool = True,
         per_layer_limit: int = 5,
@@ -394,6 +395,7 @@ class CommandedAgent:
         self.max_verify_rounds = int(max_verify_rounds)
         self.abstain_on_max_rounds = bool(abstain_on_max_rounds)
         self.min_groundedness_improvement = float(min_groundedness_improvement)
+        self.fallback_when_no_sources = bool(fallback_when_no_sources)
         self.abstain_message = abstain_message
         self.require_citations = bool(require_citations)
 
@@ -444,6 +446,40 @@ class CommandedAgent:
 
         if sources is None:
             sources = self.retriever(user_input)
+
+        # Sensible-default fallback: if the retriever returned nothing
+        # there is literally nothing to ground claims against. Forcing
+        # an abstain in that case turns the agent into a useless
+        # "I don't know" machine for users who haven't ingested any
+        # documents / memory yet (which is every first-launch user).
+        # Skip verification entirely and let the inner agent answer
+        # like a normal chat. The stopped_reason makes the path
+        # auditable so callers know no verification happened.
+        if self.fallback_when_no_sources and not sources:
+            inner_result = self.inner.run(user_input, history=history)
+            self._audit(
+                "commander.no_sources_fallback",
+                f"user:{self.inner.user_id}",
+                metadata={"input_chars": str(len(user_input))},
+            )
+            fallback_result = CommandedResult(
+                answer=(inner_result.final_text or "").strip(),
+                verdict=Verdict(
+                    groundedness=0.0,
+                    per_claim=[],
+                    unsupported_claims=[],
+                    decision="accept",
+                    rationale=(
+                        "No sources retrieved; verification skipped. "
+                        "Response is an unverified chat answer."
+                    ),
+                ),
+                sources=[],
+                stopped_reason="no_sources_fallback",
+                task_kind=task_kind,
+            )
+            fallback_result.add_usage(inner_result.usage)
+            return fallback_result
 
         rounds: list[CommandedRound] = []
         result = CommandedResult(
