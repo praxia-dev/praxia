@@ -637,12 +637,13 @@ CLI users get the same functionality with rich-formatted output:
 > | macOS 12+ | `.dmg` | 🚧 next alpha drop |
 > | Linux (Debian / Ubuntu) | `.deb` / `.AppImage` | 🚧 next alpha drop |
 >
-> 📦 **Download:** [latest release on github.com/praxia-dev/praxia/releases](https://github.com/praxia-dev/praxia/releases/latest)
-> — pick `Praxia Desktop_<version>_x64-setup.exe` for the smaller NSIS
-> installer (recommended) or `*_x64_en-US.msi` for managed Windows
-> deployment. The installer is currently unsigned, so Windows
-> SmartScreen will warn on first launch — click "More info" → "Run
-> anyway" (signed builds land with beta).
+> 📦 **Direct download (Windows, ~147 MB):**
+> [`Praxia.Desktop_0.1.0-2_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-2_x64-setup.exe)
+> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-2_x64_en-US.msi) for managed deployment ·
+> [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest).
+> The installer is unsigned during alpha, so Windows SmartScreen will warn on
+> first launch — click **"More info" → "Run anyway"** (signed builds land
+> with beta).
 >
 > The desktop app **embeds the Praxia server inside the installer** —
 > install, launch, paste an LLM provider key, and you're running. No
