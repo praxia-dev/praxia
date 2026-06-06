@@ -104,6 +104,7 @@ def create_app(
     from praxia.server.routers import memory as memory_router
     from praxia.server.routers import oauth as oauth_router
     from praxia.server.routers import skills as skills_router
+    from praxia.server.routers import tasks as tasks_router
     from praxia.server.routers import threads as threads_router
 
     app.include_router(
@@ -140,6 +141,10 @@ def create_app(
     )
     app.include_router(
         documents_router.build_router(current_user=current_user, storage=storage),
+        prefix="/api/v1",
+    )
+    app.include_router(
+        tasks_router.build_router(current_user=current_user, storage=storage),
         prefix="/api/v1",
     )
 
