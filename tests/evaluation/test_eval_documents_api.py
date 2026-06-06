@@ -489,6 +489,70 @@ class TestSearchDocumentsTool:
         assert "renewal" in first["text"].lower()
         assert first["relative_path"] == "note.txt"
 
+    def test_path_prefix_filter(self, server):
+        """When the user says 'search the contracts/2024 folder',
+        the agent calls search_documents with path_prefix and only
+        gets hits whose relative_path starts with that prefix."""
+        from praxia.agent.tools import builtin_tools
+        from dataclasses import dataclass
+
+        client, hdr, user, storage = server
+        fid = client.post("/api/v1/documents/folder",
+                          json={"path": "/x"}, headers=hdr).json()["id"]
+        # Two files in different subfolders, both with the keyword.
+        for sub in ("contracts/2024/q1.txt", "policies/security.txt"):
+            client.post(
+                f"/api/v1/documents/folder/{fid}/upload",
+                headers=hdr,
+                files={"file": (sub.split("/")[-1], io.BytesIO(
+                    b"audit retention is 7 years"
+                ), "text/plain")},
+                data={"relative_path": sub},
+            )
+
+        @dataclass
+        class _StubAgent:
+            user_id: str
+            memory_dir: str
+
+        agent = _StubAgent(user_id=user.id, memory_dir=str(storage))
+        handler = builtin_tools()["search_documents"].handler
+
+        # Without prefix: both files match
+        all_hits = handler(agent, query="audit retention")
+        paths = {h["relative_path"] for h in all_hits["hits"]}
+        assert "contracts/2024/q1.txt" in paths
+        assert "policies/security.txt" in paths
+
+        # With prefix: only contracts/2024/ matches
+        narrowed = handler(agent, query="audit retention", path_prefix="contracts/2024")
+        paths = {h["relative_path"] for h in narrowed["hits"]}
+        assert "contracts/2024/q1.txt" in paths
+        assert "policies/security.txt" not in paths
+
+    def test_list_document_folders_tool(self, server):
+        from praxia.agent.tools import builtin_tools
+        from dataclasses import dataclass
+
+        client, hdr, user, storage = server
+        client.post("/api/v1/documents/folder",
+                    json={"path": "/home/alice/contracts", "title": "Contracts"},
+                    headers=hdr)
+        client.post("/api/v1/documents/folder",
+                    json={"path": "/home/alice/notes", "title": "Notes"},
+                    headers=hdr)
+
+        @dataclass
+        class _StubAgent:
+            user_id: str
+            memory_dir: str
+
+        agent = _StubAgent(user_id=user.id, memory_dir=str(storage))
+        r = builtin_tools()["list_document_folders"].handler(agent)
+        assert r["count"] == 2
+        titles = {f["title"] for f in r["folders"]}
+        assert titles == {"Contracts", "Notes"}
+
     def test_tool_isolates_by_user(self, server, tmp_path):
         """search_documents must scope to agent.user_id — Bob can't
         see Alice's docs even though they share the same storage."""

@@ -334,6 +334,7 @@ def search_for_user(
     *,
     limit: int = 5,
     folder_ids: list[str] | None = None,
+    path_prefix: str | None = None,
 ) -> list[dict[str, Any]]:
     """Keyword search across this user's documents.
 
@@ -341,8 +342,21 @@ def search_for_user(
     asks the default retriever for sources, which calls this function in
     addition to walking L1 / L3 / L4 memory.
 
-    Returns a list of dicts shaped like :class:`SearchHit` (for cheap
-    JSON-serialisation). Empty list on any error / no results.
+    Args:
+        storage: server storage root.
+        user_id: scoping key — no cross-user leakage.
+        query: free-text query.
+        limit: max hits returned (top-scored).
+        folder_ids: when set, restrict to these folder ids.
+        path_prefix: when set, only consider documents whose
+            ``relative_path`` starts with this prefix. Lets the agent
+            answer "what does the file under contracts/2024/ say
+            about X" without re-shaping the index. Matched
+            case-sensitively against the stored relative_path.
+
+    Returns:
+        list of dicts shaped like :class:`SearchHit` (for cheap
+        JSON-serialisation). Empty list on any error / no results.
     """
     if not query.strip():
         return []
@@ -356,9 +370,21 @@ def search_for_user(
     else:
         folders = [f for f in all_folders if f.enabled]
 
+    # Normalise path_prefix so callers can pass either "sub/" or "sub"
+    # without surprises. We compare against relative_path which uses
+    # forward slashes regardless of host OS.
+    norm_prefix = None
+    if path_prefix:
+        norm_prefix = path_prefix.replace("\\", "/").strip("/")
+
     hits: list[SearchHit] = []
     for folder in folders:
         for doc in load_docs_in_folder(storage, user_id, folder.id):
+            if norm_prefix is not None:
+                rel = doc.relative_path.replace("\\", "/")
+                # Match either "prefix/..." or exactly "prefix" as a file.
+                if not (rel == norm_prefix or rel.startswith(norm_prefix + "/")):
+                    continue
             for chunk in doc.chunks:
                 lc = chunk.text.lower()
                 chunk_tokens = _tokenize(chunk.text)

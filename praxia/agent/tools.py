@@ -226,7 +226,13 @@ def _search_frozen_layer(agent: AutonomousAgent, query: str, limit: int = 5) -> 
     return {"hits": hits[: int(limit)], "count": len(hits)}
 
 
-def _search_documents(agent: AutonomousAgent, query: str, limit: int = 5) -> dict[str, Any]:
+def _search_documents(
+    agent: AutonomousAgent,
+    query: str,
+    limit: int = 5,
+    path_prefix: str | None = None,
+    folder_ids: list[str] | None = None,
+) -> dict[str, Any]:
     """Search local-document chunks the user ingested via the desktop
     app's Documents tab.
 
@@ -235,6 +241,17 @@ def _search_documents(agent: AutonomousAgent, query: str, limit: int = 5) -> dic
     scoped to the user (no cross-user leakage). Distinct from the
     L1/L3/L4 memory layers in that the content is *the user's own
     files*, not promoted memory blocks or frozen org knowledge.
+
+    Args:
+        query: free-text query.
+        limit: max hits returned.
+        path_prefix: when the user asks about "the files under
+            contracts/2024", pass ``"contracts/2024"`` here to narrow
+            the search to that subtree. Matched against
+            ``relative_path`` inside each registered folder.
+        folder_ids: when set, restrict to these specific Documents
+            folders. Use ``list_document_folders`` first if you need
+            to choose by folder title.
 
     Returns up to ``limit`` hits, each with ``text``, ``relative_path``,
     ``doc_id``, ``folder_id``, and ``score``.
@@ -245,11 +262,46 @@ def _search_documents(agent: AutonomousAgent, query: str, limit: int = 5) -> dic
         return {"hits": [], "count": 0, "note": "praxia[server] not installed"}
     try:
         hits = search_for_user(
-            Path(agent.memory_dir), agent.user_id, query, limit=int(limit)
+            Path(agent.memory_dir),
+            agent.user_id,
+            query,
+            limit=int(limit),
+            folder_ids=folder_ids,
+            path_prefix=path_prefix,
         ) or []
     except Exception:  # pragma: no cover
         return {"hits": [], "count": 0}
     return {"hits": list(hits), "count": len(hits)}
+
+
+def _list_document_folders(agent: AutonomousAgent) -> dict[str, Any]:
+    """List the user's registered Documents folders (id + title +
+    path + doc_count).
+
+    Useful when the user names a folder and the agent needs to find
+    its ``folder_id`` to pass to ``search_documents``.
+    """
+    try:
+        from praxia.server.routers.documents import load_user_folders
+    except ImportError:
+        return {"folders": [], "note": "praxia[server] not installed"}
+    try:
+        folders = load_user_folders(Path(agent.memory_dir), agent.user_id) or []
+    except Exception:  # pragma: no cover
+        return {"folders": []}
+    return {
+        "folders": [
+            {
+                "id": f.id,
+                "title": f.title,
+                "path": f.path,
+                "doc_count": f.doc_count,
+                "enabled": f.enabled,
+            }
+            for f in folders
+        ],
+        "count": len(folders),
+    }
 
 
 def _final_answer(agent: AutonomousAgent, answer: str) -> dict[str, Any]:
@@ -409,17 +461,50 @@ def builtin_tools() -> dict[str, AgentTool]:
                 "the user's question is about content they own / "
                 "imported, NOT the agent's memory layers. Often the "
                 "right first call for 'what does my contract say about "
-                "X' / 'find the section in those PDFs about Y'."
+                "X' / 'find the section in those PDFs about Y'. "
+                "Use `path_prefix` to narrow to a subfolder (e.g. "
+                "`contracts/2024`) — the user's directory structure is "
+                "preserved in `relative_path` on every hit."
             ),
             parameters_schema={
                 "type": "object",
                 "properties": {
                     "query": {"type": "string"},
                     "limit": {"type": "integer", "default": 5, "minimum": 1, "maximum": 20},
+                    "path_prefix": {
+                        "type": "string",
+                        "description": (
+                            "Restrict to documents whose relative_path "
+                            "starts with this prefix. e.g. 'contracts/2024'."
+                        ),
+                    },
+                    "folder_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Restrict to specific Documents folder ids. "
+                            "Call list_document_folders first to find ids."
+                        ),
+                    },
                 },
                 "required": ["query"],
             },
             handler=_search_documents,
+        ),
+        AgentTool(
+            name="list_document_folders",
+            description=(
+                "List the user's registered Documents folders (id, "
+                "title, path, doc_count). Use this when the user "
+                "names a folder ('search the contracts folder') and "
+                "you need to find the matching folder_id to pass to "
+                "search_documents."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {},
+            },
+            handler=_list_document_folders,
         ),
         AgentTool(
             name="final_answer",
