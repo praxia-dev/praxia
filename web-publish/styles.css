@@ -298,6 +298,31 @@ pre .str     { color: var(--accent-bright); }
 .btn:hover { transform: translateY(-1px); }
 .btn-block { width: 100%; }
 
+/* Hero-prominent CTA — larger pad + heavier weight so the download
+   button reads as the primary action above the fold. Pairs with a
+   small caption (.hero-cta-sub) for the alpha / Windows-only note. */
+.btn-lg {
+  padding: 0.85rem 1.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(168, 132, 62, 0.28);
+}
+.btn-lg:hover {
+  box-shadow: 0 8px 18px rgba(168, 132, 62, 0.34);
+  transform: translateY(-2px);
+}
+.hero-cta-sub {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b7280);
+}
+.hero-cta-sub code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0.05em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   color: #1a1408 !important;
