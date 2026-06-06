@@ -38,6 +38,13 @@ class AgentRunRequest(BaseModel):
     # Picking a smaller model here saves cost and latency on the
     # exploratory steps without hurting final-answer quality.
     scout_model: str | None = None
+    # Optional: absolute path to a workspace directory. When set, the
+    # agent gets Codex-style file tools (read_file / write_file /
+    # edit_file / list_files / delete_file) scoped strictly to that
+    # directory. The desktop app supplies this when the user picks a
+    # Workspace folder. Path-traversal escapes are rejected inside
+    # praxia.agent.file_tools.
+    workspace_root: str | None = None
     max_steps: int = 8
     verified: bool = False            # use CommandedAgent if True
     max_verify_rounds: int = 3
@@ -134,6 +141,18 @@ def build_router(*, current_user: Any, storage: Path):
                 _log.warning("scout LLM init failed (%s); using main LLM", e)
                 scout_llm = None
 
+        # Workspace-scoped file tools — opt-in via workspace_root.
+        # Resolved + validated inside praxia.agent.file_tools so a
+        # malformed path returns HTTP 400 here rather than blowing up
+        # inside the agent loop later.
+        extra_tools = []
+        if req.workspace_root:
+            try:
+                from praxia.agent.file_tools import workspace_tools
+                extra_tools = list(workspace_tools(req.workspace_root).values())
+            except Exception as e:
+                raise HTTPException(400, f"Invalid workspace_root: {e}")
+
         inner = AutonomousAgent(
             user_id=user.id,
             role=user.role,
@@ -141,6 +160,7 @@ def build_router(*, current_user: Any, storage: Path):
             llm=llm,
             memory_dir=memory_dir,
             max_steps=max(1, int(req.max_steps)),
+            extra_tools=extra_tools or None,
         )
 
         # If thread_id supplied, persist user message first (so the agent

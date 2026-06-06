@@ -253,3 +253,109 @@ class TestAgentRun:
         # When commander is invoked, verdict fields populate
         assert body["verdict_decision"] in {"accept", "redraft", "abstain"}
         assert body["rounds"] is not None
+
+
+# ---------------------------------------------------------------------------
+# Workspace-scoped file tools (/agent/run + workspace_root)
+# ---------------------------------------------------------------------------
+
+
+class TestWorkspaceFileTools:
+    """When `workspace_root` is in the request, the agent must register
+    the file_tools and be able to touch files only inside that path.
+    These tests exercise the wiring end-to-end through the HTTP route.
+    """
+
+    def test_workspace_tools_register_when_root_supplied(self, server, tmp_path: Path):
+        """A run with workspace_root should make the inner agent's tools
+        include read_file / write_file / etc. We assert via a tool_call
+        the LLM emits — the route serialises matching tool calls back to
+        the response body."""
+        client, headers, _ = server
+        ws = tmp_path / "ws"
+        ws.mkdir()
+        (ws / "hello.txt").write_text("hi from workspace", encoding="utf-8")
+
+        from unittest.mock import patch
+        from praxia.core.llm import LLMResponse
+
+        # Round 1: the LLM "decides" to call read_file. Round 2: it
+        # produces a final_answer with the content it just read.
+        tool_call = {
+            "id": "call_1",
+            "name": "read_file",
+            "arguments": '{"path": "hello.txt"}',
+        }
+        final_call = {
+            "id": "call_2",
+            "name": "final_answer",
+            "arguments": '{"answer": "the file says: hi from workspace"}',
+        }
+        responses = [
+            LLMResponse(text="", model="stub", usage={}, raw={}, tool_calls=[tool_call]),
+            LLMResponse(text="", model="stub", usage={}, raw={}, tool_calls=[final_call]),
+        ]
+        with patch("praxia.core.llm.LLM.complete", side_effect=responses):
+            r = client.post(
+                "/api/v1/agent/run",
+                json={
+                    "prompt": "read hello.txt",
+                    "workspace_root": str(ws),
+                },
+                headers=headers,
+            )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        tool_names = [tc["name"] for tc in body["tool_calls"]]
+        assert "read_file" in tool_names
+        assert "hi from workspace" in body["text"]
+
+    def test_no_workspace_root_no_file_tools(self, server):
+        """Without workspace_root, the file tools must NOT be registered
+        — calling read_file should error from the agent's "unknown tool"
+        branch."""
+        client, headers, _ = server
+
+        from unittest.mock import patch
+        from praxia.core.llm import LLMResponse
+
+        bad_call = {
+            "id": "call_1",
+            "name": "read_file",
+            "arguments": '{"path": "hello.txt"}',
+        }
+        final_call = {
+            "id": "call_2",
+            "name": "final_answer",
+            "arguments": '{"answer": "tried"}',
+        }
+        responses = [
+            LLMResponse(text="", model="stub", usage={}, raw={}, tool_calls=[bad_call]),
+            LLMResponse(text="", model="stub", usage={}, raw={}, tool_calls=[final_call]),
+        ]
+        with patch("praxia.core.llm.LLM.complete", side_effect=responses):
+            r = client.post(
+                "/api/v1/agent/run",
+                json={"prompt": "read"},
+                headers=headers,
+            )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        # The agent recorded the tool call but it failed (ok=False).
+        rf = next((tc for tc in body["tool_calls"] if tc["name"] == "read_file"), None)
+        assert rf is not None
+        assert rf["ok"] is False  # unknown tool when workspace_root is absent
+
+    def test_bad_workspace_root_returns_400(self, server, tmp_path: Path):
+        """workspace_root pointing at a file (not a directory) is a
+        client bug — surface 400 instead of letting the agent loop blow
+        up later."""
+        client, headers, _ = server
+        f = tmp_path / "not-a-dir.txt"
+        f.write_text("nope")
+        r = client.post(
+            "/api/v1/agent/run",
+            json={"prompt": "hi", "workspace_root": str(f)},
+            headers=headers,
+        )
+        assert r.status_code == 400
