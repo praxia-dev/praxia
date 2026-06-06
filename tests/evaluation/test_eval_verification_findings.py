@@ -559,6 +559,76 @@ class TestNoSourcesFallback:
         assert result.stopped_reason != "no_sources_fallback"
 
 
+    def test_synthesis_prompts_skip_verifier_even_with_sources(self) -> None:
+        """Bug report: a user with documents asked "Documents の資料を元に
+        提案資料のたたき台を出力して下さい" and the verifier abstained
+        because the proposal's claims couldn't be grounded source-by-
+        source. Synthesis prompts must reach the bare agent — sources
+        are still retrieved + injected (so the LLM uses them as
+        inspiration) but the verifier is bypassed."""
+        from praxia.agent.commander import default_task_classifier
+
+        # 1) Classifier picks "synthesis" for proposal prompts.
+        prompts = [
+            "提案資料のたたき台を .md と .pptx で出力して下さい",
+            "Draft a proposal slide deck about renewal terms",
+            "営業支援テーマで効果的な提案資料を作成して",
+            "Make a presentation about Q3 priorities",
+        ]
+        for p in prompts:
+            kind = default_task_classifier(p)
+            assert kind == "synthesis", f"{p!r} -> {kind}"
+
+        # 2) Synthesis path retrieves sources, augments the prompt,
+        # invokes the inner agent, and DOES NOT call the verifier.
+        inner = _FakeInnerAgent(drafts=["the proposal draft"])
+        verifier_calls: list[str] = []
+
+        class _SpyVerifier:
+            def verify(self, draft: str, sources: list[Source]) -> Verdict:
+                verifier_calls.append(draft)
+                return _accept()
+
+        retrieved = _src(("D#0", "sales-support handbook section 3"))
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=_SpyVerifier(),
+            retriever=lambda q: retrieved,
+        )
+        result = agent.run("Documents を参考に提案資料を作成して下さい")
+        assert result.stopped_reason == "synthesis_pass"
+        assert result.task_kind == "synthesis"
+        assert result.answer == "the proposal draft"
+        assert verifier_calls == []  # verifier NEVER invoked
+        # Sources are still surfaced as supplementary citations
+        assert result.citations == ["D#0"]
+        # The inner agent received the augmented prompt that includes
+        # the retrieved source content
+        assert any("sales-support handbook" in p for p in inner.received_prompts)
+
+    def test_synthesis_works_even_without_sources(self) -> None:
+        """A "make me a 5-slide deck about X" with no documents still
+        runs — sources are optional for synthesis."""
+        inner = _FakeInnerAgent(drafts=["the deck markdown"])
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=_ScriptedVerifier(verdicts=[]),
+            retriever=lambda q: [],
+        )
+        result = agent.run("Make a 5-slide deck about Praxia")
+        assert result.stopped_reason == "synthesis_pass"
+        assert result.answer == "the deck markdown"
+        assert result.citations == []
+
+    def test_action_still_beats_synthesis(self) -> None:
+        """Precedence: a prompt that mentions both 'write code' and
+        'proposal' should classify as action — codegen is more
+        specific."""
+        from praxia.agent.commander import default_task_classifier
+        assert default_task_classifier(
+            "write code for a proposal-generator tool"
+        ) == "action"
+
     def test_fallback_skipped_when_sources_present(self) -> None:
         """Sanity: fallback ONLY kicks in when sources are empty. With
         any source, the verifier path runs normally."""

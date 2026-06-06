@@ -54,15 +54,24 @@ the host wires up, or any object that walks like one.
 TaskClassifier = Callable[[str], str]
 """Signature: ``(user_input: str) -> task_kind: str``.
 
-Returned kinds: ``"knowledge"`` (default — grounded verification applies)
-or ``"action"`` (skip verifier, let the bare inner agent + environment
-feedback handle correctness — appropriate for code/tool/command flows).
+Returned kinds:
+  ``"knowledge"`` (default — grounded verification applies)
+  ``"action"``    (skip verifier, environment provides correctness:
+                   code/tool/command flows)
+  ``"synthesis"`` (retrieve sources as inspiration, but skip the
+                   verifier: the user is asking for a draft / proposal /
+                   summary / creative extension where many claims will
+                   be novel by design and can't be claim-by-claim
+                   grounded against the corpus)
 
 Verification finding K6: questions that the *environment* can self-verify
 (tests pass, command exits 0, file exists) don't need a grounding gate.
-Knowledge-QA over private corpora does. The default classifier is
-keyword-based and intentionally conservative — when in doubt, treat as
-``knowledge`` so the verifier still runs.
+Knowledge-QA over private corpora does. Generative / synthesis tasks
+fall in between — sources are useful as material, but per-claim
+grounding doesn't apply.
+
+The default classifier is keyword-based and intentionally conservative —
+when in doubt, treat as ``knowledge`` so the verifier still runs.
 """
 
 
@@ -96,14 +105,50 @@ _ACTION_KEYWORDS = (
 )
 
 
+# Tokens that flag a synthesis / generative request — the user is
+# asking the agent to PRODUCE a new artefact (proposal, summary,
+# slide deck, draft) using the corpus as inspiration, not to
+# REPORT facts from it. Per-claim grounding doesn't fit:
+# 「営業支援テーマの資料を元に提案資料を作って」 contains many novel
+# claims by construction.
+_SYNTHESIS_KEYWORDS = (
+    # English — generative / creative verbs
+    "draft", "make a", "write a", "create a", "design a",
+    "compose", "outline", "summarize", "summarise", "brainstorm",
+    "propose", "proposal", "make slides", "make a presentation",
+    "make a report", "write a report", "generate a", "render a",
+    "design slides", "design a deck",
+    # Japanese
+    "作成して", "作って", "起草", "草稿", "下書き",
+    "提案", "プレゼン", "発表資料",
+    "アイデア", "考案", "案を",
+    "サマリ", "要約", "纏めて", "まとめて",
+    "デザイン", "資料を作",
+    "出力して下さい", "出力してください", "生成して",
+)
+
+
 def default_task_classifier(user_input: str) -> str:
-    """Cheap regex-free classifier. Returns "action" iff the input contains
-    a clearly imperative coding/tool keyword, else "knowledge".
+    """Cheap regex-free classifier. Returns one of:
+
+    - ``"action"``: the input contains an imperative coding/tool verb.
+    - ``"synthesis"``: the input asks for a generated artefact (draft,
+      proposal, summary, deck). Sources are still retrieved (as
+      inspiration) but the verifier is bypassed because per-claim
+      grounding doesn't fit a creative output.
+    - ``"knowledge"`` (default): grounded fact-QA — verifier runs.
+
+    Precedence: action > synthesis > knowledge. A request to "write
+    code for a slide-deck generator" reads as code work, not
+    synthesis.
     """
     lowered = user_input.lower()
     for kw in _ACTION_KEYWORDS:
         if kw in lowered:
             return "action"
+    for kw in _SYNTHESIS_KEYWORDS:
+        if kw in lowered:
+            return "synthesis"
     return "knowledge"
 
 
@@ -125,8 +170,8 @@ class CommandedResult:
     sources: list[Source] = field(default_factory=list)
     citations: list[str] = field(default_factory=list)
     rounds: list["CommandedRound"] = field(default_factory=list)
-    stopped_reason: str = "accept"            # accept | abstain | max_rounds | no_improvement | bypass_action | no_sources_fallback
-    task_kind: str = "knowledge"              # knowledge | action — picked by TaskClassifier
+    stopped_reason: str = "accept"            # accept | abstain | max_rounds | no_improvement | bypass_action | no_sources_fallback | synthesis_pass
+    task_kind: str = "knowledge"              # knowledge | action | synthesis — picked by TaskClassifier
     usage: dict[str, int] = field(default_factory=dict)
 
     def add_usage(self, more: dict[str, int]) -> None:
@@ -446,6 +491,47 @@ class CommandedAgent:
 
         if sources is None:
             sources = self.retriever(user_input)
+
+        # Synthesis path: user asked for a generated artefact (proposal,
+        # draft, slide deck, summary). Retrieve sources so the LLM can
+        # use them as inspiration, augment the prompt the same way the
+        # verifier-mode would, but DON'T run the verifier — per-claim
+        # grounding rejects creative content by design. The bare
+        # inner agent then produces the artefact with the sources
+        # already in context.
+        if task_kind == "synthesis":
+            augmented = self._build_initial_prompt(user_input, sources) if sources else user_input
+            inner_result = self.inner.run(augmented, history=history)
+            self._audit(
+                "commander.synthesis_pass",
+                f"user:{self.inner.user_id}",
+                metadata={
+                    "input_chars": str(len(user_input)),
+                    "sources": str(len(sources)),
+                },
+            )
+            synth_result = CommandedResult(
+                answer=(inner_result.final_text or "").strip(),
+                verdict=Verdict(
+                    groundedness=0.0,
+                    per_claim=[],
+                    unsupported_claims=[],
+                    decision="accept",
+                    rationale=(
+                        "Synthesis request — sources provided as "
+                        "inspiration; per-claim grounding not applied."
+                    ),
+                ),
+                sources=sources,
+                stopped_reason="synthesis_pass",
+                task_kind=task_kind,
+                # Expose the source ids so the UI can still link the
+                # output to the inspiration material — they aren't
+                # "verified citations" but they ARE traceable.
+                citations=[s.id for s in sources],
+            )
+            synth_result.add_usage(inner_result.usage)
+            return synth_result
 
         # Sensible-default fallback: if the retriever returned nothing
         # there is literally nothing to ground claims against. Forcing
