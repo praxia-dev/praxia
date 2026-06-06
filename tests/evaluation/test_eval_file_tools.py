@@ -64,7 +64,11 @@ def workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def tools(workspace: Path):
-    return workspace_tools(workspace)
+    """Default tool set with confirmation disabled — preserves the
+    original immediate-execution behaviour so the existing tests stay
+    a single line each. The confirmation-required path has its own
+    dedicated test class below."""
+    return workspace_tools(workspace, require_confirmation=False)
 
 
 # ---------------------------------------------------------------------------
@@ -298,3 +302,147 @@ class TestToolRegistry:
         (tmp_path / "f.txt").write_text("x")
         with pytest.raises(ValueError):
             workspace_tools(tmp_path / "f.txt")
+
+
+# ---------------------------------------------------------------------------
+# Confirmation mode — the default: never touch disk without approval
+# ---------------------------------------------------------------------------
+
+
+class TestConfirmationModeDefault:
+    """When workspace_tools is built without `require_confirmation=False`
+    (i.e. the default), mutating tools MUST NOT touch the disk. They
+    queue a pending op record and return `{"pending": True, ...}` so
+    the LLM knows to tell the user, and the host can show a confirm
+    dialog before applying.
+    """
+
+    def test_write_queues_does_not_touch_disk(self, agent, workspace):
+        pending: list[dict] = []
+        t = workspace_tools(workspace, pending_sink=pending)  # default: confirm ON
+        r = t["write_file"].handler(agent, path="new.txt", content="hi")
+        assert r["pending"] is True
+        assert r["op"] == "write_file"
+        assert r["path"] == "new.txt"
+        assert r["created"] is True
+        assert not (workspace / "new.txt").exists()  # ← key assertion
+        assert pending == [
+            {"op": "write_file", "path": "new.txt", "bytes": 2, "created": True,
+             "content": "hi", "content_preview": "hi", "content_truncated": False}
+        ]
+
+    def test_edit_queues_does_not_touch_disk(self, agent, workspace):
+        (workspace / "f.txt").write_text("hello")
+        pending: list[dict] = []
+        t = workspace_tools(workspace, pending_sink=pending)
+        r = t["edit_file"].handler(agent, path="f.txt", old="hello", new="bye")
+        assert r["pending"] is True
+        assert r["op"] == "edit_file"
+        # File on disk is unchanged
+        assert (workspace / "f.txt").read_text() == "hello"
+        assert len(pending) == 1 and pending[0]["op"] == "edit_file"
+
+    def test_delete_queues_does_not_touch_disk(self, agent, workspace):
+        (workspace / "x.txt").write_text("doomed")
+        pending: list[dict] = []
+        t = workspace_tools(workspace, pending_sink=pending)
+        r = t["delete_file"].handler(agent, path="x.txt")
+        assert r["pending"] is True
+        assert r["op"] == "delete_file"
+        # Still on disk after the "delete" call
+        assert (workspace / "x.txt").exists()
+        assert pending == [{"op": "delete_file", "path": "x.txt", "size": 6}]
+
+    def test_reads_still_execute_in_confirmation_mode(self, agent, workspace):
+        """read_file / list_files have no side effects — they should
+        always run, even in confirmation mode."""
+        (workspace / "r.txt").write_text("read me")
+        t = workspace_tools(workspace)  # default confirm ON
+        r = t["read_file"].handler(agent, path="r.txt")
+        assert r["content"] == "read me"
+        ls = t["list_files"].handler(agent)
+        assert any(e["path"] == "r.txt" for e in ls["entries"])
+
+    def test_escape_check_runs_even_in_confirm_mode(self, agent, workspace):
+        """Path escapes are rejected before the op gets queued — we
+        don't want a pending op record with an out-of-scope path
+        sitting around for a UI to accidentally apply."""
+        pending: list[dict] = []
+        t = workspace_tools(workspace, pending_sink=pending)
+        r = t["write_file"].handler(agent, path="../escape.txt", content="x")
+        assert "error" in r and "outside" in r["error"]
+        assert pending == []  # nothing queued
+
+
+# ---------------------------------------------------------------------------
+# apply_pending_op — what runs after the user approves
+# ---------------------------------------------------------------------------
+
+
+class TestApplyPendingOp:
+    def test_apply_write(self, workspace):
+        from praxia.agent.file_tools import apply_pending_op
+        op = {"op": "write_file", "path": "new.py", "content": "print('hi')\n"}
+        r = apply_pending_op(workspace, op, actor_id="alice")
+        assert r["applied"] is True
+        assert r["created"] is True
+        assert (workspace / "new.py").read_text() == "print('hi')\n"
+
+    def test_apply_edit(self, workspace):
+        from praxia.agent.file_tools import apply_pending_op
+        (workspace / "code.py").write_text("def foo(): return 1\n")
+        op = {
+            "op": "edit_file", "path": "code.py",
+            "old": "return 1", "new": "return 42", "count": 1,
+        }
+        r = apply_pending_op(workspace, op)
+        assert r["applied"] is True
+        assert "return 42" in (workspace / "code.py").read_text()
+
+    def test_apply_edit_fails_if_file_changed(self, workspace):
+        """Between the proposal and the apply, someone (the user, an
+        external editor, anything) modified the file. The apply must
+        notice and bail rather than corrupt the file."""
+        from praxia.agent.file_tools import apply_pending_op
+        (workspace / "code.py").write_text("def foo(): return 1\n")
+        # File mutates externally
+        (workspace / "code.py").write_text("def foo(): return 2\n")
+        op = {
+            "op": "edit_file", "path": "code.py",
+            "old": "return 1", "new": "return 42", "count": 1,
+        }
+        r = apply_pending_op(workspace, op)
+        assert "error" in r
+        # File is still the externally-mutated version
+        assert "return 2" in (workspace / "code.py").read_text()
+
+    def test_apply_delete(self, workspace):
+        from praxia.agent.file_tools import apply_pending_op
+        (workspace / "x.txt").write_text("bye")
+        op = {"op": "delete_file", "path": "x.txt"}
+        r = apply_pending_op(workspace, op)
+        assert r["applied"] is True
+        assert not (workspace / "x.txt").exists()
+
+    def test_apply_rejects_escape_path(self, workspace):
+        """Defence in depth: even if a frontend mangled an op record,
+        apply_pending_op re-runs the workspace-scope check."""
+        from praxia.agent.file_tools import apply_pending_op
+        op = {"op": "write_file", "path": "../escape.txt", "content": "x"}
+        r = apply_pending_op(workspace, op)
+        assert "error" in r and "outside" in r["error"]
+        assert not (workspace.parent / "escape.txt").exists()
+
+    def test_apply_unknown_op(self, workspace):
+        from praxia.agent.file_tools import apply_pending_op
+        r = apply_pending_op(workspace, {"op": "rm_rf", "path": "."})
+        assert "error" in r and "unknown op" in r["error"]
+
+    def test_apply_audits_via_record_callable(self, workspace):
+        from praxia.agent.file_tools import apply_pending_op
+        spy = _AuditSpy()
+        op = {"op": "write_file", "path": "a.txt", "content": "x"}
+        apply_pending_op(workspace, op, actor_id="alice", audit_record=spy)
+        assert any(r.get("action") == "file_tools.apply.write" for r in spy.records)
+        rec = next(r for r in spy.records if "action" in r)
+        assert rec["actor"] == "user:alice"

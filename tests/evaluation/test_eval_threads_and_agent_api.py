@@ -359,3 +359,77 @@ class TestWorkspaceFileTools:
             headers=headers,
         )
         assert r.status_code == 400
+
+    def test_write_queues_pending_does_not_touch_disk(self, server, tmp_path: Path):
+        """End-to-end safety check: when the LLM asks to write a file,
+        the file must NOT exist on disk yet — the op should sit in the
+        pending_file_operations array waiting for the user."""
+        client, headers, _ = server
+        ws = tmp_path / "ws"
+        ws.mkdir()
+
+        from unittest.mock import patch
+        from praxia.core.llm import LLMResponse
+
+        write_call = {
+            "id": "call_1",
+            "name": "write_file",
+            "arguments": '{"path": "new.py", "content": "print(\\"hi\\")"}',
+        }
+        final_call = {
+            "id": "call_2",
+            "name": "final_answer",
+            "arguments": '{"answer": "Queued write of new.py for your approval."}',
+        }
+        responses = [
+            LLMResponse(text="", model="stub", usage={}, raw={}, tool_calls=[write_call]),
+            LLMResponse(text="", model="stub", usage={}, raw={}, tool_calls=[final_call]),
+        ]
+        with patch("praxia.core.llm.LLM.complete", side_effect=responses):
+            r = client.post(
+                "/api/v1/agent/run",
+                json={"prompt": "create new.py", "workspace_root": str(ws)},
+                headers=headers,
+            )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert not (ws / "new.py").exists()  # ← critical: NOT written yet
+        assert body["pending_file_operations"]
+        op = body["pending_file_operations"][0]
+        assert op["op"] == "write_file"
+        assert op["path"] == "new.py"
+        assert op["content"] == 'print("hi")'
+
+    def test_apply_endpoint_writes_approved_op(self, server, tmp_path: Path):
+        """After the user approves an op, /workspace/apply executes it."""
+        client, headers, _ = server
+        ws = tmp_path / "ws"
+        ws.mkdir()
+
+        r = client.post(
+            "/api/v1/workspace/apply",
+            json={
+                "workspace_root": str(ws),
+                "op": {"op": "write_file", "path": "ok.txt", "content": "approved"},
+            },
+            headers=headers,
+        )
+        assert r.status_code == 200, r.text
+        assert (ws / "ok.txt").read_text() == "approved"
+
+    def test_apply_endpoint_rejects_escape(self, server, tmp_path: Path):
+        """If the frontend tries to apply a path that escapes the
+        workspace, the server must refuse — defence in depth."""
+        client, headers, _ = server
+        ws = tmp_path / "ws"
+        ws.mkdir()
+        r = client.post(
+            "/api/v1/workspace/apply",
+            json={
+                "workspace_root": str(ws),
+                "op": {"op": "write_file", "path": "../sneaky.txt", "content": "x"},
+            },
+            headers=headers,
+        )
+        assert r.status_code == 400
+        assert not (ws.parent / "sneaky.txt").exists()

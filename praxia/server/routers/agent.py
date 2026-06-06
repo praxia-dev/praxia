@@ -65,6 +65,17 @@ class AgentRunResponse(BaseModel):
     # If thread_id was supplied, the new message ids
     user_message_id: str | None = None
     assistant_message_id: str | None = None
+    # Workspace-scoped file writes the agent wants to do but hasn't —
+    # the host must show these to the user and call /workspace/apply
+    # for each approved op.
+    pending_file_operations: list[dict[str, Any]] = []
+
+
+class ApplyFileOpRequest(BaseModel):
+    """Body for POST /workspace/apply — execute one previously-queued
+    file operation after the user approved it."""
+    workspace_root: str
+    op: dict[str, Any]
 
 
 def build_router(*, current_user: Any, storage: Path):
@@ -146,10 +157,19 @@ def build_router(*, current_user: Any, storage: Path):
         # malformed path returns HTTP 400 here rather than blowing up
         # inside the agent loop later.
         extra_tools = []
+        pending_file_ops: list[dict[str, Any]] = []
         if req.workspace_root:
             try:
                 from praxia.agent.file_tools import workspace_tools
-                extra_tools = list(workspace_tools(req.workspace_root).values())
+                # Default to require_confirmation=True — file writes
+                # never touch disk during the agent run; they queue
+                # into pending_file_ops for the user to approve.
+                tools_dict = workspace_tools(
+                    req.workspace_root,
+                    require_confirmation=True,
+                    pending_sink=pending_file_ops,
+                )
+                extra_tools = list(tools_dict.values())
             except Exception as e:
                 raise HTTPException(400, f"Invalid workspace_root: {e}")
 
@@ -192,6 +212,7 @@ def build_router(*, current_user: Any, storage: Path):
                     verdict_groundedness=cresult.verdict.groundedness,
                     citations=list(cresult.citations),
                     rounds=len(cresult.rounds),
+                    pending_file_operations=list(pending_file_ops),
                 )
             else:
                 result = inner.run(req.prompt)
@@ -209,6 +230,7 @@ def build_router(*, current_user: Any, storage: Path):
                     usage=result.usage,
                     steps=result.steps,
                     stopped_reason=result.stopped_reason,
+                    pending_file_operations=list(pending_file_ops),
                 )
                 final_text = result.final_text
         except Exception as e:
@@ -225,5 +247,40 @@ def build_router(*, current_user: Any, storage: Path):
             resp.assistant_message_id = asst_msg_id
 
         return resp
+
+    @router.post("/workspace/apply")
+    def apply_workspace_op(req: ApplyFileOpRequest, user=Depends(current_user)):
+        """Execute one previously-queued file operation.
+
+        The agent run produced a ``pending_file_operations`` list. The
+        frontend showed each one to the user with a diff preview. For
+        every op the user clicked "Apply" on, the frontend calls this
+        endpoint. Path scope is re-validated here — the user's
+        approval doesn't override the workspace boundary, and
+        ``apply_pending_op`` rejects anything that resolves outside.
+        """
+        try:
+            from praxia.agent.file_tools import apply_pending_op
+        except ImportError as e:  # pragma: no cover
+            raise HTTPException(500, f"file_tools unavailable: {e}")
+
+        auth_audit = getattr(user, "_audit_channel", None)
+        try:
+            # AuthManager's audit channel — pass through if reachable.
+            from praxia.auth.manager import AuthManager  # noqa: F401
+            # The audit instance lives on the request-scoped auth
+            # manager. We approximate by importing the storage path.
+        except Exception:  # pragma: no cover
+            auth_audit = None
+
+        result = apply_pending_op(
+            req.workspace_root,
+            req.op,
+            actor_id=user.id,
+            audit_record=auth_audit,
+        )
+        if "error" in result:
+            raise HTTPException(400, result["error"])
+        return result
 
     return router

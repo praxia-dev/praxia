@@ -67,6 +67,142 @@ class _OutsideWorkspaceError(Exception):
     """Raised when a tool argument resolves outside the configured root."""
 
 
+def apply_pending_op(
+    workspace_root: Path | str,
+    op: dict[str, Any],
+    *,
+    actor_id: str | None = None,
+    audit_record: Any = None,
+) -> dict[str, Any]:
+    """Execute a previously-queued file operation.
+
+    The host (server + frontend) gathered an op from
+    ``workspace_tools(..., require_confirmation=True)`` during an agent
+    run, showed it to the user, and the user clicked "Apply". This
+    function is what actually writes / deletes after that approval.
+
+    Path-traversal checks run again here — never trust the agent (or
+    the frontend) blindly, even after a UI confirmation.
+
+    Args:
+        workspace_root: same root the op was queued against.
+        op: a record as appended to ``pending_sink``. Must carry
+            ``op`` (``write_file`` / ``edit_file`` / ``delete_file``)
+            and the operation-specific fields.
+        actor_id: user id to attribute the action to in the audit log.
+            Defaults to ``"unknown"`` if not supplied.
+        audit_record: a callable with a ``record(**kw)`` interface —
+            usually ``agent.auth.audit``. Optional; when present, the
+            action is logged.
+    """
+    root = Path(workspace_root).expanduser().resolve(strict=False)
+    if not root.is_dir():
+        return {"error": f"workspace_root must be a directory: {root}"}
+
+    op_kind = op.get("op")
+    path = op.get("path")
+    if not isinstance(path, str):
+        return {"error": "op.path is required"}
+    try:
+        abs_path = _resolve_in(root, path)
+    except _OutsideWorkspaceError as e:
+        return {"error": str(e)}
+
+    actor = f"user:{actor_id or 'unknown'}"
+
+    def _audit(action: str, **fields: Any) -> None:
+        if audit_record is None:
+            return
+        try:
+            audit_record.record(
+                actor=actor,
+                action=action,
+                metadata={k: str(v) for k, v in fields.items()},
+            )
+        except Exception:  # pragma: no cover
+            _log.debug("audit failed for %s", action, exc_info=True)
+
+    if op_kind == "write_file":
+        content = op.get("content")
+        if not isinstance(content, str):
+            return {"error": "op.content is required for write_file"}
+        encoded = content.encode("utf-8")
+        if len(encoded) > MAX_WRITE_BYTES:
+            return {"error": f"content exceeds {MAX_WRITE_BYTES} bytes"}
+        created = not abs_path.exists()
+        try:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = abs_path.with_suffix(abs_path.suffix + ".praxia-tmp")
+            tmp.write_bytes(encoded)
+            os.replace(tmp, abs_path)
+        except OSError as e:
+            return {"error": f"write failed: {e}"}
+        _audit(
+            "file_tools.apply.write",
+            path=abs_path.relative_to(root),
+            bytes=len(encoded),
+            created=created,
+        )
+        return {"applied": True, "path": str(abs_path.relative_to(root)), "bytes": len(encoded), "created": created}
+
+    if op_kind == "edit_file":
+        old = op.get("old")
+        new = op.get("new")
+        count = int(op.get("count", 1))
+        if not isinstance(old, str) or not isinstance(new, str) or not old:
+            return {"error": "op.old and op.new (non-empty strings) are required"}
+        if not abs_path.is_file():
+            return {"error": f"not a file: {path}"}
+        try:
+            text = abs_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            return {"error": f"read failed: {e}"}
+        occurrences = text.count(old)
+        if occurrences == 0:
+            return {"error": "old string not found (file changed since the proposal?)"}
+        if count > 0 and occurrences != count:
+            return {
+                "error": (
+                    f"file changed since the proposal — expected {count} occurrence(s), "
+                    f"found {occurrences}; re-run the request and re-approve"
+                )
+            }
+        new_text = text.replace(old, new) if count == 0 else text.replace(old, new, count)
+        encoded = new_text.encode("utf-8")
+        if len(encoded) > MAX_WRITE_BYTES:
+            return {"error": f"result exceeds {MAX_WRITE_BYTES} bytes"}
+        try:
+            tmp = abs_path.with_suffix(abs_path.suffix + ".praxia-tmp")
+            tmp.write_bytes(encoded)
+            os.replace(tmp, abs_path)
+        except OSError as e:
+            return {"error": f"write failed: {e}"}
+        _audit(
+            "file_tools.apply.edit",
+            path=abs_path.relative_to(root),
+            replacements=occurrences if count == 0 else count,
+        )
+        return {
+            "applied": True,
+            "path": str(abs_path.relative_to(root)),
+            "replacements": occurrences if count == 0 else count,
+        }
+
+    if op_kind == "delete_file":
+        if not abs_path.exists():
+            return {"applied": False, "reason": "already gone"}
+        if abs_path.is_dir():
+            return {"error": "refusing to delete a directory"}
+        try:
+            abs_path.unlink()
+        except OSError as e:
+            return {"error": f"delete failed: {e}"}
+        _audit("file_tools.apply.delete", path=abs_path.relative_to(root))
+        return {"applied": True, "deleted": True, "path": str(abs_path.relative_to(root))}
+
+    return {"error": f"unknown op: {op_kind!r}"}
+
+
 def _resolve_in(workspace_root: Path, user_path: str) -> Path:
     """Join ``user_path`` onto ``workspace_root`` and confirm the result
     is inside the workspace.
@@ -112,7 +248,12 @@ def _audit(agent: "AutonomousAgent", action: str, **fields: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
-def workspace_tools(workspace_root: Path | str) -> dict[str, AgentTool]:
+def workspace_tools(
+    workspace_root: Path | str,
+    *,
+    require_confirmation: bool = True,
+    pending_sink: list[dict[str, Any]] | None = None,
+) -> dict[str, AgentTool]:
     """Return a dict of file-IO :class:`AgentTool` s scoped to
     ``workspace_root``.
 
@@ -121,6 +262,28 @@ def workspace_tools(workspace_root: Path | str) -> dict[str, AgentTool]:
     scope. This makes the tool set safe to attach to a long-lived
     agent without worrying about the workspace pointer changing under
     its feet.
+
+    Args:
+        workspace_root: directory the file tools are pinned to. Path
+            traversal escapes are rejected, see :func:`_resolve_in`.
+        require_confirmation: when ``True`` (default), mutating tools
+            (``write_file`` / ``edit_file`` / ``delete_file``)
+            **don't touch the disk**. They append a structured
+            operation record to ``pending_sink`` and return a
+            ``{"pending": True, "op": ...}`` payload so the LLM knows
+            the write was queued, not executed. The host (server +
+            desktop UI) then shows the operations to the user and
+            calls :func:`apply_pending_op` after explicit approval.
+            When ``False``, mutating tools execute immediately —
+            useful for non-interactive SDK use, tests, and one-shot
+            batch flows where the caller has already arranged consent.
+        pending_sink: when ``require_confirmation`` is True, queued
+            operations are appended here. The caller passes a list and
+            reads it after the agent run finishes. Ignored when
+            ``require_confirmation`` is False.
+
+    Read-only tools (``read_file`` / ``list_files``) execute in both
+    modes — they have no side effects.
     """
     root = Path(workspace_root).expanduser().resolve(strict=False)
     if not root.exists():
@@ -129,6 +292,25 @@ def workspace_tools(workspace_root: Path | str) -> dict[str, AgentTool]:
         _log.info("workspace root %s does not yet exist", root)
     elif not root.is_dir():
         raise ValueError(f"workspace_root must be a directory: {root}")
+
+    # The pending_sink default is None — without a sink, queued ops
+    # are recorded only on the return value, not collected for the
+    # host. Hosts that want to enumerate pending ops MUST pass a list.
+    sink: list[dict[str, Any]] = pending_sink if pending_sink is not None else []
+
+    def _queue(op_kind: str, **fields: Any) -> dict[str, Any]:
+        """Record a pending op + return the LLM-facing payload."""
+        record = {"op": op_kind, **fields}
+        sink.append(record)
+        return {
+            "pending": True,
+            **record,
+            "note": (
+                "This file operation was QUEUED for user approval, not "
+                "executed. Tell the user what you'd like to do and let "
+                "them confirm before declaring success."
+            ),
+        }
 
     # --- read ----------------------------------------------------------------
 
@@ -187,6 +369,21 @@ def workspace_tools(workspace_root: Path | str) -> dict[str, AgentTool]:
         except _OutsideWorkspaceError as e:
             return {"error": str(e)}
         created = not abs_path.exists()
+
+        if require_confirmation:
+            # Generate a small preview for the UI's diff dialog (cap
+            # at 4 KiB so we don't ship megabytes back in the response).
+            preview = content[:4096]
+            return _queue(
+                "write_file",
+                path=str(abs_path.relative_to(root)),
+                bytes=len(encoded),
+                created=created,
+                content=content,
+                content_preview=preview,
+                content_truncated=len(content) > 4096,
+            )
+
         try:
             abs_path.parent.mkdir(parents=True, exist_ok=True)
             tmp = abs_path.with_suffix(abs_path.suffix + ".praxia-tmp")
@@ -251,6 +448,22 @@ def workspace_tools(workspace_root: Path | str) -> dict[str, AgentTool]:
         encoded = new_text.encode("utf-8")
         if len(encoded) > MAX_WRITE_BYTES:
             return {"error": f"result exceeds {MAX_WRITE_BYTES} bytes"}
+
+        if require_confirmation:
+            return _queue(
+                "edit_file",
+                path=str(abs_path.relative_to(root)),
+                old=old,
+                new=new,
+                count=count,
+                replacements=occurrences if count == 0 else count,
+                # Send back enough context for the UI to render a diff:
+                # the before/after of the regions that changed.
+                before_preview=text[:4096],
+                after_preview=new_text[:4096],
+                preview_truncated=len(new_text) > 4096,
+            )
+
         try:
             tmp = abs_path.with_suffix(abs_path.suffix + ".praxia-tmp")
             tmp.write_bytes(encoded)
@@ -318,6 +531,14 @@ def workspace_tools(workspace_root: Path | str) -> dict[str, AgentTool]:
             return {"deleted": False, "reason": "not found"}
         if abs_path.is_dir():
             return {"error": "refusing to delete a directory"}
+
+        if require_confirmation:
+            return _queue(
+                "delete_file",
+                path=str(abs_path.relative_to(root)),
+                size=abs_path.stat().st_size,
+            )
+
         try:
             abs_path.unlink()
         except OSError as e:
