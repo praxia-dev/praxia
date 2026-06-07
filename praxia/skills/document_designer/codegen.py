@@ -68,20 +68,63 @@ _PPTX_TEMPLATE = textwrap.dedent('''
 
     {rules}
 
-    Theme to use (apply colors to backgrounds / fills, fonts to all
-    titles & body text, place the logo on slide 1 and footer on every
-    slide if specified):
+    Theme to use:
 
     {theme_block}
 
+    MANDATORY styling rules (a plain white deck is a FAIL):
+
+      1. EVERY slide MUST have a colored title bar at the top using the
+         primary color. Build it as a rectangle shape with fill=primary
+         and place the slide title inside it in white text.
+      2. EVERY slide gets a thin colored accent line (3-4pt) using the
+         accent color, somewhere visible (under the title bar, or as a
+         left/right margin stripe).
+      3. Body text uses the `text` color on the `background` color.
+         Do NOT leave fills as default white-on-white.
+      4. The title slide MUST use the primary color as a full background
+         and put the title centered in large white text. No exceptions.
+      5. Use the heading font for titles and the body font for body.
+      6. Section dividers / matrix quadrants must have distinct fills
+         (use 30-50% lighter shades of primary/accent).
+
     Available pptx layout idioms you can compose by hand:
-      - title slide (large title, subtitle, logo bottom-right)
-      - bullets slide (title + 3-6 bullets)
-      - two-column slide (title + two text boxes side-by-side)
-      - comparison slide (title + left/right boxes with header rows)
-      - matrix slide (2x2 grid with quadrant labels)
-      - image-full slide (one centered image, optional caption)
-      - chart slide (matplotlib figure rendered to PNG, embedded)
+      - title slide (full primary background, large white title)
+      - bullets slide (primary title bar + 3-6 bullets)
+      - two-column slide (primary title bar + two text boxes)
+      - comparison slide (primary title bar + left/right boxes with
+        primary-fill header rows)
+      - matrix slide (2x2 grid with quadrant labels; lighter tints)
+      - image-full slide (one centered image, optional caption strip)
+      - chart slide (matplotlib figure rendered to PNG, embedded;
+        chart palette MUST match the theme primary + accent)
+
+    Concrete styling snippet you should reuse (adapt colors from theme):
+
+        from pptx.util import Inches, Pt, Emu
+        from pptx.dml.color import RGBColor
+        from pptx.enum.shapes import MSO_SHAPE
+        PRIMARY = RGBColor(0x1F, 0x3A, 0x8A)   # from theme.primary
+        ACCENT  = RGBColor(0xF5, 0x9E, 0x0B)   # from theme.accent
+        # Title bar — every content slide
+        bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0,
+                                     Inches(13.33), Inches(1.0))
+        bar.fill.solid(); bar.fill.fore_color.rgb = PRIMARY
+        bar.line.fill.background()
+        tf = bar.text_frame; tf.margin_left = Inches(0.4)
+        tf.text = "Slide Title"
+        p = tf.paragraphs[0]; p.runs[0].font.size = Pt(28)
+        p.runs[0].font.bold = True
+        p.runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        # Accent stripe just under the bar
+        stripe = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0,
+                                        Inches(1.0), Inches(13.33), Pt(4))
+        stripe.fill.solid(); stripe.fill.fore_color.rgb = ACCENT
+        stripe.line.fill.background()
+
+    Substitute the actual hex values from the theme above into PRIMARY /
+    ACCENT. Use 16:9 slides (`prs.slide_width = Inches(13.33);
+    prs.slide_height = Inches(7.5)`).
 
     Brief from the user:
 

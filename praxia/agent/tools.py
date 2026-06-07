@@ -304,6 +304,161 @@ def _list_document_folders(agent: AutonomousAgent) -> dict[str, Any]:
     }
 
 
+def _schedule_recurring_task(
+    agent: AutonomousAgent,
+    cron: str,
+    prompt: str,
+    label: str | None = None,
+) -> dict[str, Any]:
+    """Create a cron-style recurring schedule that fires the given prompt.
+
+    The agent invokes this tool when the user expresses a recurring
+    intent ("every weekday at 9", "毎週月曜", "alle 4 Stunden"). The
+    LLM is responsible for translating that intent to a POSIX 5-field
+    cron expression — we just validate + persist.
+
+    Writes to the same on-disk store the /schedules router reads from,
+    so the schedule shows up in the Schedules tab immediately and is
+    picked up by the ticker on its next 60s sweep.
+    """
+    if not prompt.strip():
+        return {"created": False, "error": "prompt is required"}
+    if not cron.strip():
+        return {"created": False, "error": "cron is required"}
+    try:
+        from praxia.server.routers.schedules import (
+            ScheduleRecord,
+            _save as _save_sched,
+            next_run,
+            parse_cron,
+        )
+    except ImportError as e:
+        return {"created": False, "error": f"schedules module not available: {e}"}
+    try:
+        parse_cron(cron)
+    except ValueError as e:
+        return {
+            "created": False,
+            "error": f"invalid cron {cron!r}: {e}. Expected 5 fields: "
+                     f"'minute hour day-of-month month day-of-week' "
+                     f"with * / N / ranges / lists / steps. "
+                     f"Examples: '0 9 * * 1-5' = weekdays 9am; "
+                     f"'*/30 * * * *' = every 30 min; "
+                     f"'0 0 1 * *' = first of every month at midnight.",
+        }
+    import time
+    import uuid
+    from datetime import datetime
+    rec = ScheduleRecord(
+        id=uuid.uuid4().hex,
+        user_id=str(agent.user_id),
+        cron=cron,
+        prompt=prompt,
+        args={"label": label} if label else {},
+        enabled=True,
+        created_at=time.time(),
+    )
+    nr = next_run(cron, datetime.now())
+    rec.next_run_at = nr.timestamp() if nr else None
+    _save_sched(Path(agent.memory_dir), rec)
+    return {
+        "created": True,
+        "schedule_id": rec.id,
+        "cron": rec.cron,
+        "prompt": rec.prompt,
+        "next_run_iso": nr.isoformat() if nr else None,
+        "note": (
+            "The schedule is active. The user can view / pause / delete "
+            "it from the Schedules tab. Each firing creates a Task they "
+            "can inspect in the Tasks tab."
+        ),
+    }
+
+
+def _run_parallel_tasks(
+    agent: AutonomousAgent,
+    prompts: list[str],
+    label: str | None = None,
+    max_concurrency: int = 4,
+) -> dict[str, Any]:
+    """Fan out N agent runs in parallel, one per prompt.
+
+    The agent invokes this when the user has a list of items that all
+    need the same treatment ("for each of these 5 files, summarise…",
+    "これらの 10 件のチケットを分類して"). Each child is a normal
+    background Task — visible in /tasks, cancellable per-item — bundled
+    under a single Batch id for composite progress.
+
+    The handler is intentionally synchronous-from-the-agent's-view: it
+    queues the work + returns immediately. The child tasks run in
+    daemon threads. The user polls the Batches tab.
+    """
+    if not prompts:
+        return {"created": False, "error": "prompts must be a non-empty list"}
+    filtered = [p for p in prompts if isinstance(p, str) and p.strip()]
+    if not filtered:
+        return {"created": False, "error": "no non-empty prompts after filtering"}
+    if len(filtered) > 100:
+        return {
+            "created": False,
+            "error": f"too many prompts ({len(filtered)}); cap is 100",
+        }
+    try:
+        from praxia.server.routers.batch import (
+            BatchRecord,
+            _run_batch,
+            _save as _save_batch,
+        )
+        from praxia.server.routers.tasks import TaskRecord, _save as _save_task
+    except ImportError as e:
+        return {"created": False, "error": f"batch module not available: {e}"}
+    import time
+    import uuid
+    now = time.time()
+    batch_id = uuid.uuid4().hex
+    user_id = str(agent.user_id)
+    children: list[TaskRecord] = []
+    storage = Path(agent.memory_dir)
+    for p in filtered:
+        t = TaskRecord(
+            id=uuid.uuid4().hex,
+            user_id=user_id,
+            kind="agent_run",
+            args={"prompt": p, "_batch_id": batch_id},
+            created_at=now,
+        )
+        _save_task(storage, t)
+        children.append(t)
+    batch = BatchRecord(
+        id=batch_id,
+        user_id=user_id,
+        task_ids=[t.id for t in children],
+        created_at=now,
+        label=label,
+    )
+    _save_batch(storage, batch)
+    # We need a "user-like" object for _run_agent_task_threaded. The
+    # agent only carries user_id + role; build a tiny stand-in matching
+    # the shape that the worker expects (just .id + .role attributes).
+    class _AgentUser:
+        def __init__(self, uid: str, role: str) -> None:
+            self.id = uid
+            self.role = role
+    user_obj = _AgentUser(user_id, getattr(agent, "role", "member"))
+    _run_batch(storage, user_obj, children, int(max_concurrency))
+    return {
+        "created": True,
+        "batch_id": batch_id,
+        "task_count": len(children),
+        "task_ids": [t.id for t in children],
+        "note": (
+            "The batch is running in the background. The user can view "
+            "live progress + per-item results in the Batches tab. Each "
+            "child is also visible in the Tasks tab."
+        ),
+    }
+
+
 def _final_answer(agent: AutonomousAgent, answer: str) -> dict[str, Any]:
     """Sentinel tool — its presence in the loop signals "done, here is my answer"."""
     return {"answer": answer}
@@ -505,6 +660,100 @@ def builtin_tools() -> dict[str, AgentTool]:
                 "properties": {},
             },
             handler=_list_document_folders,
+        ),
+        AgentTool(
+            name="schedule_recurring_task",
+            description=(
+                "Create a recurring scheduled agent run. Call this when "
+                "the user expresses a RECURRING intent: 'every weekday at "
+                "9am, summarise yesterday's docs', '毎週月曜の朝にニュー"
+                "ス要約を', 'jeden Montag um 8 Uhr'. NOT for one-shot "
+                "requests ('do X now') — those are handled directly. "
+                "You are responsible for translating the user's natural-"
+                "language schedule into a POSIX 5-field cron expression "
+                "(minute hour day-of-month month day-of-week). Examples: "
+                "'0 9 * * 1-5' = weekdays 9am · '*/30 * * * *' = every "
+                "30 min · '0 8 * * 1' = Mondays 8am · '0 0 1 * *' = first "
+                "of every month at midnight. After successful creation, "
+                "tell the user when the next run will fire and remind "
+                "them they can manage it from the Schedules tab."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "cron": {
+                        "type": "string",
+                        "description": (
+                            "POSIX 5-field cron expression. Required."
+                        ),
+                    },
+                    "prompt": {
+                        "type": "string",
+                        "description": (
+                            "The prompt to run on each firing. Make it "
+                            "self-contained — the LLM will see this with "
+                            "no surrounding conversation context."
+                        ),
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": (
+                            "Optional short label for the user-facing "
+                            "Schedules list."
+                        ),
+                    },
+                },
+                "required": ["cron", "prompt"],
+            },
+            handler=_schedule_recurring_task,
+        ),
+        AgentTool(
+            name="run_parallel_tasks",
+            description=(
+                "Fan out N agent runs in parallel, one per prompt. Call "
+                "this when the user has a LIST of items that all need "
+                "the same treatment: 'summarise each of these 5 files', "
+                "'classify these 20 support tickets', 'これらの 10 件を"
+                "それぞれ要約して'. NOT for a single complex request "
+                "(use the regular reply path) and NOT for recurring "
+                "work (use schedule_recurring_task). Returns a batch_id "
+                "the user can track in the Batches tab. Hard cap of 100 "
+                "items per call. After success, tell the user the count "
+                "and that they can watch progress in the Batches tab."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "prompts": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "One prompt per item the user wants processed. "
+                            "Each prompt must be self-contained — the LLM "
+                            "running each child sees only that prompt."
+                        ),
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": (
+                            "Optional short label for the user-facing "
+                            "Batches list."
+                        ),
+                    },
+                    "max_concurrency": {
+                        "type": "integer",
+                        "default": 4,
+                        "minimum": 1,
+                        "maximum": 16,
+                        "description": (
+                            "How many children to run at once. Default 4 "
+                            "is friendly to provider rate-limits."
+                        ),
+                    },
+                },
+                "required": ["prompts"],
+            },
+            handler=_run_parallel_tasks,
         ),
         AgentTool(
             name="final_answer",

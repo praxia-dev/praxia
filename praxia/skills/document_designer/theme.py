@@ -67,12 +67,18 @@ class DocumentTheme:
     """
 
     name: str = "default"
+    # A *non-neutral* default. The previous default was primary=#1f2937 +
+    # background=#ffffff, which the LLM dutifully respected and produced
+    # decks identical to the bare exporter: white slides, dark text, no
+    # visual chrome. The default theme now has a deeper-blue primary and
+    # a warm gold accent so even a minimally-styled output ("title bar +
+    # bullets") has obvious brand colour.
     colors: dict[str, str] = field(default_factory=lambda: {
-        "primary": "#1f2937",
-        "accent": "#2563eb",
-        "background": "#ffffff",
-        "muted": "#6b7280",
-        "text": "#111827",
+        "primary": "#1f3a8a",      # indigo-900 — strong title bars + heading text
+        "accent": "#f59e0b",       # amber-500 — call-out fills, divider rules
+        "background": "#f8fafc",   # slate-50  — gentle off-white, hides any seams
+        "muted": "#64748b",        # slate-500 — secondary text / captions
+        "text": "#0f172a",         # slate-900 — body
     })
     fonts: dict[str, str | int] = field(default_factory=lambda: {
         "heading": "Calibri",
