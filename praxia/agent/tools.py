@@ -42,6 +42,40 @@ class AgentTool:
         }
 
 
+def _lift_llm_args_from_agent(agent: "AutonomousAgent") -> dict[str, Any]:
+    """Pull LLM-related fields off the parent agent so child TaskRecords
+    can re-instantiate the same configuration.
+
+    Why this exists: when run_parallel_tasks or schedule_recurring_task
+    spawn child Tasks, the worker (_invoke_agent in tasks.py) defaults
+    to ``model="claude"`` if args has none. That alias resolves to
+    Anthropic and dies with ``Missing ANTHROPIC_API_KEY`` for any user
+    running OpenAI / Azure / Gemini / Ollama. This helper looks up the
+    parent's actual model + scout + workspace + org and emits a dict
+    safe to merge into child args.
+
+    Only concrete strings are forwarded — MagicMocks in tests (and
+    similarly any None / int / dict from a misconfigured agent) are
+    skipped so child args remain JSON-serialisable.
+    """
+    out: dict[str, Any] = {}
+    parent_llm = getattr(agent, "llm", None)
+    parent_cfg = getattr(parent_llm, "config", None)
+    parent_model = getattr(parent_cfg, "model", None) if parent_cfg else None
+    if isinstance(parent_model, str) and parent_model:
+        out["model"] = parent_model
+    scout = getattr(agent, "_scout_model", None)
+    if isinstance(scout, str) and scout:
+        out["scout_model"] = scout
+    workspace = getattr(agent, "_workspace_root", None)
+    if isinstance(workspace, str) and workspace:
+        out["workspace_root"] = workspace
+    org = getattr(agent, "org_id", None)
+    if isinstance(org, str) and org and org != "default-org":
+        out["org_id"] = org
+    return out
+
+
 # --- Tool implementations ----------------------------------------------------
 
 
@@ -440,12 +474,21 @@ def _schedule_recurring_task(
     import time
     import uuid
     from datetime import datetime
+    # alpha22+: propagate the parent's LLM config so every cron firing
+    # creates a TaskRecord with the right model. Without this, every
+    # schedule fires with the worker's default model='claude' regardless
+    # of which provider the user chose, and dies with
+    # 'Missing ANTHROPIC_API_KEY' for non-Anthropic users.
+    sched_args: dict[str, Any] = {}
+    if label:
+        sched_args["label"] = label
+    sched_args.update(_lift_llm_args_from_agent(agent))
     rec = ScheduleRecord(
         id=uuid.uuid4().hex,
         user_id=str(agent.user_id),
         cron=cron,
         prompt=prompt,
-        args={"label": label} if label else {},
+        args=sched_args,
         enabled=True,
         created_at=time.time(),
     )
@@ -510,12 +553,22 @@ def _run_parallel_tasks(
     user_id = str(agent.user_id)
     children: list[TaskRecord] = []
     storage = Path(agent.memory_dir)
+    # Propagate the parent agent's LLM configuration into each child
+    # task's args. Without this the worker's _invoke_agent defaults to
+    # ``model="claude"`` (alias → anthropic/claude-opus-4-7), which
+    # breaks every batch for users running OpenAI / Azure / Gemini /
+    # Ollama — they don't have ANTHROPIC_API_KEY in their env and the
+    # litellm.completion call dies with "Missing Anthropic API Key".
+    # Pull the *unresolved* model string (alias before resolve_model)
+    # so the worker rebuilds the exact same LLM instance.
+    base_args: dict[str, Any] = {"_batch_id": batch_id}
+    base_args.update(_lift_llm_args_from_agent(agent))
     for p in filtered:
         t = TaskRecord(
             id=uuid.uuid4().hex,
             user_id=user_id,
             kind="agent_run",
-            args={"prompt": p, "_batch_id": batch_id},
+            args={"prompt": p, **base_args},
             created_at=now,
         )
         _save_task(storage, t)

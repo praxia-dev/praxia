@@ -344,6 +344,17 @@ def build_router(*, current_user: Any, storage: Path):
             max_steps=max(1, int(req.max_steps)),
             extra_tools=extra_tools or None,
         )
+        # alpha22+: tag fields the agent tools (run_parallel_tasks,
+        # schedule_recurring_task) need so they can propagate the
+        # caller's LLM config into child TaskRecords. Without these,
+        # every fan-out / cron-fired task defaults to model='claude'
+        # in the worker, which crashes any non-Anthropic user with
+        # "Missing ANTHROPIC_API_KEY". scout_model + workspace_root
+        # aren't on AutonomousAgent's __init__ contract (they belong
+        # to the route and CommandedAgent respectively), so we attach
+        # them as underscore-prefixed attributes.
+        inner._scout_model = req.scout_model
+        inner._workspace_root = req.workspace_root
 
         # alpha20+: one-shot document attachments. Each non-image
         # attachment is parsed server-side; its text is prepended to
