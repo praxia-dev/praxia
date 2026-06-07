@@ -34,7 +34,19 @@ from praxia.core.llm import LLMResponse
 @pytest.fixture
 def fake_agent(tmp_path: Path):
     """A minimal stand-in for AutonomousAgent with just the fields the
-    schedule/batch handlers need (user_id, memory_dir, role)."""
+    schedule/batch handlers need (user_id, memory_dir, role).
+
+    Pre-creates an admin user under tmp_path/auth/ so the batch workers
+    don't race on `AutonomousAgent.__init__`'s bootstrap_admin step.
+
+    In production, `praxia serve` creates the AuthManager once at server
+    startup; by the time any agent runs, "admin" already exists and the
+    bootstrap check short-circuits. The race only surfaces in tests where
+    each fresh tmp_path has an empty auth dir and N parallel threads all
+    see "no users → create admin → boom, second writer fails."
+    """
+    from praxia.auth.manager import AuthManager
+    AuthManager(storage_dir=tmp_path / "auth")  # writes auth/users.jsonl
     agent = MagicMock()
     agent.user_id = "alice"
     agent.role = "member"
