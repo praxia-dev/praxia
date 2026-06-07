@@ -691,4 +691,38 @@ def build_router(*, current_user: Any, storage: Path):
         hits.sort(key=lambda h: h.score, reverse=True)
         return [h.model_dump() for h in hits[: max(1, int(req.limit))]]
 
+    @router.delete("/documents/folder/{folder_id}/file")
+    def delete_file_by_path(
+        folder_id: str,
+        relative_path: str,
+        user=Depends(current_user),
+    ) -> dict[str, Any]:
+        """Remove one indexed document by relative path.
+
+        Used by the folder watcher when it sees a file vanish from disk
+        — we don't want stale chunks pinned in retrieval results. Idempotent:
+        deleting an already-missing file returns ``{"deleted": false}`` rather
+        than 404, so a watcher replaying its journal doesn't error out.
+        """
+        _get_folder(user.id, folder_id)  # 404 if folder unknown
+        doc = _find_doc_by_path(user.id, folder_id, relative_path)
+        if doc is None:
+            return {"deleted": False, "reason": "not indexed"}
+        try:
+            (_folder_dir(user.id, folder_id) / f"{doc.id}.json").unlink()
+        except OSError as e:  # pragma: no cover
+            _log.warning("Failed to remove doc %s: %s", doc.id, e)
+            raise HTTPException(500, "Failed to remove document")
+        # Refresh folder rollup counts so the UI reflects the new state.
+        folders = _load_folders(user.id)
+        for f in folders:
+            if f.id == folder_id:
+                remaining = _load_docs_in_folder(user.id, folder_id)
+                f.doc_count = len(remaining)
+                f.total_bytes = sum(d.size for d in remaining)
+                f.last_sync = time.time()
+                break
+        _save_folders(user.id, folders)
+        return {"deleted": True, "doc_id": doc.id, "relative_path": doc.relative_path}
+
     return router

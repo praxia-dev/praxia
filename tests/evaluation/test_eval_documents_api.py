@@ -218,6 +218,32 @@ class TestUpload:
         assert first["doc_id"] == second["doc_id"]
         assert second["status"] == "unchanged"
 
+    def test_delete_file_by_path_removes_doc(self, server):
+        # Phase 2-D: companion to upload — folder watcher uses this to
+        # drop docs whose source files have vanished from disk.
+        client, hdr, _u, _ = server
+        fid = client.post("/api/v1/documents/folder", json={"path": "/x"}, headers=hdr).json()["id"]
+        up = self._upload(client, hdr, fid, "About to vanish", "vanish.txt").json()
+        assert up["status"] == "indexed"
+        # File exists in the listing.
+        before = client.get(f"/api/v1/documents/folder/{fid}", headers=hdr).json()
+        assert any(d["relative_path"] == "vanish.txt" for d in before.get("documents", []))
+
+        r = client.delete(
+            f"/api/v1/documents/folder/{fid}/file?relative_path=vanish.txt",
+            headers=hdr,
+        )
+        assert r.status_code == 200 and r.json()["deleted"] is True
+        after = client.get(f"/api/v1/documents/folder/{fid}", headers=hdr).json()
+        assert not any(d["relative_path"] == "vanish.txt" for d in after.get("documents", []))
+
+        # Idempotent — second delete returns deleted=false, not 404.
+        r2 = client.delete(
+            f"/api/v1/documents/folder/{fid}/file?relative_path=vanish.txt",
+            headers=hdr,
+        )
+        assert r2.status_code == 200 and r2.json()["deleted"] is False
+
     def test_changed_content_replaces_indexing(self, server):
         client, hdr, _u, _ = server
         fid = client.post("/api/v1/documents/folder", json={"path": "/x"}, headers=hdr).json()["id"]

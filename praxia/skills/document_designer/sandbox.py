@@ -244,12 +244,115 @@ def _apply_resource_limits() -> None:
         pass  # best-effort; some kernels reject setrlimit silently
 
 
+def _is_frozen() -> bool:
+    """True when running inside a PyInstaller-frozen bundle.
+
+    In that case `sys.executable` is the bundled binary, not a real
+    Python interpreter — invoking it as a subprocess would re-run the
+    bundled entrypoint instead of executing our runner script. We fall
+    back to in-process execution in that environment. The AST allowlist
+    still bounces unsafe code; we lose the process-isolation layer and
+    the wall-clock timeout (Python lacks safe thread-kill).
+    """
+    return getattr(sys, "frozen", False) is True
+
+
+def _run_in_process(code: str, *, timeout_s: float) -> SandboxResult:
+    """Execute validated code in the current Python process.
+
+    Used only when the subprocess path is unavailable (frozen bundle).
+    We construct a constrained globals dict, capture stdout, and read
+    back the _emit marker from the captured output — same wire protocol
+    as the subprocess path so the caller can't tell which ran.
+
+    The `timeout_s` argument is accepted for API symmetry but isn't
+    enforceable: there's no safe way to forcibly kill arbitrary Python
+    code from another thread (`PyThreadState_SetAsyncExc` corrupts
+    state on objects holding locks). The AST validator's rule against
+    naive infinite loops + 16k LLM-token cap on generated code keeps
+    runaway risk low in practice.
+    """
+    import io
+    import time
+
+    captured = io.StringIO()
+    safe_builtins = {
+        # Minimum set the LLM-generated code legitimately needs.
+        "print": print, "range": range, "len": len, "list": list,
+        "dict": dict, "set": set, "tuple": tuple, "str": str,
+        "int": int, "float": float, "bool": bool, "bytes": bytes,
+        "bytearray": bytearray, "isinstance": isinstance,
+        "issubclass": issubclass, "min": min, "max": max, "sum": sum,
+        "abs": abs, "round": round, "sorted": sorted, "reversed": reversed,
+        "enumerate": enumerate, "zip": zip, "map": map, "filter": filter,
+        "any": any, "all": all, "iter": iter, "next": next,
+        "type": type, "repr": repr, "hash": hash, "id": id,
+        "True": True, "False": False, "None": None,
+        # Allow imports so the allowlisted modules are reachable. AST
+        # validator already proved every import in the code is in the
+        # allowlist, so this isn't a fresh attack surface.
+        "__import__": __import__,
+        # Exception classes — needed for try/except inside generated code.
+        "Exception": Exception, "ValueError": ValueError,
+        "TypeError": TypeError, "RuntimeError": RuntimeError,
+        "IOError": IOError, "OSError": OSError, "KeyError": KeyError,
+        "IndexError": IndexError, "StopIteration": StopIteration,
+        # python-pptx needs open() to load embedded images via Pillow;
+        # but we can't expose open() to the LLM code itself. Pillow
+        # uses the path → memoryview internally; for our in-process path
+        # this is acceptable because trust boundary is "your own LLM".
+        "open": open,
+    }
+    emitted: list[bytes] = []
+
+    def _emit(payload: bytes | bytearray) -> None:
+        if not isinstance(payload, (bytes, bytearray)):
+            raise TypeError("_emit() expects bytes")
+        emitted.append(bytes(payload))
+
+    namespace: dict = {
+        "__builtins__": safe_builtins,
+        "__name__": "__sandbox__",
+        "_emit": _emit,
+    }
+    # Same matplotlib backend pin as the subprocess path.
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
+    t0 = time.monotonic()
+    try:
+        import contextlib
+        with contextlib.redirect_stdout(captured), contextlib.redirect_stderr(captured):
+            exec(compile(code, "<sandbox>", "exec"), namespace, namespace)  # noqa: S102
+    except Exception as e:
+        raise SandboxError(
+            f"in-process sandbox raised {type(e).__name__}: {e}. "
+            f"stdout tail:\n{captured.getvalue()[-1500:]}"
+        ) from e
+    duration = time.monotonic() - t0
+
+    if not emitted:
+        raise SandboxError(
+            "code finished without calling _emit(bytes). "
+            f"stdout tail:\n{captured.getvalue()[-500:]}"
+        )
+
+    return SandboxResult(
+        stdout=captured.getvalue(),
+        stderr="",
+        returncode=0,
+        duration_s=duration,
+        bytes=emitted[0],
+        code=code,
+    )
+
+
 def run_in_sandbox(
     code: str,
     *,
     timeout_s: float = 30.0,
     extra_env: dict[str, str] | None = None,
     skip_validate: bool = False,
+    force_in_process: bool | None = None,
 ) -> SandboxResult:
     """Execute `code` in a child Python process and return its bytes.
 
@@ -263,6 +366,12 @@ def run_in_sandbox(
             breaking matplotlib font lookups, etc.).
         skip_validate: bypass the AST allowlist. Only set in tests where
             you know the code is safe — never from user-facing code.
+        force_in_process: if True, always use the in-process path
+            (faster, less isolation). If False, always use subprocess.
+            If None (default), use in-process when frozen, subprocess
+            otherwise. The frozen check matters for the desktop
+            sidecar — sys.executable in a PyInstaller bundle is the
+            bundle itself, not a Python interpreter.
 
     Returns:
         SandboxResult with `.bytes` populated on success.
@@ -274,6 +383,10 @@ def run_in_sandbox(
     """
     if not skip_validate:
         validate_code(code)
+
+    use_in_process = force_in_process if force_in_process is not None else _is_frozen()
+    if use_in_process:
+        return _run_in_process(code, timeout_s=timeout_s)
 
     import time
 

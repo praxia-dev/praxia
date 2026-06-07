@@ -196,14 +196,27 @@ def apply_pending_op(
             return {"error": "op.source_markdown is required for render_document"}
         if fmt not in ("md", "markdown", "html", "json", "pptx", "docx"):
             return {"error": f"unsupported format: {fmt!r}"}
-        try:
-            from praxia.io.exporters import export_as
-            result = export_as(source, format=fmt)
-            payload = result.bytes
-        except ImportError as e:
-            return {"error": f"exporter for {fmt!r} not available: {e}"}
-        except Exception as e:
-            return {"error": f"render failed: {e}"}
+        # Honour pre-rendered Designer bytes if the queue-time pass
+        # produced them. We don't re-invoke the Designer here because
+        # apply_pending_op runs in a worker context that may not have
+        # an LLM configured, and the user already saw the markdown
+        # preview that informed the designer output.
+        designer_b64 = op.get("designer_bytes_b64")
+        if isinstance(designer_b64, str) and designer_b64:
+            try:
+                import base64
+                payload = base64.b64decode(designer_b64)
+            except Exception as e:
+                return {"error": f"failed to decode designer bytes: {e}"}
+        else:
+            try:
+                from praxia.io.exporters import export_as
+                result = export_as(source, format=fmt)
+                payload = result.bytes
+            except ImportError as e:
+                return {"error": f"exporter for {fmt!r} not available: {e}"}
+            except Exception as e:
+                return {"error": f"render failed: {e}"}
         if len(payload) > MAX_WRITE_BYTES:
             return {"error": f"rendered output exceeds {MAX_WRITE_BYTES} bytes"}
         created = not abs_path.exists()
@@ -268,6 +281,63 @@ def _resolve_in(workspace_root: Path, user_path: str) -> Path:
             f"path {user_path!r} resolves outside the workspace"
         ) from e
     return p
+
+
+def _try_designer(
+    agent: "AutonomousAgent",
+    fmt: str,
+    source_markdown: str,
+) -> tuple[bytes | None, str | None]:
+    """Try Document Designer for pptx/docx; return (bytes, error_str).
+
+    On any failure (skill not importable, codegen retries exhausted,
+    sandbox refuses, LLM call errors) we return (None, error) so the
+    caller can fall back to the basic exporter. The whole point is
+    "richer output when we can, plain output when we can't"; never
+    bubble up an exception that would block the agent's response.
+    """
+    try:
+        # Tolerate the skill subpackage being absent in stripped builds.
+        from praxia.skills.document_designer import (
+            DocxDesignerSkill,
+            DocumentTheme,
+            PptxDesignerSkill,
+        )
+    except ImportError as e:
+        return None, f"designer skills not available: {e}"
+
+    # No LLM on the agent — can't run codegen. Caller falls back.
+    llm = getattr(agent, "llm", None)
+    if llm is None:
+        return None, "agent has no llm"
+
+    # Treat the markdown the LLM already produced as the brief — it
+    # describes structure, sections, key data. The designer LLM call
+    # turns that into python-pptx / python-docx code.
+    brief = source_markdown
+    if not brief.strip():
+        return None, "empty brief"
+
+    try:
+        if fmt == "pptx":
+            skill = PptxDesignerSkill(llm=llm)
+        else:
+            skill = DocxDesignerSkill(llm=llm)
+        # Conservative caps for the desktop sidecar where we don't want
+        # a single render to monopolise the LLM budget. 2 attempts +
+        # 20s sandbox is enough for typical decks; failures fall back.
+        result = skill.design(
+            brief,
+            theme=DocumentTheme(),
+            max_attempts=2,
+            max_tokens=8192,
+            timeout_s=20.0,
+        )
+        if not result.ok:
+            return None, "designer returned empty bytes"
+        return result.bytes, None
+    except Exception as e:  # noqa: BLE001 — designer can fail any number of ways
+        return None, f"designer raised {type(e).__name__}: {e}"
 
 
 def _maybe_unescape(text: str) -> str:
@@ -634,6 +704,19 @@ def workspace_tools(
         except _OutsideWorkspaceError as e:
             return {"error": str(e)}
 
+        # Graphical pptx/docx: route through the Document Designer skill
+        # which has the LLM author python-pptx / python-docx code. The
+        # skill validates + sandboxes; we cache the produced bytes on
+        # the pending op so apply-time is bytes→disk with no second LLM
+        # round-trip. Designer failure quietly falls back to the basic
+        # exporter — better a plain deck than no deck.
+        designer_bytes: bytes | None = None
+        designer_used = False
+        designer_error: str | None = None
+        if fmt in ("pptx", "docx"):
+            designer_bytes, designer_error = _try_designer(agent, fmt, source_markdown)
+            designer_used = designer_bytes is not None
+
         if require_confirmation:
             # Defer the actual rendering until apply time — the
             # source markdown is what the user reviews; the bytes
@@ -641,6 +724,19 @@ def workspace_tools(
             # approval. Show the user a markdown preview only;
             # binary preview wouldn't be meaningful pre-render.
             preview = source_markdown[:4096]
+            extra: dict[str, Any] = {}
+            if designer_bytes is not None:
+                # Stash the pre-rendered bytes so apply_pending_op can
+                # write them verbatim. Base64 because the pending op
+                # serializes through JSON over HTTP to the desktop UI.
+                import base64
+                extra["designer_bytes_b64"] = base64.b64encode(designer_bytes).decode("ascii")
+                extra["designer_used"] = True
+            elif designer_error:
+                # Surface the failure on the queued op so the UI can
+                # show "(plain layout — designer fallback)" if it cares.
+                extra["designer_used"] = False
+                extra["designer_error"] = designer_error
             return _queue(
                 "render_document",
                 path=str(abs_path.relative_to(root)),
@@ -649,18 +745,22 @@ def workspace_tools(
                 source_markdown_preview=preview,
                 source_truncated=len(source_markdown) > 4096,
                 source_bytes=len(source_markdown.encode("utf-8")),
+                **extra,
             )
 
         # Immediate-execution path (require_confirmation=False) — tests
         # and non-interactive batch use. Same rendering, no queue.
-        try:
-            from praxia.io.exporters import export_as
-            result = export_as(source_markdown, format=fmt)
-            payload = result.bytes
-        except ImportError as e:
-            return {"error": f"exporter for {fmt!r} not available: {e}"}
-        except Exception as e:
-            return {"error": f"render failed: {e}"}
+        if designer_bytes is not None:
+            payload = designer_bytes
+        else:
+            try:
+                from praxia.io.exporters import export_as
+                result = export_as(source_markdown, format=fmt)
+                payload = result.bytes
+            except ImportError as e:
+                return {"error": f"exporter for {fmt!r} not available: {e}"}
+            except Exception as e:
+                return {"error": f"render failed: {e}"}
         if len(payload) > MAX_WRITE_BYTES:
             return {"error": f"rendered output exceeds {MAX_WRITE_BYTES} bytes"}
         try:
@@ -676,12 +776,15 @@ def workspace_tools(
             path=abs_path.relative_to(root),
             format=fmt,
             bytes=len(payload),
+            designer=designer_used,
         )
         return {
             "path": str(abs_path.relative_to(root)),
             "format": fmt,
             "bytes": len(payload),
             "rendered": True,
+            "designer_used": designer_used,
+            **({"designer_error": designer_error} if designer_error else {}),
         }
 
     # --- delete (audit, opt-in via caller wiring) ---------------------------
