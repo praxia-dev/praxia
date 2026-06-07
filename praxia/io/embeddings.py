@@ -16,13 +16,20 @@ search router falls back to keyword scoring.
 Model selection (in priority order):
   1. ``model=`` parameter at the call site
   2. ``PRAXIA_EMBEDDING_MODEL`` environment variable
-  3. Provider auto-detect from a configured LLM API key:
-       OPENAI_API_KEY  → "text-embedding-3-small"
-       AZURE_API_KEY   → "azure/text-embedding-3-small"
-                         (requires AZURE_API_BASE / AZURE_API_VERSION too)
-       OLLAMA_BASE_URL → "ollama/nomic-embed-text"
+  3. Provider auto-detect from a configured API key:
+       OPENAI_API_KEY    → "text-embedding-3-small"
+       AZURE_API_KEY     → "azure/text-embedding-3-small"
+                           (requires AZURE_API_BASE too)
+       OLLAMA_BASE_URL   → "ollama/nomic-embed-text"
+       GOOGLE_API_KEY    → "gemini/text-embedding-004"
+       DASHSCOPE_API_KEY → "dashscope/text-embedding-v3"
+       HF_TOKEN          → "huggingface/BAAI/bge-m3"
   4. Hard default: "text-embedding-3-small" (errors loudly if no
      OPENAI_API_KEY is around — that's the right failure mode).
+
+Anthropic deliberately omitted: Claude has no public embedding API
+(verified 2026-06). Anthropic-only users must add a second provider
+(Ollama for free local, OpenAI / Gemini / DashScope / HF for cloud).
 """
 from __future__ import annotations
 
@@ -51,6 +58,15 @@ def get_default_embedding_model() -> str:
         return "azure/text-embedding-3-small"
     if os.environ.get("OLLAMA_BASE_URL"):
         return "ollama/nomic-embed-text"
+    if os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
+        # Google AI Studio's embedding endpoint — free tier covers a lot.
+        return "gemini/text-embedding-004"
+    if os.environ.get("DASHSCOPE_API_KEY"):
+        # Alibaba's Qwen embedding family — same key as the chat model.
+        return "dashscope/text-embedding-v3"
+    if os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_API_KEY"):
+        # HF Inference's hosted bge-m3 — multilingual, MIT-licensed.
+        return "huggingface/BAAI/bge-m3"
     return _HARD_DEFAULT
 
 
@@ -133,5 +149,10 @@ def is_available() -> bool:
         os.environ.get("OPENAI_API_KEY")
         or os.environ.get("AZURE_API_KEY")
         or os.environ.get("OLLAMA_BASE_URL")
+        or os.environ.get("GOOGLE_API_KEY")
+        or os.environ.get("GEMINI_API_KEY")
+        or os.environ.get("DASHSCOPE_API_KEY")
+        or os.environ.get("HF_TOKEN")
+        or os.environ.get("HUGGINGFACE_API_KEY")
         or os.environ.get("PRAXIA_EMBEDDING_MODEL")
     )

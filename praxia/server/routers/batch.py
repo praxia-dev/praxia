@@ -227,13 +227,19 @@ def build_router(*, current_user: Any, storage: Path):
     @router.get("/batches")
     def list_batches(user=Depends(current_user), limit: int = 20):
         d = _batches_dir(storage, user.id)
-        out: list[dict[str, Any]] = []
-        for f in sorted(d.glob("*.json"), reverse=True)[: max(1, int(limit))]:
+        # alpha23+: sort by ``created_at`` desc so the UI's Recent list
+        # shows newest-first (matching Tasks tab UX). Pre-alpha23 sorted
+        # by filename which is the batch id — UUID hex, so effectively
+        # random — and users saw new batches appearing in the middle of
+        # the list.
+        rows: list[dict[str, Any]] = []
+        for f in d.glob("*.json"):
             try:
-                out.append(json.loads(f.read_text(encoding="utf-8")))
+                rows.append(json.loads(f.read_text(encoding="utf-8")))
             except (OSError, json.JSONDecodeError):
                 continue
-        return {"batches": out}
+        rows.sort(key=lambda r: r.get("created_at", 0.0), reverse=True)
+        return {"batches": rows[: max(1, int(limit))]}
 
     @router.delete("/batches/{batch_id}")
     def delete_batch(batch_id: str, user=Depends(current_user)):

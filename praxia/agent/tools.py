@@ -573,12 +573,22 @@ def _run_parallel_tasks(
         )
         _save_task(storage, t)
         children.append(t)
+    # alpha23+: synthesise a friendlier auto-label when the LLM didn't
+    # pass one. Without this the Batches sidebar showed the bare UUID
+    # fragment (e.g. "a3f9c2b1") which reads as random English hex to
+    # JA / ZH / KO users. Take the first prompt's first 40 chars as a
+    # quick description — good enough for skim-reading the recent list.
+    effective_label = label
+    if not effective_label and filtered:
+        first_line = filtered[0].splitlines()[0].strip()
+        if first_line:
+            effective_label = first_line[:40] + ("…" if len(first_line) > 40 else "")
     batch = BatchRecord(
         id=batch_id,
         user_id=user_id,
         task_ids=[t.id for t in children],
         created_at=now,
-        label=label,
+        label=effective_label,
     )
     _save_batch(storage, batch)
     # We need a "user-like" object for _run_agent_task_threaded. The
