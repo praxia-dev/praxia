@@ -545,3 +545,94 @@ class TestRenderDocument:
         assert schema["function"]["name"] == "render_document"
         props = schema["function"]["parameters"]["properties"]
         assert "format" in props and "source_markdown" in props
+
+
+# ---------------------------------------------------------------------------
+# Unescape heuristic — LLM double-escaped \n must be undone
+# ---------------------------------------------------------------------------
+
+
+class TestUnescapeHeuristic:
+    """Real bug from alpha10: the agent rendered a proposal where the
+    Markdown source arrived with literal backslash+n pairs instead of
+    actual newlines, producing a single unbroken paragraph in the
+    .md file and a 1-slide .pptx. file_tools auto-detects the shape
+    and undoes the double-escape."""
+
+    def test_double_escaped_md_is_unescaped(self, agent, workspace):
+        from praxia.agent.file_tools import _maybe_unescape
+
+        # Real shape from the field: many literal "\n" tokens, zero
+        # real newlines
+        bad = "# Title\\n\\n## Section\\n- bullet 1\\n- bullet 2"
+        fixed = _maybe_unescape(bad)
+        assert "\n" in fixed
+        assert fixed.startswith("# Title\n\n")
+        assert "## Section" in fixed
+        assert "- bullet 1\n- bullet 2" in fixed
+
+    def test_proper_input_is_left_alone(self):
+        from praxia.agent.file_tools import _maybe_unescape
+        good = "# Title\n\n## Section\n- bullet\n"
+        assert _maybe_unescape(good) is good or _maybe_unescape(good) == good
+
+    def test_legitimate_literal_backslash_n_in_code(self):
+        from praxia.agent.file_tools import _maybe_unescape
+        # If the text has real newlines AND a literal "\n" (code
+        # sample), don't mutate — the heuristic only fires on the
+        # "no real newlines but lots of literal \n" pattern.
+        text = "Real newline here.\nCode example: `print(\"\\n\")`."
+        assert _maybe_unescape(text) == text
+
+    def test_single_stray_literal_is_not_unescaped(self):
+        """One stray "\n" in an otherwise normal string is probably
+        intentional (code, regex). Threshold is 2+."""
+        from praxia.agent.file_tools import _maybe_unescape
+        text = "test \\n end"
+        assert _maybe_unescape(text) == text
+
+    def test_render_document_unescapes_at_call_time(self, agent, workspace):
+        """End-to-end: render_document with double-escaped input writes
+        properly-formatted output (real newlines + slide segmentation
+        possible)."""
+        t = workspace_tools(workspace, require_confirmation=False)
+        bad_source = (
+            "# Q3 Summary\\n\\n"
+            "## Revenue\\n- up 12%\\n\\n"
+            "## Outlook\\n- continued growth\\n"
+        )
+        r = t["render_document"].handler(
+            agent, path="out.md", format="md", source_markdown=bad_source
+        )
+        assert r["rendered"] is True
+        body = (workspace / "out.md").read_text(encoding="utf-8")
+        # Real newlines made it to disk
+        assert "\n" in body
+        # The slide markers survive (so PPTX would segment too)
+        assert "## Revenue" in body
+        assert "## Outlook" in body
+
+    def test_write_file_unescapes_at_call_time(self, agent, workspace):
+        t = workspace_tools(workspace, require_confirmation=False)
+        bad_content = "line one\\nline two\\nline three"
+        r = t["write_file"].handler(
+            agent, path="multi.txt", content=bad_content
+        )
+        assert r["written"] is True
+        body = (workspace / "multi.txt").read_text(encoding="utf-8")
+        assert body == "line one\nline two\nline three"
+
+    def test_apply_pending_op_unescapes_too(self, workspace):
+        """Defence in depth: even if a stored pending op has the
+        double-escaped form (because the LLM emitted it that way),
+        the apply path unescapes before writing."""
+        from praxia.agent.file_tools import apply_pending_op
+        op = {
+            "op": "write_file",
+            "path": "x.md",
+            "content": "# Hi\\n\\nbody\\n",
+        }
+        r = apply_pending_op(workspace, op, actor_id="alice")
+        assert r["applied"] is True
+        body = (workspace / "x.md").read_text(encoding="utf-8")
+        assert body.startswith("# Hi\n\nbody\n")

@@ -126,6 +126,7 @@ def apply_pending_op(
         content = op.get("content")
         if not isinstance(content, str):
             return {"error": "op.content is required for write_file"}
+        content = _maybe_unescape(content)
         encoded = content.encode("utf-8")
         if len(encoded) > MAX_WRITE_BYTES:
             return {"error": f"content exceeds {MAX_WRITE_BYTES} bytes"}
@@ -269,6 +270,42 @@ def _resolve_in(workspace_root: Path, user_path: str) -> Path:
     return p
 
 
+def _maybe_unescape(text: str) -> str:
+    """LLMs occasionally double-escape newlines when emitting JSON tool
+    arguments: they write ``"\\\\n\\\\n"`` (4 chars) where ``"\\n\\n"``
+    (2 chars) was meant. After the framework's JSON parse the string
+    that lands here is then ``\\n\\n`` (2 chars — literal backslash +
+    n) instead of actual newlines.
+
+    Symptom: a "Markdown" file with hundreds of ``\\n`` substrings
+    and zero real newlines — renders as one giant unbroken paragraph
+    in any viewer, and the PPTX exporter (which segments slides on
+    ``##``) collapses everything to a single slide.
+
+    Heuristic: if the input has many literal ``\\n`` substrings AND
+    contains no actual newline character, decode it through
+    ``unicode_escape`` once. We only fire on this skewed shape so a
+    legitimate string containing ``\\n`` as a literal (rare in
+    Markdown / proposal text but possible in code samples) isn't
+    silently mutated.
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    if "\n" in text:
+        return text  # has real newlines already — trust the input
+    if text.count("\\n") < 2:
+        return text  # one stray "\n" is probably intentional
+    try:
+        decoded = text.encode("latin-1", errors="backslashreplace").decode("unicode_escape")
+        # Sanity: decoded must produce more newlines than the input
+        # had pseudo-newlines, otherwise the heuristic was wrong.
+        if decoded.count("\n") >= text.count("\\n") // 2:
+            return decoded
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        pass
+    return text
+
+
 def _audit(agent: "AutonomousAgent", action: str, **fields: Any) -> None:
     """Best-effort write to the agent's audit log. Never raises —
     audit failure must not break a successful tool call."""
@@ -401,6 +438,11 @@ def workspace_tools(
     ) -> dict[str, Any]:
         if not isinstance(content, str):
             return {"error": "content must be a string"}
+        # Same fix as render_document below: LLMs sometimes
+        # double-escape newlines on the JSON boundary, landing us
+        # with a giant "\\n\\n"-strewn string that writes literally
+        # to disk and renders as one unbroken line.
+        content = _maybe_unescape(content)
         encoded = content.encode("utf-8")
         if len(encoded) > MAX_WRITE_BYTES:
             return {"error": f"content exceeds {MAX_WRITE_BYTES} bytes"}
@@ -573,6 +615,12 @@ def workspace_tools(
     ) -> dict[str, Any]:
         if not isinstance(source_markdown, str):
             return {"error": "source_markdown must be a string"}
+        # Auto-undo LLM double-escaping (see _maybe_unescape). Without
+        # this, "Markdown" arriving as a 1-line "\\n\\n"-strewn string
+        # was being written verbatim to disk: MD viewers showed one
+        # paragraph and the PPTX exporter (which segments slides on
+        # blank-line + "## ") collapsed everything to a single slide.
+        source_markdown = _maybe_unescape(source_markdown)
         fmt = (format or "").lower().lstrip(".").strip()
         if fmt not in _SUPPORTED_RENDER_FORMATS:
             return {
