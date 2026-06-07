@@ -304,6 +304,97 @@ def _list_document_folders(agent: AutonomousAgent) -> dict[str, Any]:
     }
 
 
+def _list_files_in_folder(
+    agent: AutonomousAgent,
+    folder_id: str | None = None,
+    folder_title: str | None = None,
+    path_prefix: str | None = None,
+) -> dict[str, Any]:
+    """Enumerate every file inside a Documents folder. The agent calls
+    this before ``run_parallel_tasks`` so it knows what items to fan
+    out over: each child gets one file's ``relative_path``.
+
+    Pass exactly one of ``folder_id`` or ``folder_title``. When the
+    user said "fan out across the contracts folder" the LLM should
+    first call this tool (folder_title="contracts"), then build one
+    prompt per file in the returned list.
+
+    Returns one entry per registered doc with ``relative_path``,
+    ``doc_id``, ``folder_id``, ``size_bytes`` (best effort, may be 0
+    for legacy docs), ``chunk_count``, and ``extension``.
+    """
+    try:
+        from praxia.server.routers.documents import (
+            load_docs_in_folder, load_user_folders,
+        )
+    except ImportError:
+        return {"files": [], "count": 0, "note": "praxia[server] not installed"}
+
+    try:
+        folders = load_user_folders(Path(agent.memory_dir), agent.user_id) or []
+    except Exception:  # pragma: no cover
+        return {"files": [], "count": 0}
+
+    # Resolve the target folder. folder_id wins; otherwise match by
+    # title (case-insensitive). Errors are returned as a `note` rather
+    # than raising — the LLM can recover by listing folders first.
+    target = None
+    if folder_id:
+        target = next((f for f in folders if f.id == folder_id), None)
+    elif folder_title:
+        wanted = folder_title.strip().lower()
+        target = next((f for f in folders if (f.title or "").lower() == wanted), None)
+    if target is None:
+        return {
+            "files": [],
+            "count": 0,
+            "note": (
+                f"No folder matched folder_id={folder_id!r} "
+                f"folder_title={folder_title!r}. Call "
+                "list_document_folders to see what exists."
+            ),
+        }
+
+    try:
+        docs = load_docs_in_folder(
+            Path(agent.memory_dir), agent.user_id, target.id,
+        ) or []
+    except Exception:  # pragma: no cover
+        return {"files": [], "count": 0, "folder_id": target.id}
+
+    norm_prefix = None
+    if path_prefix:
+        norm_prefix = path_prefix.replace("\\", "/").strip("/")
+
+    out = []
+    for doc in docs:
+        rel = doc.relative_path.replace("\\", "/")
+        if norm_prefix is not None and not (
+            rel == norm_prefix or rel.startswith(norm_prefix + "/")
+        ):
+            continue
+        # Extension extraction without pulling pathlib for every doc.
+        dot = rel.rfind(".")
+        ext = rel[dot + 1:].lower() if dot >= 0 and dot < len(rel) - 1 else ""
+        out.append({
+            "doc_id": doc.id,
+            "folder_id": target.id,
+            "relative_path": rel,
+            "extension": ext,
+            "chunk_count": len(doc.chunks or []),
+            # `size_bytes` is best-effort — pre-alpha22 docs may not
+            # carry it, in which case we report 0.
+            "size_bytes": getattr(doc, "size_bytes", 0) or 0,
+        })
+
+    return {
+        "folder_id": target.id,
+        "folder_title": target.title,
+        "files": out,
+        "count": len(out),
+    }
+
+
 def _schedule_recurring_task(
     agent: AutonomousAgent,
     cron: str,
@@ -662,6 +753,52 @@ def builtin_tools() -> dict[str, AgentTool]:
             handler=_list_document_folders,
         ),
         AgentTool(
+            name="list_files_in_folder",
+            description=(
+                "Enumerate every file the user has indexed inside ONE "
+                "Documents folder. This is the right first call for any "
+                "per-file batch fan-out ('summarise each PDF in folder X', "
+                "'extract action items from every doc in pdfs'): list the "
+                "files here, then build one self-contained prompt per "
+                "file and hand them all to run_parallel_tasks. Pass "
+                "EITHER folder_id (preferred, from list_document_folders) "
+                "OR folder_title (case-insensitive match by user-visible "
+                "name). Returns one entry per file with relative_path "
+                "(use this in the per-file prompt so each child knows "
+                "which doc to work on), doc_id, extension, and "
+                "chunk_count."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "folder_id": {
+                        "type": "string",
+                        "description": (
+                            "Documents folder id (from list_document_"
+                            "folders). Preferred over folder_title."
+                        ),
+                    },
+                    "folder_title": {
+                        "type": "string",
+                        "description": (
+                            "User-visible folder name. Matched case-"
+                            "insensitively. Use when the user named the "
+                            "folder verbally."
+                        ),
+                    },
+                    "path_prefix": {
+                        "type": "string",
+                        "description": (
+                            "Optional subpath filter (e.g. '2024/Q1') — "
+                            "only returns files whose relative_path "
+                            "starts with this prefix."
+                        ),
+                    },
+                },
+            },
+            handler=_list_files_in_folder,
+        ),
+        AgentTool(
             name="schedule_recurring_task",
             description=(
                 "Create a recurring scheduled agent run. Call this when "
@@ -722,12 +859,13 @@ def builtin_tools() -> dict[str, AgentTool]:
                 "'tous ces PDF'. If the user mentions 'all' / '全件' / "
                 "'全部' / '各' / 'every' / 'each' together with a folder "
                 "or a doc-type plural, this is your tool. Workflow: "
-                "(1) call list_document_folders + search_documents (or "
-                "search_documents with no query, listing all hits) to "
-                "enumerate the actual files, (2) call this tool with "
-                "one self-contained prompt per file mentioning the file "
-                "name/path explicitly so each child agent knows which "
-                "doc to work on. NOT for a single complex request and "
+                "(1) call list_document_folders to find the folder_id, "
+                "(2) call list_files_in_folder(folder_id=...) to get "
+                "the actual file list (NOT search_documents — that "
+                "returns chunks not files), (3) call this tool with one "
+                "self-contained prompt per file mentioning the file's "
+                "relative_path explicitly so each child agent knows "
+                "which doc to work on. NOT for a single complex request and "
                 "NOT for recurring work (use schedule_recurring_task). "
                 "Returns a batch_id the user tracks in the Batches tab. "
                 "Hard cap of 100 items per call. After success, tell "

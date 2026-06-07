@@ -72,6 +72,13 @@ class Chunk(BaseModel):
     text: str
     start: int                          # character offset in original content
     end: int
+    # Semantic search embedding (alpha22+). None on chunks ingested
+    # before semantic search was wired in — the router back-fills on
+    # next startup. Vector dimension varies by model (1536 for
+    # text-embedding-3-small, 768 for nomic-embed-text, etc.) — we
+    # don't pin a size at the type level because mixing models is
+    # explicitly supported.
+    embedding: list[float] | None = None
 
 
 class Document(BaseModel):
@@ -327,6 +334,89 @@ def load_docs_in_folder(storage: Path, user_id: str, folder_id: str) -> list[Doc
     return out
 
 
+def _save_doc_blob(storage: Path, user_id: str, doc: Document) -> None:
+    """Write a Document back to disk at its canonical path. Used by
+    the embedding backfill below + (mirrored) by the router's inline
+    _save_doc helper."""
+    (_folder_dir(storage, user_id, doc.folder_id) / f"{doc.id}.json").write_text(
+        json.dumps(doc.model_dump(), ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def backfill_embeddings_for_user(
+    storage: Path,
+    user_id: str,
+    *,
+    max_chunks_per_run: int | None = None,
+) -> tuple[int, int]:
+    """Walk every doc this user has and embed any chunk that still
+    has ``embedding is None``. Returns ``(docs_updated, chunks_embedded)``.
+
+    Why this exists: alpha22 introduced ``Chunk.embedding`` and starts
+    populating it at upload time, but every doc ingested under
+    alpha18-21 has ``embedding=None`` and would forever fall back to
+    keyword scoring without a back-fill pass. We run this once on
+    server startup so the first launch after an upgrade quietly
+    upgrades the index.
+
+    Skips quietly when no embedding provider is configured — the
+    search router will just keep using keyword scoring, which is the
+    correct degradation. Bounded by ``max_chunks_per_run`` so a huge
+    library doesn't bring server boot to its knees; the remainder is
+    picked up by future ingests / future startups.
+    """
+    try:
+        from praxia.io.embeddings import embed_texts, is_available
+    except Exception:
+        return (0, 0)
+    if not is_available():
+        return (0, 0)
+
+    folders = load_user_folders(storage, user_id)
+    docs_updated = 0
+    chunks_embedded = 0
+    remaining = max_chunks_per_run if max_chunks_per_run else None
+
+    for folder in folders:
+        for doc in load_docs_in_folder(storage, user_id, folder.id):
+            missing_idx = [i for i, c in enumerate(doc.chunks) if not c.embedding]
+            if not missing_idx:
+                continue
+            if remaining is not None:
+                missing_idx = missing_idx[:max(0, remaining)]
+                if not missing_idx:
+                    return (docs_updated, chunks_embedded)
+            texts = [doc.chunks[i].text for i in missing_idx]
+            try:
+                vectors = embed_texts(texts)
+            except Exception as e:
+                _log.warning(
+                    "embedding backfill failed for %s/%s (%s); leaving keyword-only",
+                    user_id, doc.relative_path, e,
+                )
+                # One failure (rate-limit, network hiccup) shouldn't
+                # abort the whole pass — keep going on the next doc.
+                continue
+            if len(vectors) != len(missing_idx):
+                _log.warning(
+                    "embedding backfill: vector count mismatch on %s — got %d, expected %d",
+                    doc.relative_path, len(vectors), len(missing_idx),
+                )
+                continue
+            for idx, vec in zip(missing_idx, vectors):
+                doc.chunks[idx].embedding = vec
+            _save_doc_blob(storage, user_id, doc)
+            docs_updated += 1
+            chunks_embedded += len(vectors)
+            if remaining is not None:
+                remaining -= len(vectors)
+                if remaining <= 0:
+                    return (docs_updated, chunks_embedded)
+
+    return (docs_updated, chunks_embedded)
+
+
 def search_for_user(
     storage: Path,
     user_id: str,
@@ -368,9 +458,6 @@ def search_for_user(
     """
     if not query.strip():
         return []
-    query_tokens = _tokenize(query)
-    if not query_tokens:
-        return []
     all_folders = load_user_folders(storage, user_id)
     if folder_ids:
         allowed = set(folder_ids)
@@ -385,6 +472,35 @@ def search_for_user(
     if path_prefix:
         norm_prefix = path_prefix.replace("\\", "/").strip("/")
 
+    # alpha22+: semantic search via litellm embeddings. Embed the
+    # query once, then score each chunk by cosine similarity against
+    # its stored embedding. For chunks WITHOUT embeddings (pre-alpha22
+    # docs not yet back-filled), we fall through to the original
+    # keyword scoring path so old docs aren't suddenly unsearchable
+    # mid-upgrade. Net effect: semantic search where possible,
+    # keyword as graceful degradation.
+    query_vec: list[float] | None = None
+    try:
+        from praxia.io.embeddings import embed_text, cosine_similarity, is_available
+        if is_available():
+            query_vec = embed_text(query)
+    except Exception as e:
+        _log.warning(
+            "query embedding failed (%s); falling back to keyword scoring", e,
+        )
+        query_vec = None
+
+    # Keyword tokens — used for fallback OR as a tie-breaker.
+    query_tokens = _tokenize(query)
+    if query_vec is None and not query_tokens:
+        # Pure noise (empty query after tokenization, no embeddings).
+        return []
+
+    # Score thresholds: cosine sim above 0.30 is "probably relevant".
+    # We bias toward returning results — recall over precision —
+    # because the agent's retriever already caps at `limit`.
+    _SEMANTIC_MIN_SCORE = 0.30
+
     hits: list[SearchHit] = []
     for folder in folders:
         for doc in load_docs_in_folder(storage, user_id, folder.id):
@@ -394,9 +510,20 @@ def search_for_user(
                 if not (rel == norm_prefix or rel.startswith(norm_prefix + "/")):
                     continue
             for chunk in doc.chunks:
-                lc = chunk.text.lower()
-                chunk_tokens = _tokenize(chunk.text)
-                score = score_chunk(query_tokens, lc, chunk_tokens)
+                score: float = 0.0
+                # 1) Semantic path: chunk has an embedding AND we have
+                #    a query embedding → cosine similarity.
+                if query_vec is not None and chunk.embedding:
+                    sim = cosine_similarity(query_vec, chunk.embedding)
+                    if sim >= _SEMANTIC_MIN_SCORE:
+                        score = sim
+                # 2) Keyword fallback: no embedding on either side,
+                #    use BM25-ish token overlap. Same path that ran
+                #    pre-alpha22; preserved so legacy docs keep working.
+                else:
+                    lc = chunk.text.lower()
+                    chunk_tokens = _tokenize(chunk.text)
+                    score = score_chunk(query_tokens, lc, chunk_tokens)
                 if score > 0:
                     hits.append(SearchHit(
                         doc_id=doc.id,
@@ -407,6 +534,41 @@ def search_for_user(
                         score=round(score, 4),
                     ))
     hits.sort(key=lambda h: h.score, reverse=True)
+
+    # alpha22+: 0-hits fallback. When the caller scoped the search to a
+    # specific folder / path_prefix and our semantic+keyword passes both
+    # returned nothing, the agent's downstream "abstain" branch fires
+    # ("Documents の pdfs フォルダは見つかりましたが…中に検索可能な PDF
+    # ファイルがまだ登録されていないようです — ヒット数 0 件") even
+    # though the folder DOES contain files. Most common cause: query
+    # language doesn't lexically match the doc language and the chunk
+    # embeddings haven't been back-filled yet. Instead of abstaining,
+    # surface the first chunk of every doc in scope so the agent at
+    # least sees what's there and can enumerate / summarise per-file.
+    # Only triggers when scoped — otherwise an open-ended empty query
+    # could dump the entire corpus.
+    if not hits and (norm_prefix is not None or folder_ids):
+        for folder in folders:
+            for doc in load_docs_in_folder(storage, user_id, folder.id):
+                if norm_prefix is not None:
+                    rel = doc.relative_path.replace("\\", "/")
+                    if not (rel == norm_prefix or rel.startswith(norm_prefix + "/")):
+                        continue
+                if not doc.chunks:
+                    continue
+                # First chunk only — gives the agent a handle ("this
+                # doc exists, here's a snippet") without ballooning the
+                # response. Score 0 marks this as a fallback hit.
+                first = doc.chunks[0]
+                hits.append(SearchHit(
+                    doc_id=doc.id,
+                    folder_id=doc.folder_id,
+                    relative_path=doc.relative_path,
+                    chunk_index=first.index,
+                    text=first.text,
+                    score=0.0,
+                ))
+
     top = hits[: max(1, int(limit))]
 
     if not include_images:
@@ -710,6 +872,35 @@ def build_router(*, current_user: Any, storage: Path):
                 doc_id="", folder_id=folder_id, chunks=0,
                 status="skipped",
                 reason="parsed content was empty",
+            )
+
+        # alpha22+: embed every chunk now so query-time semantic search
+        # can do cosine similarity without re-reading docs. The embed
+        # call goes through litellm using whatever model the user has
+        # configured (defaults to text-embedding-3-small when
+        # OPENAI_API_KEY is set; ollama/nomic-embed-text otherwise).
+        #
+        # Failure mode: if the embedding call dies (missing API key,
+        # rate limit, unknown model), we still index the chunks
+        # text-only. search_for_user will fall back to keyword scoring
+        # for those chunks. A subsequent re-ingest or the startup
+        # backfill loop can fill embeddings later.
+        try:
+            from praxia.io.embeddings import embed_texts, is_available
+            if is_available():
+                vectors = embed_texts([c.text for c in chunks])
+                if len(vectors) == len(chunks):
+                    for c, v in zip(chunks, vectors):
+                        c.embedding = v
+                else:
+                    _log.warning(
+                        "embedding count mismatch for %s: got %d vectors for %d chunks; saving without embeddings",
+                        rel, len(vectors), len(chunks),
+                    )
+        except Exception as e:
+            _log.warning(
+                "embedding skipped for %s (%s); chunks indexed text-only",
+                rel, e,
             )
 
         # Re-use existing doc id if replacing, else mint a new one

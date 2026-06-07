@@ -175,4 +175,56 @@ def create_app(
     except ImportError:
         pass
 
+    # --- Embedding backfill (alpha22+) -------------------------------------
+    # Pre-alpha22 docs were indexed without embeddings; on the first
+    # boot after an upgrade we walk every user's library and embed any
+    # chunk whose ``embedding`` is None. Runs in a background thread so
+    # boot stays fast — the user can start querying immediately and
+    # the backfill catches up live. Bounded to 2000 chunks per startup
+    # so a huge library doesn't melt the embedding API on every launch.
+    @app.on_event("startup")
+    async def _kick_embedding_backfill():  # noqa: D401 - FastAPI hook
+        import asyncio
+        import logging
+
+        log = logging.getLogger("praxia.embedding_backfill")
+        try:
+            from praxia.io.embeddings import is_available
+            if not is_available():
+                # Common case for first-launch-no-keys; staying quiet
+                # so we don't pollute the log with a "skipped" line
+                # every boot.
+                return
+        except Exception:
+            return
+
+        from praxia.server.routers.documents import (
+            _docs_root,
+            backfill_embeddings_for_user,
+        )
+
+        def _run():
+            root = _docs_root(storage)
+            if not root.exists():
+                return
+            for user_dir in root.iterdir():
+                if not user_dir.is_dir():
+                    continue
+                try:
+                    docs, chunks = backfill_embeddings_for_user(
+                        storage, user_dir.name, max_chunks_per_run=2000,
+                    )
+                except Exception as e:
+                    log.warning("backfill aborted for %s (%s)", user_dir.name, e)
+                    continue
+                if chunks > 0:
+                    log.info(
+                        "embedded %d chunks across %d docs for user=%s",
+                        chunks, docs, user_dir.name,
+                    )
+
+        # Off the event loop so embedding HTTP calls don't block other
+        # routes during startup; the task is fire-and-forget.
+        asyncio.get_event_loop().run_in_executor(None, _run)
+
     return app

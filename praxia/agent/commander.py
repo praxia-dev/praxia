@@ -167,6 +167,29 @@ _ACTION_KEYWORDS = (
 # REPORT facts from it. Per-claim grounding doesn't fit:
 # 「営業支援テーマの資料を元に提案資料を作って」 contains many novel
 # claims by construction.
+# Tokens that flag a per-item batch fan-out — the user is asking for
+# the SAME operation across multiple items ("for each PDF…", "for all
+# files…", "summarize every doc in the folder"). Pre-alpha22 these
+# routed to `knowledge`, ran the verifier, and the verifier's grounding
+# bias steered the LLM toward "answer from one source" instead of
+# emitting a tool call to `run_parallel_tasks`. Routing them to a
+# dedicated `batch` kind lets us skip the verifier AND nudge the prompt
+# toward the parallel-tasks tool path.
+_BATCH_KEYWORDS = (
+    # English — explicit per-item language
+    "for each ", "for every ", "each pdf", "each file", "each doc",
+    "every pdf", "every file", "every doc",
+    "all files", "all pdfs", "all docs", "all the files",
+    "all the pdfs", "across all", "per file", "per document", "per pdf",
+    "one by one", "fan out", "fan-out",
+    # Japanese
+    "全件", "全部の", "各pdf", "各 pdf", "各ファイル", "各 ファイル",
+    "各ドキュメント", "各文書", "各資料",
+    "それぞれの", "全てのpdf", "全ての pdf", "全てのファイル",
+    "全てのドキュメント", "ファイルごと", "文書ごと", "ドキュメントごと",
+)
+
+
 _SYNTHESIS_KEYWORDS = (
     # English — generative / creative verbs
     "draft", "make a", "write a", "create a", "design a",
@@ -188,20 +211,25 @@ def default_task_classifier(user_input: str) -> str:
     """Cheap regex-free classifier. Returns one of:
 
     - ``"action"``: the input contains an imperative coding/tool verb.
+    - ``"batch"``: per-item fan-out across multiple files / docs (alpha22+).
+      Verifier skipped, no pre-retrieval — the inner agent is expected
+      to call ``run_parallel_tasks`` so each item gets its own answer.
     - ``"synthesis"``: the input asks for a generated artefact (draft,
       proposal, summary, deck). Sources are still retrieved (as
       inspiration) but the verifier is bypassed because per-claim
       grounding doesn't fit a creative output.
     - ``"knowledge"`` (default): grounded fact-QA — verifier runs.
 
-    Precedence: action > synthesis > knowledge. A request to "write
-    code for a slide-deck generator" reads as code work, not
-    synthesis.
+    Precedence: action > batch > synthesis > knowledge. "Write code
+    that summarises each PDF" reads as code work, not batch.
     """
     lowered = user_input.lower()
     for kw in _ACTION_KEYWORDS:
         if kw in lowered:
             return "action"
+    for kw in _BATCH_KEYWORDS:
+        if kw in lowered:
+            return "batch"
     for kw in _SYNTHESIS_KEYWORDS:
         if kw in lowered:
             return "synthesis"
@@ -559,6 +587,49 @@ class CommandedAgent:
             )
             result.add_usage(inner_result.usage)
             return result
+
+        # K6.5: batch fan-out — the user asked for the same operation
+        # across multiple items ("for each PDF in folder X…"). DON'T
+        # pre-retrieve: the inner agent needs to LIST then fan out,
+        # which is what the run_parallel_tasks tool is for. If we
+        # pre-retrieved, the LLM gets biased toward "answer from these
+        # 5 chunks" and never emits the tool call. Skip the verifier
+        # too — verifying a fan-out result per-claim makes no sense.
+        if task_kind == "batch":
+            nudge = (
+                "This is a per-item batch request. Use the "
+                "`run_parallel_tasks` tool to fan out across the items "
+                "the user named (one task per file/doc/PDF). If you "
+                "don't know what items to fan out over yet, first call "
+                "`list_files_in_folder` (or the equivalent) to "
+                "enumerate them, then call `run_parallel_tasks`."
+            )
+            augmented = f"{nudge}\n\n---\n\n{user_input}"
+            inner_result = self.inner.run(augmented, history=history, images=images)
+            self._audit(
+                "commander.batch_pass",
+                f"user:{self.inner.user_id}",
+                metadata={"input_chars": str(len(user_input))},
+            )
+            batch_result = CommandedResult(
+                answer=(inner_result.final_text or "").strip(),
+                verdict=Verdict(
+                    groundedness=0.0,
+                    per_claim=[],
+                    unsupported_claims=[],
+                    decision="accept",
+                    rationale=(
+                        "Batch fan-out request — per-item answers "
+                        "produced via run_parallel_tasks; per-claim "
+                        "grounding not applied to the aggregate."
+                    ),
+                ),
+                sources=[],
+                stopped_reason="batch_pass",
+                task_kind=task_kind,
+            )
+            batch_result.add_usage(inner_result.usage)
+            return batch_result
 
         if sources is None:
             sources = self.retriever(user_input)
