@@ -286,11 +286,11 @@
           </thead>
           <tbody>
             <tr>
-              <th data-i18n="cmp.cron">Cron schedules from natural language</th>
+              <th data-i18n="cmp.cron">Recurring NL schedules that persist across sessions (&ldquo;every Monday&rdquo; → registered cron)</th>
               <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td>
             </tr>
             <tr>
-              <th data-i18n="cmp.batch">Parallel batch fan-out (one prompt per item)</th>
+              <th data-i18n="cmp.batch">Parallel batch fan-out as a built-in workflow (one prompt per list item, UI-cancellable)</th>
               <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td>
             </tr>
             <tr>
@@ -298,27 +298,23 @@
               <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td>
             </tr>
             <tr>
-              <th data-i18n="cmp.designer">Code-gen PowerPoint with theme + charts</th>
+              <th data-i18n="cmp.designer">Themed PowerPoint as a first-class workflow (no code-interpreter detour)</th>
               <td class="yes">✓</td><td class="meh">—</td><td class="meh">—</td>
             </tr>
             <tr>
-              <th data-i18n="cmp.multi">9+ LLM providers in one app</th>
+              <th data-i18n="cmp.multi">9+ LLM providers in one app (Claude · OpenAI · Gemini · Qwen · DeepSeek · …)</th>
               <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td>
             </tr>
             <tr>
-              <th data-i18n="cmp.bring">Bring your own API key (local-first, no SaaS proxy)</th>
-              <td class="yes">✓</td><td class="meh">—</td><td class="meh">—</td>
-            </tr>
-            <tr>
-              <th data-i18n="cmp.memory">Personal → organizational memory promotion</th>
+              <th data-i18n="cmp.bring">Local-first: your API key, direct to the provider (no SaaS proxy in between)</th>
               <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td>
             </tr>
             <tr>
-              <th data-i18n="cmp.i18n">UI in 8 languages</th>
-              <td class="yes">✓</td><td class="meh">—</td><td class="meh">—</td>
+              <th data-i18n="cmp.memory">Personal → organizational memory promotion (3-path: frequency · outcome · LLM self-eval)</th>
+              <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td>
             </tr>
             <tr>
-              <th data-i18n="cmp.oss">Open source (Apache 2.0 server)</th>
+              <th data-i18n="cmp.oss">Open source server (Apache 2.0) — inspect, fork, self-host</th>
               <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td>
             </tr>
           </tbody>
@@ -1773,8 +1769,8 @@ P  = Praxia cost (license + infra)</code></pre>
     </div>
   </footer>
 
-  <script src="i18n.js?v=alpha17b"></script>
-  <script src="consent.js?v=alpha17b"></script>
+  <script src="i18n.js?v=alpha17c"></script>
+  <script src="consent.js?v=alpha17c"></script>
   <script src="analytics.js"></script>
   <script>
     // Tab switching for #examples section
