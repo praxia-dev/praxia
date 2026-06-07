@@ -253,6 +253,86 @@ class TestAgentRun:
         # When commander is invoked, verdict fields populate
         assert body["verdict_decision"] in {"accept", "redraft", "abstain"}
         assert body["rounds"] is not None
+        # Sources field must be present (may be empty for a no-memory
+        # fixture) so the desktop UI can rely on its shape unconditionally.
+        # The Sources panel in the desktop renders nothing when this list
+        # is empty, so an empty list is fine — but the KEY must exist.
+        assert "sources" in body, "verified responses must include sources field"
+        assert isinstance(body["sources"], list)
+
+    def test_verified_response_serialises_source_metadata(self, server):
+        """End-to-end check that retrieved sources surface with their
+        metadata (id, kind, text_preview, metadata.relative_path / score)
+        in the API response. Critical for the desktop Sources panel —
+        without this the user only sees [D#0] without knowing what
+        document it came from."""
+        client, headers, _ = server
+        import json as _json
+        from unittest.mock import patch
+
+        # Stub the commander retriever to inject a synthetic local_document
+        # source so the response can include something even without a
+        # real Documents folder ingested. The retriever is a callable
+        # the commander invokes during run() to populate cresult.sources.
+        from praxia.agent.verifier import Source
+
+        fake_sources = [
+            Source(
+                id="D#0",
+                text="The quarterly review identified three key risks ...",
+                kind="local_document",
+                metadata={
+                    "doc_id": "doc-abc",
+                    "folder_id": "fold-xyz",
+                    "relative_path": "contracts/2024/acme-msa.pdf",
+                    "chunk_index": 2,
+                    "score": 0.87,
+                },
+            ),
+        ]
+
+        verifier_reply = _json.dumps({
+            "claims": [{
+                "claim": "Three key risks were identified.",
+                "score": 0.9,
+                "supporting_ids": ["D#0"],
+            }]
+        })
+        responses = [_mk_llm_response("Three key risks were identified."),
+                     _mk_llm_response(verifier_reply)]
+
+        with patch(
+            "praxia.agent.commander.DefaultMemoryRetriever.__call__",
+            return_value=fake_sources,
+        ), patch(
+            "praxia.core.llm.LLM.complete",
+            side_effect=responses,
+        ):
+            r = client.post(
+                "/api/v1/agent/run",
+                json={
+                    "prompt": "what risks were identified",
+                    "verified": True,
+                    "max_verify_rounds": 1,
+                },
+                headers=headers,
+            )
+
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert isinstance(body["sources"], list)
+        assert len(body["sources"]) == 1, body["sources"]
+        s = body["sources"][0]
+        assert s["id"] == "D#0"
+        assert s["kind"] == "local_document"
+        assert s["text_preview"].startswith("The quarterly review")
+        assert s["text_truncated"] is False
+        assert s["metadata"]["relative_path"] == "contracts/2024/acme-msa.pdf"
+        assert s["metadata"]["chunk_index"] == 2
+        assert s["metadata"]["score"] == 0.87
+        # The cited ID must also appear in citations so the UI can
+        # cross-reference and visually distinguish cited vs uncited.
+        assert "D#0" in body["citations"]
 
 
 # ---------------------------------------------------------------------------

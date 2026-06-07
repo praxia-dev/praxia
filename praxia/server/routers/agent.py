@@ -62,6 +62,15 @@ class AgentRunResponse(BaseModel):
     verdict_groundedness: float | None = None
     citations: list[str] = []
     rounds: int | None = None
+    # Full source records the commander retrieved before drafting. Each
+    # entry has id (matches what citations references — e.g. "D#0"),
+    # kind ("local_document" / "memory" / "frozen" / …), a 500-char
+    # preview of the chunk text, and metadata (doc_id, folder_id,
+    # relative_path, chunk_index, score for local_document sources).
+    # The UI uses this to render a clickable "Sources" panel under
+    # answers so the user can verify where each [D#N] citation came
+    # from without spelunking through DevTools.
+    sources: list[dict[str, Any]] = []
     # If thread_id was supplied, the new message ids
     user_message_id: str | None = None
     assistant_message_id: str | None = None
@@ -202,6 +211,20 @@ def build_router(*, current_user: Any, storage: Path):
                 )
                 cresult = agent.run(req.prompt)
                 final_text = cresult.answer
+                # Serialise the retrieved sources so the UI can render a
+                # "where did [D#N] come from" panel. We cap the preview
+                # at 500 chars per source to keep the JSON body sane —
+                # the full chunk text is already on disk under the
+                # user's Documents folder if they want to inspect more.
+                sources_payload: list[dict[str, Any]] = []
+                for s in cresult.sources:
+                    sources_payload.append({
+                        "id": s.id,
+                        "kind": s.kind,
+                        "text_preview": (s.text or "")[:500],
+                        "text_truncated": len(s.text or "") > 500,
+                        "metadata": dict(s.metadata or {}),
+                    })
                 resp = AgentRunResponse(
                     text=final_text,
                     tool_calls=[],
@@ -211,6 +234,7 @@ def build_router(*, current_user: Any, storage: Path):
                     verdict_decision=cresult.verdict.decision,
                     verdict_groundedness=cresult.verdict.groundedness,
                     citations=list(cresult.citations),
+                    sources=sources_payload,
                     rounds=len(cresult.rounds),
                     pending_file_operations=list(pending_file_ops),
                 )

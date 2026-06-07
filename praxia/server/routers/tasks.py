@@ -351,12 +351,24 @@ def _invoke_agent(storage: Path, user, args: dict[str, Any]) -> dict[str, Any]:
             require_citations=True,
         )
         cresult = agent.run(prompt)
+        # Same source serialisation as /agent/run so Tasks-tab consumers
+        # can render the citation panel with full doc paths.
+        sources_payload: list[dict[str, Any]] = []
+        for s in cresult.sources:
+            sources_payload.append({
+                "id": s.id,
+                "kind": s.kind,
+                "text_preview": (s.text or "")[:500],
+                "text_truncated": len(s.text or "") > 500,
+                "metadata": dict(s.metadata or {}),
+            })
         return {
             "text": cresult.answer,
             "stopped_reason": cresult.stopped_reason,
             "verdict_decision": cresult.verdict.decision,
             "verdict_groundedness": cresult.verdict.groundedness,
             "citations": list(cresult.citations),
+            "sources": sources_payload,
             "rounds": len(cresult.rounds),
             "pending_file_operations": list(pending_file_ops),
         }

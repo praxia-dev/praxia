@@ -81,8 +81,17 @@ when in doubt, treat as ``knowledge`` so the verifier still runs.
 
 DEFAULT_ABSTAIN_MESSAGE = (
     "I don't have enough grounded information in the available sources to "
-    "answer this confidently. Please add more context, point me at the right "
-    "documents, or rephrase the question."
+    "answer this confidently.\n\n"
+    "Things you can try:\n"
+    "  • If you wanted me to process MULTIPLE documents in parallel "
+    "(e.g. \"extract action items from all PDFs in Documents\"), "
+    "rephrase to make the list explicit: \"for each PDF in Documents, "
+    "extract the action items.\" That triggers the batch tool which "
+    "fans out one agent run per file.\n"
+    "  • If you wanted a one-shot answer, point me at the specific "
+    "folder or rephrase with concrete keywords from the document.\n"
+    "  • Add the relevant documents to a Documents folder if you "
+    "haven't yet (auto-watch will index them)."
 )
 
 
