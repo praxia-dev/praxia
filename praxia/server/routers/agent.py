@@ -49,6 +49,13 @@ class AgentRunRequest(BaseModel):
     verified: bool = False            # use CommandedAgent if True
     max_verify_rounds: int = 3
     memory_dir: str | None = None     # override server's default
+    # Optional inline image attachments for this turn. Each entry must
+    # be {"mime": "image/png", "data": "<base64>"} — the same shape
+    # AutonomousAgent.run accepts. Forwarded straight through to the
+    # LLM as image_url content parts. Vision-capable model required
+    # (Claude 3+ / GPT-4o / Gemini 1.5+) — non-vision models will
+    # error from the provider, not silently drop the image.
+    images: list[dict[str, str]] | None = None
 
 
 class AgentRunResponse(BaseModel):
@@ -209,7 +216,7 @@ def build_router(*, current_user: Any, storage: Path):
                     max_verify_rounds=max(1, int(req.max_verify_rounds)),
                     require_citations=True,
                 )
-                cresult = agent.run(req.prompt)
+                cresult = agent.run(req.prompt, images=req.images)
                 final_text = cresult.answer
                 # Serialise the retrieved sources so the UI can render a
                 # "where did [D#N] come from" panel. We cap the preview
@@ -239,7 +246,7 @@ def build_router(*, current_user: Any, storage: Path):
                     pending_file_operations=list(pending_file_ops),
                 )
             else:
-                result = inner.run(req.prompt)
+                result = inner.run(req.prompt, images=req.images)
                 resp = AgentRunResponse(
                     text=result.final_text,
                     tool_calls=[

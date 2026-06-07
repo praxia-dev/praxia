@@ -461,6 +461,7 @@ class CommandedAgent:
         *,
         history: list[dict[str, Any]] | None = None,
         sources: list[Source] | None = None,
+        images: list[dict[str, str]] | None = None,
     ) -> CommandedResult:
         """Run the commander loop.
 
@@ -469,6 +470,13 @@ class CommandedAgent:
             history: prior conversation messages (forwarded to inner).
             sources: pre-computed sources to skip retrieval — useful for
                 tests and for hosts that have already done the retrieval.
+            images: optional vision attachments — same shape as
+                ``AutonomousAgent.run(images=...)`` expects. Passed
+                through to every inner.run() call in this loop so the
+                vision-capable LLM can use the image as evidence in
+                each draft/redraft round. The verifier doesn't see the
+                image; it only judges the draft against retrieved
+                text sources.
         """
         task_kind = self.task_classifier(user_input)
 
@@ -476,7 +484,7 @@ class CommandedAgent:
         # the grounding gate — the environment is the verifier. Hand
         # straight to the inner agent and return its draft as-is.
         if task_kind == "action":
-            inner_result = self.inner.run(user_input, history=history)
+            inner_result = self.inner.run(user_input, history=history, images=images)
             self._audit(
                 "commander.bypass_action",
                 f"user:{self.inner.user_id}",
@@ -510,7 +518,7 @@ class CommandedAgent:
         # already in context.
         if task_kind == "synthesis":
             augmented = self._build_initial_prompt(user_input, sources) if sources else user_input
-            inner_result = self.inner.run(augmented, history=history)
+            inner_result = self.inner.run(augmented, history=history, images=images)
             self._audit(
                 "commander.synthesis_pass",
                 f"user:{self.inner.user_id}",
@@ -551,7 +559,7 @@ class CommandedAgent:
         # like a normal chat. The stopped_reason makes the path
         # auditable so callers know no verification happened.
         if self.fallback_when_no_sources and not sources:
-            inner_result = self.inner.run(user_input, history=history)
+            inner_result = self.inner.run(user_input, history=history, images=images)
             self._audit(
                 "commander.no_sources_fallback",
                 f"user:{self.inner.user_id}",
@@ -606,7 +614,7 @@ class CommandedAgent:
         prev_groundedness: float | None = None
 
         for round_i in range(self.max_verify_rounds):
-            inner_result = self.inner.run(augmented_input, history=history)
+            inner_result = self.inner.run(augmented_input, history=history, images=images)
             result.add_usage(inner_result.usage)
             last_draft = (inner_result.final_text or "").strip()
 
