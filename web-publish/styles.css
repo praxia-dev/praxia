@@ -511,6 +511,7 @@ table.compare tbody tr:hover { background: var(--bg-card-hover); }
 }
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 
 .card {
   padding: 1.75rem;
@@ -1516,7 +1517,7 @@ table.compare tbody tr:hover { background: var(--bg-card-hover); }
   .hero-sub { font-size: 0.95rem; }
   .section-head h2 { font-size: 1.4rem; }
   .footer-grid { grid-template-columns: 1fr; }
-  .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr !important; }
   .ba-grid { grid-template-columns: 1fr; }
 
   /* Pricing tier cards stack */

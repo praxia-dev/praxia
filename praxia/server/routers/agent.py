@@ -15,6 +15,7 @@ Streaming + WebSocket variants land in a later phase.
 """
 from __future__ import annotations
 
+import io
 import logging
 import time
 import uuid
@@ -56,6 +57,15 @@ class AgentRunRequest(BaseModel):
     # (Claude 3+ / GPT-4o / Gemini 1.5+) — non-vision models will
     # error from the provider, not silently drop the image.
     images: list[dict[str, str]] | None = None
+    # Optional non-image document attachments for this turn (alpha20+).
+    # Each entry: {filename, mime, data (base64)}. Server-side, each is
+    # parsed via praxia.io.parsers and the extracted text gets injected
+    # as a system-style preamble before the user's prompt. Embedded
+    # images that the parsers find (e.g. DOCX media, PDF page renders)
+    # additionally get fed into the same images path so the vision LLM
+    # sees them. Cap: 6 attachments per turn, 50 MB per file, matching
+    # the Documents folder upload cap.
+    attachments: list[dict[str, str]] | None = None
 
 
 class AgentRunResponse(BaseModel):
@@ -92,6 +102,142 @@ class ApplyFileOpRequest(BaseModel):
     file operation after the user approved it."""
     workspace_root: str
     op: dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# alpha20+: one-shot attachments on /agent/run
+# ---------------------------------------------------------------------------
+
+# Per-attachment cap matches the Documents folder upload route so the
+# limits are predictable regardless of which path the user uses.
+_ATTACH_MAX_BYTES = 50 * 1024 * 1024
+_ATTACH_MAX_COUNT = 6
+# Truncate parsed text injected as preamble. Larger docs land in the
+# normal Documents folder route; one-shot attachments are meant for
+# "answer about THIS file, right now" — a few thousand chars is enough.
+_ATTACH_TEXT_PREAMBLE_LIMIT = 12_000
+
+_IMAGE_MIMES = {
+    "image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp",
+}
+
+
+def _absorb_attachments(
+    prompt: str,
+    *,
+    attachments: list[dict[str, str]],
+    user_images: list[dict[str, str]],
+) -> tuple[str, list[dict[str, str]]]:
+    """Parse attachments → build prompt preamble + merged images list.
+
+    Returns (augmented_prompt, merged_images). The augmented_prompt
+    prepends a "Attached files:" block listing each non-image
+    attachment's parsed text (truncated). The merged_images list
+    extends the user-supplied images with:
+      - the raw bytes of image-MIME attachments
+      - PDF page renders + DOCX/PPTX embedded media that fall out of
+        the parser metadata
+    """
+    if not attachments:
+        return prompt, user_images
+
+    # Reject runaway batches at the boundary instead of inside the
+    # agent loop where errors are noisier. Lazy-import HTTPException
+    # so this module stays importable from agents that don't have
+    # FastAPI installed.
+    if len(attachments) > _ATTACH_MAX_COUNT:
+        from fastapi import HTTPException as _HE
+        raise _HE(
+            400,
+            f"Too many attachments ({len(attachments)}); cap is {_ATTACH_MAX_COUNT}",
+        )
+
+    import base64 as _b64
+    from pathlib import Path as _P
+
+    text_blocks: list[str] = []
+    images_out: list[dict[str, str]] = list(user_images)
+
+    for i, att in enumerate(attachments):
+        filename = (att.get("filename") or f"attachment_{i}").strip()
+        mime = (att.get("mime") or "").strip().lower()
+        data_b64 = att.get("data") or ""
+        if not data_b64:
+            continue
+
+        # Decode + size-check
+        try:
+            raw = _b64.b64decode(data_b64, validate=False)
+        except Exception:
+            continue
+        if len(raw) > _ATTACH_MAX_BYTES:
+            text_blocks.append(
+                f"[attachment {filename!r} skipped: {len(raw)} bytes > "
+                f"{_ATTACH_MAX_BYTES} cap]"
+            )
+            continue
+
+        # Image-MIME → straight into the images list, no parsing
+        if mime in _IMAGE_MIMES:
+            images_out.append({"mime": mime, "data": data_b64})
+            continue
+
+        # Everything else → parse via the file_parsers registry
+        try:
+            from praxia.io.parsers import parse_file, supported_extensions
+        except ImportError as e:
+            text_blocks.append(
+                f"--- {filename} (parser unavailable: {e}) ---\n"
+                f"(could not parse this attachment)"
+            )
+            continue
+
+        ext = _P(filename).suffix.lower().lstrip(".")
+        if ext not in supported_extensions():
+            text_blocks.append(
+                f"--- {filename} (unsupported extension .{ext}) ---\n"
+                f"(no parser registered for this file type)"
+            )
+            continue
+
+        try:
+            parsed = parse_file(io.BytesIO(raw), filename=filename)
+        except Exception as e:
+            text_blocks.append(
+                f"--- {filename} (parse error: {str(e)[:120]}) ---"
+            )
+            continue
+
+        # Pull out parser-discovered images (DOCX/PPTX embedded media,
+        # PDF page renders) and add them to the vision stream.
+        for ei in (parsed.metadata.get("embedded_images") or []):
+            if isinstance(ei, dict) and ei.get("mime") and ei.get("data"):
+                images_out.append({"mime": ei["mime"], "data": ei["data"]})
+        for pi in (parsed.metadata.get("page_images") or []):
+            if isinstance(pi, dict) and pi.get("mime") and pi.get("data"):
+                images_out.append({"mime": pi["mime"], "data": pi["data"]})
+
+        # And the parsed text as a system-style preamble block
+        text = parsed.content or ""
+        truncated_note = ""
+        if len(text) > _ATTACH_TEXT_PREAMBLE_LIMIT:
+            text = text[:_ATTACH_TEXT_PREAMBLE_LIMIT]
+            truncated_note = (
+                f"\n[...truncated at {_ATTACH_TEXT_PREAMBLE_LIMIT} chars — "
+                f"add this file to a Documents folder for full-text retrieval]"
+            )
+        text_blocks.append(f"--- {filename} ---\n{text}{truncated_note}")
+
+    if not text_blocks:
+        return prompt, images_out
+
+    preamble = (
+        "The user attached the following file(s) inline with this turn. "
+        "Read them first, then answer the question below.\n\n"
+        + "\n\n".join(text_blocks)
+        + "\n\n---\n\n"
+    )
+    return preamble + prompt, images_out
 
 
 def build_router(*, current_user: Any, storage: Path):
@@ -199,6 +345,18 @@ def build_router(*, current_user: Any, storage: Path):
             extra_tools=extra_tools or None,
         )
 
+        # alpha20+: one-shot document attachments. Each non-image
+        # attachment is parsed server-side; its text is prepended to
+        # the prompt as a system-style preamble, and any embedded /
+        # page images the parser found are merged into req.images so
+        # the vision LLM sees figures inside PDFs / Office docs too.
+        # Image-MIME attachments short-circuit straight to req.images.
+        augmented_prompt, merged_images = _absorb_attachments(
+            req.prompt,
+            attachments=req.attachments or [],
+            user_images=list(req.images or []),
+        )
+
         # If thread_id supplied, persist user message first (so the agent
         # sees it as user-said, and so retries pick it up).
         user_msg_id = None
@@ -216,7 +374,7 @@ def build_router(*, current_user: Any, storage: Path):
                     max_verify_rounds=max(1, int(req.max_verify_rounds)),
                     require_citations=True,
                 )
-                cresult = agent.run(req.prompt, images=req.images)
+                cresult = agent.run(augmented_prompt, images=merged_images or None)
                 final_text = cresult.answer
                 # Serialise the retrieved sources so the UI can render a
                 # "where did [D#N] come from" panel. We cap the preview
@@ -246,7 +404,7 @@ def build_router(*, current_user: Any, storage: Path):
                     pending_file_operations=list(pending_file_ops),
                 )
             else:
-                result = inner.run(req.prompt, images=req.images)
+                result = inner.run(augmented_prompt, images=merged_images or None)
                 resp = AgentRunResponse(
                     text=result.final_text,
                     tool_calls=[

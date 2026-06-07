@@ -335,6 +335,7 @@ def search_for_user(
     limit: int = 5,
     folder_ids: list[str] | None = None,
     path_prefix: str | None = None,
+    include_images: bool = False,
 ) -> list[dict[str, Any]]:
     """Keyword search across this user's documents.
 
@@ -353,6 +354,13 @@ def search_for_user(
             answer "what does the file under contracts/2024/ say
             about X" without re-shaping the index. Matched
             case-sensitively against the stored relative_path.
+        include_images: when True, each hit gets an additional
+            ``"images"`` field containing the doc-side images the
+            commander should attach to the vision LLM. For PDF the
+            page image matching the chunk's page is picked; for
+            DOCX/PPTX up to 2 embedded images are included. Off by
+            default to keep the response small for callers that don't
+            need vision context.
 
     Returns:
         list of dicts shaped like :class:`SearchHit` (for cheap
@@ -399,7 +407,88 @@ def search_for_user(
                         score=round(score, 4),
                     ))
     hits.sort(key=lambda h: h.score, reverse=True)
-    return [h.model_dump() for h in hits[: max(1, int(limit))]]
+    top = hits[: max(1, int(limit))]
+
+    if not include_images:
+        return [h.model_dump() for h in top]
+
+    # ── Vision-attach path (alpha20+) ───────────────────────────────
+    # For each top hit, fetch the doc and pull the relevant image(s)
+    # so the commander can pass them through to inner.run(images=...).
+    #
+    # We do this in a second pass to avoid loading every doc twice
+    # during the initial scoring loop. Cap N images per hit + total
+    # bytes per hit so a pathological 50-image DOCX doesn't blow up
+    # the JSON response.
+    _MAX_IMAGES_PER_HIT = 2
+    _MAX_IMAGE_BYTES_PER_HIT = 4 * 1024 * 1024
+
+    # Cache loaded docs across hits — multiple hits from the same doc
+    # are common and we don't want to re-read the JSON for each one.
+    doc_cache: dict[str, Document] = {}
+
+    def _doc_for(folder_id: str, doc_id: str) -> Document | None:
+        if doc_id in doc_cache:
+            return doc_cache[doc_id]
+        for d in load_docs_in_folder(storage, user_id, folder_id):
+            if d.id == doc_id:
+                doc_cache[doc_id] = d
+                return d
+        return None
+
+    def _page_num_for_chunk(chunk_text: str) -> int | None:
+        """PDF chunks contain `--- Page N ---` markers from the parser.
+        Pull the first page number we can find inside the chunk."""
+        m = re.search(r"---\s*Page\s+(\d+)\s*---", chunk_text)
+        return int(m.group(1)) if m else None
+
+    def _select_images(doc: Document, chunk_text: str) -> list[dict[str, Any]]:
+        meta = doc.metadata or {}
+        out: list[dict[str, Any]] = []
+        total = 0
+
+        # PDF: page-image matched to the chunk's page marker
+        if doc.parser == "pdf":
+            page_n = _page_num_for_chunk(chunk_text)
+            page_images = meta.get("page_images") or []
+            if page_n is not None:
+                # Find image whose page_num equals this chunk's page
+                for pi in page_images:
+                    if pi.get("page_num") == page_n:
+                        sz = int(pi.get("bytes_size") or 0)
+                        if total + sz <= _MAX_IMAGE_BYTES_PER_HIT:
+                            out.append({"mime": pi["mime"], "data": pi["data"]})
+                            total += sz
+                        break
+            # If no page marker found, fall back to the first page image
+            if not out and page_images:
+                pi = page_images[0]
+                sz = int(pi.get("bytes_size") or 0)
+                if sz <= _MAX_IMAGE_BYTES_PER_HIT:
+                    out.append({"mime": pi["mime"], "data": pi["data"]})
+
+        # DOCX/PPTX: chunk-level association isn't reliable (the python-
+        # docx / python-pptx parsers don't tell us which paragraph each
+        # image is inline with), so just attach the first N embedded
+        # images. The user's query already selected this doc — sending
+        # 1-2 figures from it is more useful than sending none.
+        elif doc.parser in ("docx", "pptx"):
+            for img in (meta.get("embedded_images") or [])[:_MAX_IMAGES_PER_HIT]:
+                sz = int(img.get("bytes_size") or 0)
+                if total + sz > _MAX_IMAGE_BYTES_PER_HIT:
+                    break
+                out.append({"mime": img["mime"], "data": img["data"]})
+                total += sz
+
+        return out[:_MAX_IMAGES_PER_HIT]
+
+    out: list[dict[str, Any]] = []
+    for h in top:
+        d = h.model_dump()
+        doc = _doc_for(h.folder_id, h.doc_id)
+        d["images"] = _select_images(doc, h.text) if doc else []
+        out.append(d)
+    return out
 
 
 # ---------------------------------------------------------------------------

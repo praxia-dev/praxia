@@ -79,6 +79,53 @@ when in doubt, treat as ``knowledge`` so the verifier still runs.
 # Default abstention text
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Vision-attachment aggregation (alpha20+)
+# ---------------------------------------------------------------------------
+
+# Caps when collecting images from retrieved sources to send through to
+# the inner LLM. The hits already cap per-hit; this is the across-all-
+# hits ceiling so a 5-hit query with a 2 MB image each doesn't ship a
+# 10 MB request to the provider on every retry round of verified mode.
+_AGG_MAX_IMAGES = 4
+_AGG_MAX_TOTAL_BYTES = 6 * 1024 * 1024
+
+
+def _aggregate_source_images(
+    sources: list["Source"],
+) -> list[dict[str, str]]:
+    """Pull `{mime, data}` entries out of each source's metadata["images"]
+    field (populated by `_from_documents` when search_for_user was
+    called with include_images=True). Deduplicate by base64 hash so the
+    same image attached to multiple hits is only sent once. Cap at
+    `_AGG_MAX_IMAGES` and `_AGG_MAX_TOTAL_BYTES`.
+    """
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    total = 0
+    for s in sources:
+        for img in (s.metadata.get("images") or []) if s.metadata else []:
+            data = img.get("data")
+            mime = img.get("mime")
+            if not isinstance(data, str) or not isinstance(mime, str):
+                continue
+            # Cheap dedupe key — first 64 chars of base64 collides
+            # only for genuinely identical images.
+            key = data[:64]
+            if key in seen:
+                continue
+            # Estimate decoded size from base64 length (4 chars per 3 bytes)
+            est_bytes = (len(data) * 3) // 4
+            if total + est_bytes > _AGG_MAX_TOTAL_BYTES:
+                continue
+            out.append({"mime": mime, "data": data})
+            seen.add(key)
+            total += est_bytes
+            if len(out) >= _AGG_MAX_IMAGES:
+                return out
+    return out
+
+
 DEFAULT_ABSTAIN_MESSAGE = (
     "I don't have enough grounded information in the available sources to "
     "answer this confidently.\n\n"
@@ -361,17 +408,24 @@ class DefaultMemoryRetriever:
             text = h.get("text") if isinstance(h, dict) else None
             if not text:
                 continue
+            md: dict[str, Any] = {
+                "doc_id": h.get("doc_id"),
+                "folder_id": h.get("folder_id"),
+                "relative_path": h.get("relative_path"),
+                "chunk_index": h.get("chunk_index"),
+                "score": h.get("score"),
+            }
+            # Vision attachments — only present when search_for_user was
+            # called with include_images=True. Each entry is the
+            # {mime, data} shape AutonomousAgent.run(images=...) wants.
+            imgs = h.get("images") if isinstance(h, dict) else None
+            if imgs:
+                md["images"] = imgs
             out.append(Source(
                 id=f"D#{i}",
                 text=str(text),
                 kind="local_document",
-                metadata={
-                    "doc_id": h.get("doc_id"),
-                    "folder_id": h.get("folder_id"),
-                    "relative_path": h.get("relative_path"),
-                    "chunk_index": h.get("chunk_index"),
-                    "score": h.get("score"),
-                },
+                metadata=md,
             ))
         return out
 
@@ -508,6 +562,15 @@ class CommandedAgent:
 
         if sources is None:
             sources = self.retriever(user_input)
+
+        # Aggregate doc-side images attached to retrieved sources (PDF
+        # page renders + DOCX/PPTX embedded media) and combine with the
+        # user-supplied attachments. The combined list flows through
+        # every subsequent inner.run() in this loop so each draft +
+        # redraft round sees the same vision context.
+        retrieved_images = _aggregate_source_images(sources)
+        if retrieved_images:
+            images = (images or []) + retrieved_images
 
         # Synthesis path: user asked for a generated artefact (proposal,
         # draft, slide deck, summary). Retrieve sources so the LLM can
@@ -815,7 +878,15 @@ class CommandedAgent:
             user_id = self.inner.user_id
 
             def _docs_search(q: str):
-                return search_for_user(memory_dir, user_id, q, limit=per_layer_limit)
+                # include_images=True so the retrieved hits also carry
+                # the relevant PDF page render / DOCX-PPTX embedded
+                # images. CommandedAgent aggregates these and forwards
+                # them to inner.run(images=...) for the vision LLM.
+                return search_for_user(
+                    memory_dir, user_id, q,
+                    limit=per_layer_limit,
+                    include_images=True,
+                )
 
             documents_search = _docs_search
         except Exception:  # pragma: no cover
