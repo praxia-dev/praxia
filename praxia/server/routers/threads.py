@@ -59,6 +59,14 @@ class CreateThreadRequest(BaseModel):
     title: str = ""
 
 
+class UpdateThreadRequest(BaseModel):
+    """Partial update — only fields present in the request body get
+    applied. Today the only mutable field is title, but the shape is
+    open so adding (e.g.) pinned/archived later is a non-breaking
+    additive change."""
+    title: str | None = None
+
+
 class AppendMessageRequest(BaseModel):
     role: str
     content: str
@@ -145,6 +153,38 @@ def build_router(*, current_user: Any, storage: Path):
     @router.get("/threads/{thread_id}")
     def get_thread(thread_id: str, user=Depends(current_user)) -> dict[str, Any]:
         return _load(user.id, thread_id).model_dump()
+
+    @router.patch("/threads/{thread_id}")
+    def update_thread(
+        thread_id: str,
+        req: UpdateThreadRequest,
+        user=Depends(current_user),
+    ) -> dict[str, Any]:
+        """Partial update — currently only `title`. Used by the desktop
+        ThreadList's rename action so the user can hand-name threads
+        whose auto-derived title no longer matches the conversation."""
+        thread = _load(user.id, thread_id)
+        changed = False
+        if req.title is not None:
+            new_title = req.title.strip()
+            if not new_title:
+                raise HTTPException(400, "title cannot be empty / whitespace-only")
+            # Cap at 200 chars so a paste of a giant prompt as title
+            # doesn't bloat the sidebar.
+            new_title = new_title[:200]
+            if new_title != thread.title:
+                thread.title = new_title
+                changed = True
+        if changed:
+            thread.updated_at = time.time()
+            _save(thread)
+        return {
+            "id": thread.id,
+            "title": thread.title,
+            "created_at": thread.created_at,
+            "updated_at": thread.updated_at,
+            "message_count": len(thread.messages),
+        }
 
     @router.post("/threads/{thread_id}/messages")
     def append_message(

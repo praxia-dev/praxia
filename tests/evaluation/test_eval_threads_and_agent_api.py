@@ -120,6 +120,62 @@ class TestThreadsCrud:
         r = client.get(f"/api/v1/threads/{tid}", headers=headers)
         assert r.status_code == 404
 
+    def test_rename_thread(self, server):
+        client, headers, _ = server
+        tid = client.post(
+            "/api/v1/threads", json={"title": "original"}, headers=headers
+        ).json()["id"]
+        # Happy path
+        r = client.patch(
+            f"/api/v1/threads/{tid}",
+            json={"title": "new title"},
+            headers=headers,
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["title"] == "new title"
+        assert body["id"] == tid
+        # Confirm persistence via GET
+        got = client.get(f"/api/v1/threads/{tid}", headers=headers).json()
+        assert got["title"] == "new title"
+
+    def test_rename_thread_rejects_empty(self, server):
+        client, headers, _ = server
+        tid = client.post(
+            "/api/v1/threads", json={"title": "x"}, headers=headers
+        ).json()["id"]
+        # Empty / whitespace title should 400 — the desktop UI shortcuts
+        # this client-side but the server is the source of truth.
+        r = client.patch(
+            f"/api/v1/threads/{tid}", json={"title": ""}, headers=headers
+        )
+        assert r.status_code == 400
+        r = client.patch(
+            f"/api/v1/threads/{tid}", json={"title": "   "}, headers=headers
+        )
+        assert r.status_code == 400
+
+    def test_rename_thread_caps_at_200(self, server):
+        client, headers, _ = server
+        tid = client.post(
+            "/api/v1/threads", json={"title": "x"}, headers=headers
+        ).json()["id"]
+        long_title = "A" * 500
+        r = client.patch(
+            f"/api/v1/threads/{tid}", json={"title": long_title}, headers=headers
+        )
+        assert r.status_code == 200
+        assert len(r.json()["title"]) == 200
+
+    def test_rename_thread_404_when_missing(self, server):
+        client, headers, _ = server
+        r = client.patch(
+            "/api/v1/threads/does-not-exist",
+            json={"title": "anything"},
+            headers=headers,
+        )
+        assert r.status_code == 404
+
     def test_threads_are_user_scoped(self, server, tmp_path: Path):
         """Two different users see different thread lists."""
         client, headers_alice, _alice = server
