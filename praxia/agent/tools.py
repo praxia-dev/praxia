@@ -338,6 +338,45 @@ def _list_document_folders(agent: AutonomousAgent) -> dict[str, Any]:
     }
 
 
+def _web_search(
+    agent: AutonomousAgent,
+    query: str,
+    max_results: int = 5,
+) -> dict[str, Any]:
+    """Search the open web via the configured provider.
+
+    Praxia ships no web index — the agent uses this tool when the
+    user asks about current events, breaking news, prices, or
+    anything else outside the local Documents / memory layers.
+    Returns up to ``max_results`` results with title + url + snippet,
+    plus (for Tavily) a one-paragraph synthesised answer.
+
+    Errors are returned as a structured ``error`` field rather than
+    raised so the LLM can relay them to the user (most common: no
+    provider key configured).
+    """
+    try:
+        from praxia.agent.web_search import search, is_available
+    except ImportError as e:
+        return {"results": [], "count": 0, "error": f"web_search module not available: {e}"}
+    if not is_available():
+        return {
+            "results": [],
+            "count": 0,
+            "error": (
+                "No web search provider configured. Tell the user to "
+                "add TAVILY_API_KEY (https://tavily.com — 1000 free "
+                "queries/month) or BRAVE_SEARCH_API_KEY "
+                "(https://brave.com/search/api/ — 2000 free/month) "
+                "in Settings → Choose your provider → Advanced."
+            ),
+        }
+    try:
+        return search(query, max_results=int(max_results))
+    except Exception as e:  # pragma: no cover
+        return {"results": [], "count": 0, "error": str(e)}
+
+
 def _list_files_in_folder(
     agent: AutonomousAgent,
     folder_id: str | None = None,
@@ -799,6 +838,50 @@ def builtin_tools() -> dict[str, AgentTool]:
                 "required": ["query"],
             },
             handler=_search_documents,
+        ),
+        AgentTool(
+            name="web_search",
+            description=(
+                "Search the open web for current information. Praxia "
+                "has no web index of its own — use this tool whenever "
+                "the user asks about: breaking news, today's events, "
+                "current prices / stock quotes / exchange rates, "
+                "recent regulatory or policy changes, anything time-"
+                "sensitive that wouldn't be in their Documents or "
+                "memory layers. Returns a list of {title, url, snippet} "
+                "results plus (for Tavily) a one-paragraph synthesised "
+                "answer. NOT a substitute for search_documents (which "
+                "is for the user's own ingested files) or "
+                "search_personal_memory (which is for things the user "
+                "told you previously). Caveat: requires the user to "
+                "have a Tavily or Brave Search API key configured; if "
+                "the tool returns an `error` field, relay it verbatim "
+                "so the user knows what to add in Settings."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "Free-text search query. Phrase it as a "
+                            "self-contained question or noun phrase — "
+                            "the LLM will write it, the search engine "
+                            "consumes it. e.g. 'OpenAI o4 release "
+                            "date', 'USD to JPY today', 'EU AI Act "
+                            "Article 5 deadline 2026'."
+                        ),
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10,
+                        "default": 5,
+                    },
+                },
+                "required": ["query"],
+            },
+            handler=_web_search,
         ),
         AgentTool(
             name="list_document_folders",
