@@ -365,9 +365,8 @@ def _web_search(
             "count": 0,
             "error": (
                 "No web search provider configured. Tell the user to "
-                "add TAVILY_API_KEY (https://tavily.com — 1000 free "
-                "queries/month) or BRAVE_SEARCH_API_KEY "
-                "(https://brave.com/search/api/ — 2000 free/month) "
+                "add TAVILY_API_KEY (https://tavily.com) or "
+                "BRAVE_SEARCH_API_KEY (https://brave.com/search/api/) "
                 "in Settings → Choose your provider → Advanced."
             ),
         }

@@ -5,12 +5,15 @@ events ("latest news on X", "what's the price of Y today",
 "recent guidance from Z") it calls one of the providers below. Two
 are supported, picked by precedence:
 
-  1. ``TAVILY_API_KEY``        → Tavily (built for LLM agents,
-                                 1 000 free queries/month, then
-                                 ~$0.001/query at the basic tier).
-  2. ``BRAVE_SEARCH_API_KEY``  → Brave Search (2 000 free queries/
-                                 month, $5/CPM after; serves the
-                                 generic web-search use case fine).
+  1. ``TAVILY_API_KEY``        → Tavily (built for LLM agents, has
+                                 a free tier).
+  2. ``BRAVE_SEARCH_API_KEY``  → Brave Search (also has a free tier;
+                                 serves the generic web-search use
+                                 case fine).
+
+(Both vendors publish current pricing on their own sites — we
+deliberately don't quote numeric quotas here because they change
+faster than this comment does.)
 
 Anthropic, OpenAI, etc. are *not* in this list — none of them
 expose a first-party web-search HTTP endpoint that's appropriate
@@ -76,9 +79,8 @@ def search(query: str, *, max_results: int = 5) -> dict[str, Any]:
     if provider is None:
         raise RuntimeError(
             "No web search provider configured. Set TAVILY_API_KEY "
-            "(https://tavily.com — 1000 free queries/month) or "
-            "BRAVE_SEARCH_API_KEY "
-            "(https://brave.com/search/api/ — 2000 free/month)."
+            "(https://tavily.com) or BRAVE_SEARCH_API_KEY "
+            "(https://brave.com/search/api/)."
         )
     q = (query or "").strip()
     if not q:
