@@ -19,7 +19,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
-[![Tests: 431](https://img.shields.io/badge/tests-431%20passing-green.svg)]()
+[![Tests: 781](https://img.shields.io/badge/tests-781%20passing-green.svg)]()
 [![Connectors: 20](https://img.shields.io/badge/connectors-20-blueviolet.svg)]()
 [![Languages: 8](https://img.shields.io/badge/languages-en%20%C2%B7%20ja%20%C2%B7%20zh%20%C2%B7%20ko%20%C2%B7%20es%20%C2%B7%20fr%20%C2%B7%20de%20%C2%B7%20pt-blue.svg)]()
 [![MCP: stdio + HTTP/SSE](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP%2FSSE-orange.svg)]()
@@ -31,7 +31,7 @@
 
 ## ⬇ **Try Praxia in 30 seconds — no Python, no setup**
 
-### 👉 [**📦 Download Praxia Desktop for Windows (.exe, 167 MB)**](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-21_x64-setup.exe)
+### 👉 [**📦 Download Praxia Desktop for Windows (.exe, 174 MB)**](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-27_x64-setup.exe)
 
 Windows 10 / 11 x64 alpha · Tauri + embedded Python sidecar · zero
 `pip install`, zero `praxia serve`. Paste an LLM API key (Anthropic /
@@ -39,7 +39,7 @@ OpenAI / Azure / Google / Qwen / HF / Ollama) and you're chatting.
 Unsigned alpha — SmartScreen will warn on first launch, click
 **"More info" → "Run anyway"**.
 
-Other downloads · [`.msi` for managed deployment](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-21_x64_en-US.msi)
+Other downloads · [`.msi` for managed deployment](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-27_x64_en-US.msi)
 · [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest)
 · macOS / Linux coming in Phase 1b.
 
@@ -167,7 +167,7 @@ print(result.final_text)
 
 ```bash
 praxia agent run "Summarize where we stand with Acme this quarter and draft a proposal"
-praxia agent tools     # list the 11 built-in tools
+praxia agent tools     # list the 15 built-in tools
 ```
 
 The agent is also exposed as a single MCP meta-tool (`autonomous_agent`) so
@@ -204,9 +204,17 @@ the resulting defaults:
   groundedness by `min_groundedness_improvement` (default 0.05) aborts
   to abstain instead of burning the whole round budget on a loop that
   isn't making progress.
-- **Promotion engine reweighted** — `PromotionEngine` defaults are now
-  `0.5·freq + 0.4·outcome + 0.1·self_eval` so the LLM's own
-  self-assessment can no longer carry a memory promotion on its own.
+- **Promotion engine hardened** — `PromotionEngine` blends
+  `0.5·freq + 0.4·outcome + 0.1·self_eval` and **alpha26+ adds two
+  hard pre-condition gates that short-circuit the score blend**:
+  (1) an optional external `verifier(text, verdict) → (passed,
+  reason)` callback — `passed=False` forces `decision="skip"` no
+  matter how high the blend scored, closing the self-eval reward-
+  hacking path identified in the L0–L3 verification bench; (2)
+  `min_independent_sources=2` — single-source candidates cap at
+  `"review"` and never auto-promote, blocking the
+  contamination-from-one-user path. `require_verification=True`
+  fails closed when no verifier is wired in.
 
 ```python
 from praxia.agent import AutonomousAgent, CommandedAgent
@@ -329,6 +337,67 @@ The Admin → Settings UI groups all these as provider sub-categories (`LLM · O
 > accepts these formats inline too: drop a PDF, ask "what does the
 > chart on page 3 say?", and Praxia routes the page image to the
 > vision LLM automatically.
+
+### What's new in alpha22–27
+
+> **alpha22 — Documents semantic search.** Every chunk uploaded to a
+> Documents folder is embedded via litellm (auto-detected from your
+> provider env vars: OpenAI → `text-embedding-3-small`, Ollama →
+> `nomic-embed-text`, Azure / Gemini / DashScope / HuggingFace also
+> covered). Cosine-similarity ranking replaces keyword scoring, so
+> a JA query like "アクションアイテム" finds EN chunks about *action
+> items*. Pre-alpha22 docs back-fill silently on first boot after
+> upgrade.
+>
+> **alpha22 — Batch fan-out via natural language.** Say "Documents
+> の各 PDF からアクションアイテムを抽出して" / "for each PDF in
+> folder X, summarise" and the agent classifier routes to a `batch`
+> task kind that lists files, fans out one prompt per file via
+> `run_parallel_tasks`, and surfaces composite progress in the
+> Batches tab.
+>
+> **alpha22 — OSS license disclosure.** Settings → "Open-source
+> notices" shows the full text of every third-party license shipped
+> in the desktop installer (562 packages: 71 Python · 469 Rust · 22
+> npm). The full text is bundled with the installer for compliance
+> with MIT / BSD / Apache 2.0 / MPL.
+>
+> **alpha23 — Auth propagation across worker tasks.** Batches and
+> Schedules now carry the parent agent's LLM (model + scout +
+> workspace + org) into every child TaskRecord. Previously fan-outs
+> from non-Anthropic users crashed with `Missing ANTHROPIC_API_KEY`
+> because the worker fell back to `model="claude"`.
+>
+> **alpha25 — `web_search` agent tool.** Tavily + Brave Search
+> backends. The agent uses this for current events / today's prices
+> / breaking news / recent regulatory changes — anything not in the
+> user's Documents or memory layers. Tavily wins when both keys
+> are set (returns a one-paragraph synthesised answer). No key
+> configured → tool returns a structured error and the LLM relays
+> it. Only the query string leaves the machine — Documents and
+> memory content stay local.
+>
+> **alpha26 — Promotion gate + bitemporal SharedMemory.**
+> `PromotionEngine` now takes a `verifier` callback that
+> short-circuits the score blend to `"skip"` on `passed=False`, plus
+> `min_independent_sources=2` (single-source candidates cap at
+> "review" instead of auto-promoting). `SharedBlock` is bitemporal-
+> lite: `upsert()` supersedes the old block (`valid_to=now`,
+> `superseded_by=<id>`) rather than overwriting; `as_of(timestamp)`
+> queries past snapshots. `search()` tie-breaks ties by
+> verification_score → source_breadth → recency. Built from the
+> L0–L3 verification findings — see release notes for details.
+>
+> **alpha27 — LLM-driven query expansion (Anthropic fallback).**
+> When no embedding provider is configured (most common: Anthropic-
+> only, since Claude has no embedding API), Documents search no
+> longer falls back to pure literal keyword matching. The active
+> LLM rewrites the query into 3–5 alternative phrasings (synonyms,
+> cross-language equivalents, paraphrases) and each chunk is scored
+> against the max-scoring variant. Results cached LRU per
+> `(model, query)`. Anthropic-only users now get usable
+> cross-language Documents search without a second provider key —
+> at the cost of one small extra LLM round-trip per distinct query.
 
 
 Auto-dispatched by extension:
@@ -660,13 +729,13 @@ CLI users get the same functionality with rich-formatted output:
 >
 > | Platform | Installer | Status |
 > |---|---|---|
-> | Windows 10 / 11 | `.exe` (NSIS, 140 MB) / `.msi` (WiX, 203 MB) | ✅ **`v0.1.0-alpha1` shipped** |
+> | Windows 10 / 11 | `.exe` (NSIS, 174 MB) / `.msi` (WiX, 250 MB) | ✅ **`v0.1.0-alpha27` shipped** |
 > | macOS 12+ | `.dmg` | 🚧 next alpha drop |
 > | Linux (Debian / Ubuntu) | `.deb` / `.AppImage` | 🚧 next alpha drop |
 >
-> 📦 **Direct download (Windows, ~147 MB):**
-> [`Praxia.Desktop_0.1.0-21_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-21_x64-setup.exe)
-> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-21_x64_en-US.msi) for managed deployment ·
+> 📦 **Direct download (Windows, ~174 MB):**
+> [`Praxia.Desktop_0.1.0-27_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-27_x64-setup.exe)
+> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-27_x64_en-US.msi) for managed deployment ·
 > [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest).
 > The installer is unsigned during alpha, so Windows SmartScreen will warn on
 > first launch — click **"More info" → "Run anyway"** (signed builds land
@@ -815,7 +884,7 @@ Full guide: [docs/quickstart.md](docs/quickstart.md).
 > **Deploying it?** Two paths — fastest is `praxia ui` (full-stack); for "Praxia as a brain behind your own frontend" use the SDK or `praxia serve` (HTTP API). Setup recipes: [docs/deployment-modes.md](docs/deployment-modes.md).
 > **Building a connector?** Step-by-step recipe in [docs/CUSTOM_CONNECTORS.md](docs/CUSTOM_CONNECTORS.md). The pattern is ~50 lines + an entry-point.
 > **Formal specs?** Basic design / I/F / detailed design / **functional spec** (EN + JA) under [docs/specs/](docs/specs/).
-> **Regression suite?** 364 tests covering auth/memory/exporters/CLI/i18n/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
+> **Regression suite?** 781 tests covering auth/memory/exporters/CLI/i18n/web search/query expansion/promotion gate/etc. — see [docs/EVALUATION.md](docs/EVALUATION.md).
 > **Multilingual?** Landing page + Streamlit UI ship in 8 languages (en / ja / zh-CN / ko / es / fr / de / pt-BR) with browser-language auto-detection — see [docs/i18n.md](docs/i18n.md).
 > **Contributing?** PRs require a DCO sign-off (`git commit -s …`). Trademark policy + GDPR notes for operators are in [docs/legal/](docs/legal/).
 > **MCP for Claude Desktop / Cursor?** Local stdio (`praxia mcp serve`) or remote HTTP+SSE (`/api/v1/mcp` after `praxia serve`). Every skill + flow becomes an MCP tool automatically.
