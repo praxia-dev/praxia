@@ -42,10 +42,21 @@ class SleepTimeConsolidator:
         llm: LLM,
         threshold: float = 0.75,
         review_dir: Path | str = ".praxia/review_queue",
+        verifier=None,
+        min_independent_sources: int = 2,
     ) -> None:
         self.personal = personal
         self.shared = shared
-        self.engine = PromotionEngine(llm=llm, auto_threshold=threshold)
+        # alpha26+: forward verifier + min_independent_sources to the
+        # promoter so the L3 layer can't be contaminated by single-
+        # source / unverified promotions. See PromotionEngine docstring
+        # for the empirical motivation.
+        self.engine = PromotionEngine(
+            llm=llm,
+            auto_threshold=threshold,
+            verifier=verifier,
+            min_independent_sources=min_independent_sources,
+        )
         self.review_dir = Path(review_dir)
         self.review_dir.mkdir(parents=True, exist_ok=True)
 
@@ -79,11 +90,25 @@ class SleepTimeConsolidator:
                 continue
 
             if verdict.decision == "auto_promote" and self.shared:
+                # alpha26+: pass the promotion-gate signals through to
+                # SharedBlock so search() can use them for conflict
+                # arbitration later (recency × verification × source
+                # breadth tie-break).
+                verification_score = None
+                if verdict.verification_passed is True:
+                    # The verifier doesn't return a probability today
+                    # (just pass/fail); use 1.0 to mean "verified" and
+                    # leave 0.0..1.0 reserved for future probabilistic
+                    # graders. None still means "not verified at all"
+                    # which sorts below any verified block.
+                    verification_score = 1.0
                 self.shared.upsert(
                     label=self._derive_label(candidate_text),
                     description="Auto-promoted from personal memory",
                     value=candidate_text,
                     promoted_from=verdict.contributing_users,
+                    source_count=verdict.independent_source_count,
+                    verification_score=verification_score,
                 )
                 report.auto_promoted += 1
             elif verdict.decision == "review":
