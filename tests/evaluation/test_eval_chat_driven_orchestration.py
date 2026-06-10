@@ -227,6 +227,25 @@ class TestBatchTool:
             )
             assert res["created"] is True
             tasks_dir = tmp_path / "tasks" / "alice"
+            # Daemon worker threads write the task JSON files
+            # concurrently with this test body. Without a barrier we
+            # race them — on Windows a concurrent open-for-write
+            # surfaces as PermissionError when the test tries to read
+            # the same path. Wait until every child has reached a
+            # terminal status before snapshotting.
+            def _all_terminal() -> bool:
+                fs = list(tasks_dir.glob("*.json"))
+                if len(fs) != 2:
+                    return False
+                try:
+                    statuses = [
+                        json.loads(f.read_text(encoding="utf-8"))["status"]
+                        for f in fs
+                    ]
+                except (json.JSONDecodeError, OSError):
+                    return False
+                return all(s in ("done", "error") for s in statuses)
+            assert _wait_until(_all_terminal), "child tasks never settled"
             files = list(tasks_dir.glob("*.json"))
             assert len(files) == 2
             for f in files:

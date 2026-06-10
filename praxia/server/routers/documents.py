@@ -426,6 +426,7 @@ def search_for_user(
     folder_ids: list[str] | None = None,
     path_prefix: str | None = None,
     include_images: bool = False,
+    llm: Any = None,
 ) -> list[dict[str, Any]]:
     """Keyword search across this user's documents.
 
@@ -496,6 +497,32 @@ def search_for_user(
         # Pure noise (empty query after tokenization, no embeddings).
         return []
 
+    # alpha27+: agentic query expansion. When embedding is unavailable
+    # (most often: Anthropic-only user, no OpenAI/Ollama/etc. key) we
+    # used to fall straight to pure keyword scoring — which fails the
+    # cross-language case ("アクションアイテム" never matches "action
+    # items"). Now we ask the LLM for 3-5 alternate phrasings of the
+    # query (synonyms + cross-language equivalents) and score each
+    # chunk against the max-scoring variant. The original query is
+    # always included so we never regress below pre-alpha27 recall.
+    #
+    # The expanded variant list is cached LRU per (model, query); the
+    # one-time LLM call cost amortises across repeated similar queries
+    # in a session. See praxia/io/query_expansion.py for the full
+    # design rationale.
+    expanded_token_sets: list[tuple[str, list[str]]] = [(query, query_tokens)]
+    if query_vec is None and llm is not None and query_tokens:
+        try:
+            from praxia.io.query_expansion import expand_query
+            for variant in expand_query(query, llm=llm):
+                v_tokens = _tokenize(variant)
+                if v_tokens:
+                    expanded_token_sets.append((variant, v_tokens))
+        except Exception as e:
+            _log.warning(
+                "query expansion failed (%s); using original query only", e,
+            )
+
     # Score thresholds: cosine sim above 0.30 is "probably relevant".
     # We bias toward returning results — recall over precision —
     # because the agent's retriever already caps at `limit`.
@@ -518,12 +545,21 @@ def search_for_user(
                     if sim >= _SEMANTIC_MIN_SCORE:
                         score = sim
                 # 2) Keyword fallback: no embedding on either side,
-                #    use BM25-ish token overlap. Same path that ran
-                #    pre-alpha22; preserved so legacy docs keep working.
+                #    use BM25-ish token overlap. alpha27+ runs the
+                #    score against EACH expanded variant and takes
+                #    the max — so a JA query has a fair chance of
+                #    hitting an EN chunk via the LLM's translation
+                #    variant. When llm is None or expansion returned
+                #    nothing, the list contains just the original
+                #    query — behaviour identical to alpha22-26.
                 else:
                     lc = chunk.text.lower()
                     chunk_tokens = _tokenize(chunk.text)
-                    score = score_chunk(query_tokens, lc, chunk_tokens)
+                    score = 0.0
+                    for _variant, v_tokens in expanded_token_sets:
+                        candidate = score_chunk(v_tokens, lc, chunk_tokens)
+                        if candidate > score:
+                            score = candidate
                 if score > 0:
                     hits.append(SearchHit(
                         doc_id=doc.id,

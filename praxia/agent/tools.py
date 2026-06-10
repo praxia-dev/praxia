@@ -302,6 +302,10 @@ def _search_documents(
             limit=int(limit),
             folder_ids=folder_ids,
             path_prefix=path_prefix,
+            # alpha27+: pass the parent agent's LLM so the no-embedding
+            # fallback path can expand the query (synonyms + cross-
+            # language) instead of degrading to pure keyword.
+            llm=getattr(agent, "llm", None),
         ) or []
     except Exception:  # pragma: no cover
         return {"hits": [], "count": 0}
