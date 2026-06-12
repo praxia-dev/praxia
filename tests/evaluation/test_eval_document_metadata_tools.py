@@ -245,6 +245,41 @@ class TestListFilesEnhanced:
         assert res["count"] == 1
         assert res["files"][0]["relative_path"] == "draft_proposal.pdf"
 
+    def test_filename_contains_accepts_list_or_semantics(self, tmp_path: Path):
+        """alpha30: passing a LIST to filename_contains means OR — any
+        match wins. Lets the LLM cover language/synonym variants in
+        one call without iterating."""
+        _make_folder_and_docs(tmp_path, "alice", "mixed", [
+            ("議事録_2026Q3.pdf", 100.0, "Japanese minutes body"),
+            ("meeting-notes-2026.pdf", 200.0, "English meeting notes"),
+            ("invoice.pdf", 300.0, "unrelated"),
+        ])
+        # User says "最新の議事録" — LLM passes both JA and EN variants
+        # in one call. Both 議事録 and meeting-notes files should
+        # come back, sorted newest-first.
+        res = _list_files_in_folder(
+            _agent(tmp_path), folder_title="mixed",
+            filename_contains=["議事録", "meeting", "minutes"],
+            sort_by="mtime_desc",
+        )
+        names = [f["relative_path"] for f in res["files"]]
+        assert names == ["meeting-notes-2026.pdf", "議事録_2026Q3.pdf"]
+        # The unrelated invoice is NOT in the list.
+        assert "invoice.pdf" not in names
+
+    def test_filename_contains_empty_list_ignored(self, tmp_path: Path):
+        """An empty list (or list of empty strings) shouldn't accidentally
+        match every file — treat it as 'no filter'."""
+        _make_folder_and_docs(tmp_path, "alice", "p", [
+            ("a.pdf", 1.0, "x"),
+            ("b.pdf", 2.0, "x"),
+        ])
+        res = _list_files_in_folder(
+            _agent(tmp_path), folder_title="p",
+            filename_contains=["", "  "],
+        )
+        assert res["count"] == 2  # no filter applied
+
 
 # ─── read_document ──────────────────────────────────────────────────
 

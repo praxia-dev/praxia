@@ -403,7 +403,7 @@ def _list_files_in_folder(
     folder_id: str | None = None,
     folder_title: str | None = None,
     path_prefix: str | None = None,
-    filename_contains: str | None = None,
+    filename_contains: str | list[str] | None = None,
     extensions: list[str] | None = None,
     sort_by: str = "name",
     limit: int | None = None,
@@ -484,8 +484,20 @@ def _list_files_in_folder(
     # alpha29+ filters. Both case-insensitive. filename_contains is a
     # plain substring match against the lowercased relative_path, so
     # 'proposal' matches 'docs/proposal_leasing.md' and 'PROPOSAL.md'.
+    # alpha30+: filename_contains may be a list of substrings — ANY
+    # match counts (OR semantics). Lets the LLM cover JA + EN + domain
+    # variants in one call without iterating.
     # extensions is normalised to lowercase, no leading dot.
-    norm_substr = (filename_contains or "").strip().lower() or None
+    norm_substrs: list[str] | None = None
+    if isinstance(filename_contains, str):
+        s = filename_contains.strip().lower()
+        if s:
+            norm_substrs = [s]
+    elif isinstance(filename_contains, list):
+        norm_substrs = [
+            v.strip().lower() for v in filename_contains
+            if isinstance(v, str) and v.strip()
+        ] or None
     norm_exts: set[str] | None = None
     if extensions:
         norm_exts = {
@@ -512,8 +524,10 @@ def _list_files_in_folder(
             ext = rel[dot + 1:].lower() if dot >= 0 and dot < len(rel) - 1 else ""
             if norm_exts is not None and ext not in norm_exts:
                 continue
-            if norm_substr is not None and norm_substr not in rel.lower():
-                continue
+            if norm_substrs is not None:
+                lower_rel = rel.lower()
+                if not any(s in lower_rel for s in norm_substrs):
+                    continue
             mt = _doc_mtime(doc)
             # ISO 8601 in UTC, no microseconds — easy for the LLM to
             # paraphrase as a human-readable date.
@@ -1197,16 +1211,22 @@ def builtin_tools() -> dict[str, AgentTool]:
                         ),
                     },
                     "filename_contains": {
-                        "type": "string",
+                        "oneOf": [
+                            {"type": "string"},
+                            {"type": "array", "items": {"type": "string"}},
+                        ],
                         "description": (
                             "Case-insensitive substring filter on the "
                             "filename / relative_path. THE main lever "
                             "for 'find the latest proposal' / 'show me "
                             "the contract' queries — the doc type "
                             "lives in the filename, not the indexed "
-                            "chunk text. Example: filename_contains="
-                            "'proposal' returns 'proposal_leasing.md' "
-                            "AND 'docs/2024-proposal.pdf'."
+                            "chunk text. Accepts a single string OR a "
+                            "list of strings; with a list, ANY match "
+                            "wins (OR semantics). Pass a list to "
+                            "cover language/synonym variants in one "
+                            "call, e.g. ['議事録','meeting','minutes'] "
+                            "or ['提案','proposal','リース']."
                         ),
                     },
                     "extensions": {
