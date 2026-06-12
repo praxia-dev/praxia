@@ -380,24 +380,50 @@ def _web_search(
         return {"results": [], "count": 0, "error": str(e)}
 
 
+_VALID_SORTS = {"name", "mtime_desc", "mtime_asc", "size_desc", "size_asc"}
+
+
+def _doc_mtime(doc) -> float:
+    """Best-effort modification time for a Document.
+
+    The router stores ``mtime`` (file's mtime at ingest) and
+    ``indexed_at`` (when Praxia processed it). For "what's the latest
+    doc?" queries the file's own mtime is the right answer; we fall
+    back to indexed_at when mtime is missing or zero (some pre-alpha22
+    docs).
+    """
+    mt = getattr(doc, "mtime", 0.0) or 0.0
+    if mt <= 0.0:
+        mt = getattr(doc, "indexed_at", 0.0) or 0.0
+    return float(mt)
+
+
 def _list_files_in_folder(
     agent: AutonomousAgent,
     folder_id: str | None = None,
     folder_title: str | None = None,
     path_prefix: str | None = None,
+    sort_by: str = "name",
+    limit: int | None = None,
 ) -> dict[str, Any]:
-    """Enumerate every file inside a Documents folder. The agent calls
-    this before ``run_parallel_tasks`` so it knows what items to fan
-    out over: each child gets one file's ``relative_path``.
+    """Enumerate files in the user's Documents.
 
-    Pass exactly one of ``folder_id`` or ``folder_title``. When the
-    user said "fan out across the contracts folder" the LLM should
-    first call this tool (folder_title="contracts"), then build one
-    prompt per file in the returned list.
+    alpha22+ added this to support ``run_parallel_tasks`` (fan-out per
+    file). alpha28+ generalises it: pass ``folder_id=None`` AND
+    ``folder_title=None`` to enumerate across EVERY enabled folder,
+    and use ``sort_by="mtime_desc"`` + ``limit=N`` for "find the
+    latest N documents" queries — which is the right path when the
+    user asks for "the most recent proposal" / "latest update" /
+    "新しい順" and content-keyword search isn't a match.
 
-    Returns one entry per registered doc with ``relative_path``,
-    ``doc_id``, ``folder_id``, ``size_bytes`` (best effort, may be 0
-    for legacy docs), ``chunk_count``, and ``extension``.
+    Each entry now also reports ``mtime`` (Unix seconds) and
+    ``mtime_iso`` (ISO-8601 in UTC), so the LLM can reason about
+    recency without a separate metadata fetch.
+
+    Returns ``files: [{doc_id, folder_id, folder_title,
+    relative_path, extension, chunk_count, size_bytes, mtime,
+    mtime_iso}, ...]`` plus ``count`` and (when scoped) ``folder_id``
+    / ``folder_title``.
     """
     try:
         from praxia.server.routers.documents import (
@@ -411,63 +437,227 @@ def _list_files_in_folder(
     except Exception:  # pragma: no cover
         return {"files": [], "count": 0}
 
-    # Resolve the target folder. folder_id wins; otherwise match by
-    # title (case-insensitive). Errors are returned as a `note` rather
-    # than raising — the LLM can recover by listing folders first.
-    target = None
+    sort_key = sort_by if sort_by in _VALID_SORTS else "name"
+
+    # Resolve target folder(s).
+    # - folder_id given → that single folder
+    # - folder_title given → case-insensitive match on title
+    # - neither given → ALL enabled folders (alpha28+ new mode)
+    targets: list = []
     if folder_id:
-        target = next((f for f in folders if f.id == folder_id), None)
+        match = next((f for f in folders if f.id == folder_id), None)
+        if match is None:
+            return {
+                "files": [], "count": 0,
+                "note": (
+                    f"No folder matched folder_id={folder_id!r}. "
+                    "Call list_document_folders to see what exists."
+                ),
+            }
+        targets = [match]
     elif folder_title:
         wanted = folder_title.strip().lower()
-        target = next((f for f in folders if (f.title or "").lower() == wanted), None)
-    if target is None:
-        return {
-            "files": [],
-            "count": 0,
-            "note": (
-                f"No folder matched folder_id={folder_id!r} "
-                f"folder_title={folder_title!r}. Call "
-                "list_document_folders to see what exists."
-            ),
-        }
+        match = next((f for f in folders if (f.title or "").lower() == wanted), None)
+        if match is None:
+            return {
+                "files": [], "count": 0,
+                "note": (
+                    f"No folder matched folder_title={folder_title!r}. "
+                    "Call list_document_folders to see what exists."
+                ),
+            }
+        targets = [match]
+    else:
+        # Across-all-folders mode. Filter to enabled so we don't
+        # leak files the user has explicitly disabled.
+        targets = [f for f in folders if getattr(f, "enabled", True)]
 
-    try:
-        docs = load_docs_in_folder(
-            Path(agent.memory_dir), agent.user_id, target.id,
-        ) or []
-    except Exception:  # pragma: no cover
-        return {"files": [], "count": 0, "folder_id": target.id}
+    if not targets:
+        return {"files": [], "count": 0, "note": "No enabled folders to scan."}
 
     norm_prefix = None
     if path_prefix:
         norm_prefix = path_prefix.replace("\\", "/").strip("/")
 
-    out = []
-    for doc in docs:
-        rel = doc.relative_path.replace("\\", "/")
-        if norm_prefix is not None and not (
-            rel == norm_prefix or rel.startswith(norm_prefix + "/")
-        ):
+    out: list[dict[str, Any]] = []
+    storage_path = Path(agent.memory_dir)
+    for target in targets:
+        try:
+            docs = load_docs_in_folder(storage_path, agent.user_id, target.id) or []
+        except Exception:  # pragma: no cover
             continue
-        # Extension extraction without pulling pathlib for every doc.
-        dot = rel.rfind(".")
-        ext = rel[dot + 1:].lower() if dot >= 0 and dot < len(rel) - 1 else ""
-        out.append({
-            "doc_id": doc.id,
-            "folder_id": target.id,
-            "relative_path": rel,
-            "extension": ext,
-            "chunk_count": len(doc.chunks or []),
-            # `size_bytes` is best-effort — pre-alpha22 docs may not
-            # carry it, in which case we report 0.
-            "size_bytes": getattr(doc, "size_bytes", 0) or 0,
-        })
+        for doc in docs:
+            rel = doc.relative_path.replace("\\", "/")
+            if norm_prefix is not None and not (
+                rel == norm_prefix or rel.startswith(norm_prefix + "/")
+            ):
+                continue
+            # Extension without instantiating a pathlib object per doc.
+            dot = rel.rfind(".")
+            ext = rel[dot + 1:].lower() if dot >= 0 and dot < len(rel) - 1 else ""
+            mt = _doc_mtime(doc)
+            # ISO 8601 in UTC, no microseconds — easy for the LLM to
+            # paraphrase as a human-readable date.
+            from datetime import datetime as _dt, timezone as _tz
+            try:
+                iso = _dt.fromtimestamp(mt, _tz.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if mt > 0 else ""
+            except (OverflowError, OSError, ValueError):
+                iso = ""
+            out.append({
+                "doc_id": doc.id,
+                "folder_id": target.id,
+                "folder_title": target.title,
+                "relative_path": rel,
+                "extension": ext,
+                "chunk_count": len(doc.chunks or []),
+                "size_bytes": getattr(doc, "size", 0) or 0,
+                "mtime": mt,
+                "mtime_iso": iso,
+            })
 
-    return {
-        "folder_id": target.id,
-        "folder_title": target.title,
+    # Sort. "name" is the default backwards-compatible behaviour.
+    if sort_key == "mtime_desc":
+        out.sort(key=lambda r: r["mtime"], reverse=True)
+    elif sort_key == "mtime_asc":
+        out.sort(key=lambda r: r["mtime"])
+    elif sort_key == "size_desc":
+        out.sort(key=lambda r: r["size_bytes"], reverse=True)
+    elif sort_key == "size_asc":
+        out.sort(key=lambda r: r["size_bytes"])
+    else:
+        out.sort(key=lambda r: r["relative_path"].lower())
+
+    if limit is not None and limit > 0:
+        out = out[: int(limit)]
+
+    result: dict[str, Any] = {
         "files": out,
         "count": len(out),
+        "sort_by": sort_key,
+        "scope": (
+            "single_folder"
+            if (folder_id or folder_title)
+            else "all_enabled_folders"
+        ),
+    }
+    # Surface the resolved folder id/title only when we narrowed to one.
+    if len(targets) == 1:
+        result["folder_id"] = targets[0].id
+        result["folder_title"] = targets[0].title
+    return result
+
+
+def _read_document(
+    agent: AutonomousAgent,
+    doc_id: str | None = None,
+    relative_path: str | None = None,
+    folder_id: str | None = None,
+    folder_title: str | None = None,
+    max_chars: int = 20000,
+) -> dict[str, Any]:
+    """Return the full text of one Document.
+
+    Pair with ``list_files_in_folder`` for "find and read" flows:
+    list files (e.g. ``sort_by="mtime_desc", limit=1`` for "the latest
+    one"), then call this with the returned ``doc_id`` to read the
+    content. The content is the concatenation of every chunk in the
+    document, truncated to ``max_chars`` (default 20 000) — the LLM
+    can ask for more by raising the limit, but most use cases fit.
+
+    Resolution precedence: ``doc_id`` > (``folder_id`` |
+    ``folder_title``) + ``relative_path``. If only ``relative_path``
+    is given without a folder, we scan every enabled folder for a
+    match — convenient when the LLM kept the path string from a
+    prior ``list_files_in_folder`` reply but lost the folder_id.
+    """
+    try:
+        from praxia.server.routers.documents import (
+            load_docs_in_folder, load_user_folders,
+        )
+    except ImportError:
+        return {"text": "", "found": False, "note": "praxia[server] not installed"}
+
+    try:
+        folders = load_user_folders(Path(agent.memory_dir), agent.user_id) or []
+    except Exception:  # pragma: no cover
+        return {"text": "", "found": False}
+
+    # Narrow the folder pool early.
+    if folder_id:
+        folders = [f for f in folders if f.id == folder_id]
+    elif folder_title:
+        wanted = folder_title.strip().lower()
+        folders = [f for f in folders if (f.title or "").lower() == wanted]
+    else:
+        folders = [f for f in folders if getattr(f, "enabled", True)]
+
+    target_doc = None
+    target_folder = None
+    storage = Path(agent.memory_dir)
+    norm_path = relative_path.replace("\\", "/").strip("/") if relative_path else None
+    for f in folders:
+        try:
+            docs = load_docs_in_folder(storage, agent.user_id, f.id) or []
+        except Exception:
+            continue
+        for d in docs:
+            if doc_id and d.id == doc_id:
+                target_doc, target_folder = d, f
+                break
+            if norm_path and d.relative_path.replace("\\", "/").strip("/") == norm_path:
+                target_doc, target_folder = d, f
+                break
+        if target_doc is not None:
+            break
+
+    if target_doc is None:
+        return {
+            "text": "",
+            "found": False,
+            "note": (
+                f"No document matched doc_id={doc_id!r} "
+                f"relative_path={relative_path!r}. "
+                "Call list_files_in_folder to confirm what exists."
+            ),
+        }
+
+    # Concatenate chunks in index order. We use newlines as the
+    # separator — chunk boundaries are an indexing artifact, not a
+    # semantic one, and most parsers already include trailing blank
+    # lines, so single \n keeps the text close to the original layout.
+    parts = sorted(target_doc.chunks or [], key=lambda c: c.index)
+    full = "\n".join(c.text for c in parts)
+
+    cap = max(500, min(int(max_chars), 200_000))
+    truncated = False
+    if len(full) > cap:
+        full = full[:cap]
+        truncated = True
+
+    mt = _doc_mtime(target_doc)
+    from datetime import datetime as _dt, timezone as _tz
+    try:
+        iso = _dt.fromtimestamp(mt, _tz.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if mt > 0 else ""
+    except (OverflowError, OSError, ValueError):
+        iso = ""
+
+    return {
+        "found": True,
+        "doc_id": target_doc.id,
+        "folder_id": target_folder.id,
+        "folder_title": target_folder.title,
+        "relative_path": target_doc.relative_path,
+        "extension": (
+            target_doc.relative_path.rsplit(".", 1)[1].lower()
+            if "." in target_doc.relative_path else ""
+        ),
+        "size_bytes": getattr(target_doc, "size", 0) or 0,
+        "mtime": mt,
+        "mtime_iso": iso,
+        "chunk_count": len(parts),
+        "char_count": len(full),
+        "truncated": truncated,
+        "text": full,
     }
 
 
@@ -806,16 +996,26 @@ def builtin_tools() -> dict[str, AgentTool]:
         AgentTool(
             name="search_documents",
             description=(
-                "Search the user's ingested LOCAL DOCUMENTS — the files "
-                "they dropped onto the Praxia desktop app's Documents "
-                "tab (PDFs, Word docs, code, manuals…). Use this when "
-                "the user's question is about content they own / "
-                "imported, NOT the agent's memory layers. Often the "
-                "right first call for 'what does my contract say about "
-                "X' / 'find the section in those PDFs about Y'. "
+                "**Content** search over the user's ingested LOCAL "
+                "DOCUMENTS — the files they dropped onto the Praxia "
+                "desktop app's Documents tab (PDFs, Word docs, code, "
+                "manuals…). Use this when the user's question is "
+                "about content they own / imported, NOT the agent's "
+                "memory layers. Often the right first call for 'what "
+                "does my contract say about X' / 'find the section "
+                "in those PDFs about Y'. "
                 "Use `path_prefix` to narrow to a subfolder (e.g. "
-                "`contracts/2024`) — the user's directory structure is "
-                "preserved in `relative_path` on every hit."
+                "`contracts/2024`) — the user's directory structure "
+                "is preserved in `relative_path` on every hit.\n"
+                "\n"
+                "**When this returns 0 hits**, the right next step is "
+                "almost always `list_files_in_folder` — the user may "
+                "have asked about a doc by its METADATA (date, name, "
+                "size) rather than its contents. For example "
+                "'最新の提案を見せて' / 'show me the latest proposal' "
+                "is a recency query, not a content query: call "
+                "list_files_in_folder(sort_by='mtime_desc', limit=1) "
+                "then read_document on the result."
             ),
             parameters_schema={
                 "type": "object",
@@ -904,18 +1104,33 @@ def builtin_tools() -> dict[str, AgentTool]:
         AgentTool(
             name="list_files_in_folder",
             description=(
-                "Enumerate every file the user has indexed inside ONE "
-                "Documents folder. This is the right first call for any "
-                "per-file batch fan-out ('summarise each PDF in folder X', "
-                "'extract action items from every doc in pdfs'): list the "
-                "files here, then build one self-contained prompt per "
-                "file and hand them all to run_parallel_tasks. Pass "
-                "EITHER folder_id (preferred, from list_document_folders) "
-                "OR folder_title (case-insensitive match by user-visible "
-                "name). Returns one entry per file with relative_path "
-                "(use this in the per-file prompt so each child knows "
-                "which doc to work on), doc_id, extension, and "
-                "chunk_count."
+                "Enumerate files in the user's Documents folders, with "
+                "sort + filter + recency metadata. Two use cases:\n"
+                "\n"
+                "  (1) **Per-file batch fan-out** — 'summarise each PDF "
+                "in folder X', 'extract action items from every doc'. "
+                "List, then build one prompt per file and hand to "
+                "run_parallel_tasks.\n"
+                "\n"
+                "  (2) **Find by recency / size** — '最新の提案を出して' "
+                "/ 'the most recently updated contract' / 'biggest file "
+                "in here'. Pass sort_by='mtime_desc' + limit=1 (or N) "
+                "and the newest file(s) come back with mtime + "
+                "mtime_iso filled in. Use **this** path when content-"
+                "keyword search via search_documents returns nothing "
+                "or the user asked about a *specific document by "
+                "metadata* (date / size / name) rather than its "
+                "contents.\n"
+                "\n"
+                "Folder selection: pass folder_id (from "
+                "list_document_folders) OR folder_title (case-"
+                "insensitive). Pass NEITHER to scan EVERY enabled "
+                "folder — useful when the user said 'in Documents' "
+                "without naming a folder. Each entry carries doc_id, "
+                "folder_id, folder_title, relative_path, extension, "
+                "chunk_count, size_bytes, mtime (Unix sec), and "
+                "mtime_iso (ISO-8601 UTC string). Use the doc_id with "
+                "read_document to fetch full content."
             ),
             parameters_schema={
                 "type": "object",
@@ -924,7 +1139,9 @@ def builtin_tools() -> dict[str, AgentTool]:
                         "type": "string",
                         "description": (
                             "Documents folder id (from list_document_"
-                            "folders). Preferred over folder_title."
+                            "folders). Preferred over folder_title. "
+                            "Omit (with folder_title also omitted) to "
+                            "scan every enabled folder."
                         ),
                     },
                     "folder_title": {
@@ -943,9 +1160,96 @@ def builtin_tools() -> dict[str, AgentTool]:
                             "starts with this prefix."
                         ),
                     },
+                    "sort_by": {
+                        "type": "string",
+                        "enum": [
+                            "name", "mtime_desc", "mtime_asc",
+                            "size_desc", "size_asc",
+                        ],
+                        "default": "name",
+                        "description": (
+                            "Sort order. Use 'mtime_desc' for "
+                            "'latest/most recent', 'mtime_asc' for "
+                            "'oldest', 'size_desc' for 'biggest'. "
+                            "Default 'name' is alphabetical by "
+                            "relative_path."
+                        ),
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": (
+                            "Cap the result count. Pair with "
+                            "sort_by='mtime_desc' + limit=1 for 'the "
+                            "single latest file'."
+                        ),
+                    },
                 },
             },
             handler=_list_files_in_folder,
+        ),
+        AgentTool(
+            name="read_document",
+            description=(
+                "Read the full text of ONE Document by doc_id (or by "
+                "relative_path + folder). Pair with "
+                "list_files_in_folder for 'find-then-read' flows: "
+                "list_files_in_folder(sort_by='mtime_desc', limit=1) "
+                "→ read_document(doc_id=…) is the canonical answer to "
+                "'tell me what the latest proposal says'. The returned "
+                "text is the concatenation of all chunks in order, "
+                "capped at max_chars (default 20 000) — raise it for "
+                "longer docs. Also returns mtime / mtime_iso / size "
+                "so the LLM can cite the document's metadata in its "
+                "reply. NOT for grep-style content search — use "
+                "search_documents for 'find chunks mentioning X'."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "doc_id": {
+                        "type": "string",
+                        "description": (
+                            "Document id (from list_files_in_folder). "
+                            "Preferred resolution path."
+                        ),
+                    },
+                    "relative_path": {
+                        "type": "string",
+                        "description": (
+                            "Document relative_path (forward-slashed). "
+                            "Use when only the path is known. Combine "
+                            "with folder_id / folder_title to "
+                            "disambiguate across folders."
+                        ),
+                    },
+                    "folder_id": {
+                        "type": "string",
+                        "description": (
+                            "Optional folder scope (from "
+                            "list_document_folders)."
+                        ),
+                    },
+                    "folder_title": {
+                        "type": "string",
+                        "description": (
+                            "Optional folder scope by user-visible "
+                            "name. Case-insensitive."
+                        ),
+                    },
+                    "max_chars": {
+                        "type": "integer",
+                        "minimum": 500,
+                        "maximum": 200000,
+                        "default": 20000,
+                        "description": (
+                            "Truncate the returned text to this many "
+                            "characters. Set higher for long PDFs."
+                        ),
+                    },
+                },
+            },
+            handler=_read_document,
         ),
         AgentTool(
             name="schedule_recurring_task",
