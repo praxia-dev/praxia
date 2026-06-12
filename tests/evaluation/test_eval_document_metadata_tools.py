@@ -173,6 +173,78 @@ class TestListFilesEnhanced:
         assert "note" in res
         assert "list_document_folders" in res["note"]
 
+    def test_filename_contains_finds_buried_match(self, tmp_path: Path):
+        """The headline alpha29 use case: lots of noisy newer files
+        push the proposal out of the mtime_desc top-N. With
+        filename_contains='proposal' the LLM finds it regardless of
+        mtime rank."""
+        _make_folder_and_docs(tmp_path, "alice", "pdfs", [
+            ("2026-Q3-team-retro.pdf", 3000.0, "retro body"),
+            ("2026-Q3-marketing.pdf", 2900.0, "marketing body"),
+            ("2026-Q3-engineering.pdf", 2800.0, "engineering body"),
+            ("proposal_leasing.md", 1000.0, "proposal body"),
+            ("2026-Q3-support.pdf", 2700.0, "support body"),
+        ])
+        # Naive "newest 3" misses the proposal entirely.
+        latest3 = _list_files_in_folder(
+            _agent(tmp_path), folder_title="pdfs",
+            sort_by="mtime_desc", limit=3,
+        )
+        assert "proposal_leasing.md" not in [
+            f["relative_path"] for f in latest3["files"]
+        ]
+        # Targeted filename filter recovers it.
+        targeted = _list_files_in_folder(
+            _agent(tmp_path), folder_title="pdfs",
+            filename_contains="proposal",
+            sort_by="mtime_desc", limit=1,
+        )
+        assert targeted["count"] == 1
+        assert targeted["files"][0]["relative_path"] == "proposal_leasing.md"
+
+    def test_filename_contains_is_case_insensitive(self, tmp_path: Path):
+        _make_folder_and_docs(tmp_path, "alice", "pdfs", [
+            ("Proposal_v1.PDF", 1.0, "x"),
+            ("invoice_2024.pdf", 2.0, "x"),
+        ])
+        res = _list_files_in_folder(
+            _agent(tmp_path), folder_title="pdfs",
+            filename_contains="PROPOSAL",
+        )
+        assert res["count"] == 1
+        assert res["files"][0]["relative_path"] == "Proposal_v1.PDF"
+
+    def test_extensions_filter(self, tmp_path: Path):
+        _make_folder_and_docs(tmp_path, "alice", "mixed", [
+            ("doc1.pdf", 1.0, "a"),
+            ("notes.md", 2.0, "b"),
+            ("doc2.PDF", 3.0, "c"),
+            ("readme.txt", 4.0, "d"),
+        ])
+        res = _list_files_in_folder(
+            _agent(tmp_path), folder_title="mixed",
+            extensions=["pdf"],
+        )
+        names = sorted(f["relative_path"] for f in res["files"])
+        assert names == ["doc1.pdf", "doc2.PDF"]
+
+    def test_filename_and_extension_combined(self, tmp_path: Path):
+        _make_folder_and_docs(tmp_path, "alice", "mixed", [
+            ("proposal_v1.md", 1.0, "x"),
+            ("proposal_v2.pdf", 2.0, "x"),
+            ("invoice_2024.pdf", 3.0, "x"),
+            ("draft_proposal.pdf", 4.0, "x"),  # newest matching
+        ])
+        res = _list_files_in_folder(
+            _agent(tmp_path), folder_title="mixed",
+            filename_contains="proposal",
+            extensions=["pdf"],
+            sort_by="mtime_desc",
+            limit=1,
+        )
+        assert res["count"] == 1
+        assert res["files"][0]["relative_path"] == "draft_proposal.pdf"
+
 
 # ─── read_document ──────────────────────────────────────────────────
 

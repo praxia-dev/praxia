@@ -403,6 +403,8 @@ def _list_files_in_folder(
     folder_id: str | None = None,
     folder_title: str | None = None,
     path_prefix: str | None = None,
+    filename_contains: str | None = None,
+    extensions: list[str] | None = None,
     sort_by: str = "name",
     limit: int | None = None,
 ) -> dict[str, Any]:
@@ -479,6 +481,19 @@ def _list_files_in_folder(
     if path_prefix:
         norm_prefix = path_prefix.replace("\\", "/").strip("/")
 
+    # alpha29+ filters. Both case-insensitive. filename_contains is a
+    # plain substring match against the lowercased relative_path, so
+    # 'proposal' matches 'docs/proposal_leasing.md' and 'PROPOSAL.md'.
+    # extensions is normalised to lowercase, no leading dot.
+    norm_substr = (filename_contains or "").strip().lower() or None
+    norm_exts: set[str] | None = None
+    if extensions:
+        norm_exts = {
+            e.strip().lower().lstrip(".") for e in extensions if e and e.strip()
+        }
+        if not norm_exts:
+            norm_exts = None
+
     out: list[dict[str, Any]] = []
     storage_path = Path(agent.memory_dir)
     for target in targets:
@@ -495,6 +510,10 @@ def _list_files_in_folder(
             # Extension without instantiating a pathlib object per doc.
             dot = rel.rfind(".")
             ext = rel[dot + 1:].lower() if dot >= 0 and dot < len(rel) - 1 else ""
+            if norm_exts is not None and ext not in norm_exts:
+                continue
+            if norm_substr is not None and norm_substr not in rel.lower():
+                continue
             mt = _doc_mtime(doc)
             # ISO 8601 in UTC, no microseconds — easy for the LLM to
             # paraphrase as a human-readable date.
@@ -1090,10 +1109,16 @@ def builtin_tools() -> dict[str, AgentTool]:
             name="list_document_folders",
             description=(
                 "List the user's registered Documents folders (id, "
-                "title, path, doc_count). Use this when the user "
-                "names a folder ('search the contracts folder') and "
-                "you need to find the matching folder_id to pass to "
-                "search_documents."
+                "title, path, doc_count). Use this WHENEVER the user "
+                "mentions a folder NAME — a date-like string "
+                "('20260306', '2024-Q1'), a project name, a folder "
+                "title — to confirm whether it's actually a registered "
+                "folder before you assume it's a content keyword. "
+                "Common LLM mistake: treating 'in the 20260306 folder' "
+                "as a content search query for the string '20260306'. "
+                "It's a FOLDER name; call this first to get the "
+                "folder_title / folder_id and pass to "
+                "list_files_in_folder."
             ),
             parameters_schema={
                 "type": "object",
@@ -1105,32 +1130,43 @@ def builtin_tools() -> dict[str, AgentTool]:
             name="list_files_in_folder",
             description=(
                 "Enumerate files in the user's Documents folders, with "
-                "sort + filter + recency metadata. Two use cases:\n"
+                "filter + sort + recency metadata. Use cases:\n"
                 "\n"
-                "  (1) **Per-file batch fan-out** — 'summarise each PDF "
-                "in folder X', 'extract action items from every doc'. "
-                "List, then build one prompt per file and hand to "
-                "run_parallel_tasks.\n"
+                "  (1) **Find by document TYPE** — '最新の提案書' / "
+                "'the latest contract' / 'support tickets PDFs'. "
+                "When the user names a document KIND (proposal / "
+                "contract / report / minutes / 提案書 / 契約書 / "
+                "議事録 …), pass filename_contains='proposal' (or the "
+                "equivalent substring) — proposal-like content is in "
+                "the FILENAME, not the chunk text, so search_documents "
+                "won't reliably find it. Combine with sort_by='mtime_"
+                "desc' + limit=1 for 'the latest <type>'. Try multiple "
+                "substrings if the first returns nothing — e.g. "
+                "'proposal' then '提案' then 'リース' if the user's "
+                "phrasing hints at a domain.\n"
                 "\n"
-                "  (2) **Find by recency / size** — '最新の提案を出して' "
-                "/ 'the most recently updated contract' / 'biggest file "
-                "in here'. Pass sort_by='mtime_desc' + limit=1 (or N) "
-                "and the newest file(s) come back with mtime + "
-                "mtime_iso filled in. Use **this** path when content-"
-                "keyword search via search_documents returns nothing "
-                "or the user asked about a *specific document by "
-                "metadata* (date / size / name) rather than its "
-                "contents.\n"
+                "  (2) **Find by recency / size only** — 'what's the "
+                "newest doc?', 'biggest file?'. No filename_contains, "
+                "just sort_by='mtime_desc' / 'size_desc' + limit.\n"
+                "\n"
+                "  (3) **Per-file batch fan-out** — 'summarise each "
+                "PDF in folder X'. List → build one prompt per file → "
+                "run_parallel_tasks. Filter by extensions=['pdf'] to "
+                "skip non-PDF noise.\n"
                 "\n"
                 "Folder selection: pass folder_id (from "
                 "list_document_folders) OR folder_title (case-"
-                "insensitive). Pass NEITHER to scan EVERY enabled "
-                "folder — useful when the user said 'in Documents' "
-                "without naming a folder. Each entry carries doc_id, "
-                "folder_id, folder_title, relative_path, extension, "
-                "chunk_count, size_bytes, mtime (Unix sec), and "
-                "mtime_iso (ISO-8601 UTC string). Use the doc_id with "
-                "read_document to fetch full content."
+                "insensitive, e.g. user says '20260306 フォルダ' → "
+                "folder_title='20260306'). Pass NEITHER to scan EVERY "
+                "enabled folder — useful when the user said 'in "
+                "Documents' without naming a folder, OR as the FIRST "
+                "call when looking for a specific filename across the "
+                "whole library.\n"
+                "\n"
+                "Each entry carries doc_id, folder_id, folder_title, "
+                "relative_path, extension, chunk_count, size_bytes, "
+                "mtime (Unix sec), and mtime_iso (ISO-8601 UTC). Use "
+                "the doc_id with read_document to fetch full content."
             ),
             parameters_schema={
                 "type": "object",
@@ -1158,6 +1194,29 @@ def builtin_tools() -> dict[str, AgentTool]:
                             "Optional subpath filter (e.g. '2024/Q1') — "
                             "only returns files whose relative_path "
                             "starts with this prefix."
+                        ),
+                    },
+                    "filename_contains": {
+                        "type": "string",
+                        "description": (
+                            "Case-insensitive substring filter on the "
+                            "filename / relative_path. THE main lever "
+                            "for 'find the latest proposal' / 'show me "
+                            "the contract' queries — the doc type "
+                            "lives in the filename, not the indexed "
+                            "chunk text. Example: filename_contains="
+                            "'proposal' returns 'proposal_leasing.md' "
+                            "AND 'docs/2024-proposal.pdf'."
+                        ),
+                    },
+                    "extensions": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Limit to these extensions "
+                            "(case-insensitive, no leading dot). e.g. "
+                            "['pdf','docx'] for proposal-style "
+                            "documents, ['md'] for markdown notes."
                         ),
                     },
                     "sort_by": {
