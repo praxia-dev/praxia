@@ -237,6 +237,56 @@ class TestTaskRouterK6:
     def test_knowledge_prompts_classified_as_knowledge(self, prompt: str) -> None:
         assert default_task_classifier(prompt) == "knowledge"
 
+    @pytest.mark.parametrize("prompt", [
+        # JA — existence / lookup phrases the user actually typed when
+        # the bug surfaced.
+        "分析プロンプト.txt はありませんか？",
+        "proposal_leasing.md は登録されていますか",
+        "20260306内にありませんか？",
+        "議事録ファイル一覧出して",
+        # EN — equivalent patterns.
+        "is there a file called X.pdf?",
+        "do you have any proposal docs?",
+        "list the files in contracts folder",
+    ])
+    def test_metadata_prompts_classified_as_metadata(self, prompt: str) -> None:
+        """alpha31 regression: file existence / listing queries must
+        route to the metadata kind so the verifier doesn't abstain
+        with 'I don't have enough grounded information' on what is
+        actually a tool-answerable question."""
+        assert default_task_classifier(prompt) == "metadata"
+
+    def test_metadata_path_bypasses_verifier(self) -> None:
+        """Metadata prompts must NOT reach the verifier — the inner
+        agent runs with full tool access and its answer is taken
+        as-is. Otherwise a 0-hit pre-retrieve produces the broken
+        'I don't have enough grounded information' abstain that
+        triggered this whole alpha31 fix."""
+        inner = _FakeInnerAgent(drafts=["proposal_leasing.md is in folder 20260306"])
+        verifier_calls: list[tuple[str, list[Source]]] = []
+
+        class _SpyVerifier:
+            def verify(self, draft: str, sources: list[Source]) -> Verdict:
+                verifier_calls.append((draft, sources))
+                return _accept()
+
+        retrieve_calls: list[str] = []
+        def _ret(q: str) -> list[Source]:
+            retrieve_calls.append(q)
+            return _src(("L1#0", "noise"))
+
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=_SpyVerifier(),
+            retriever=_ret,
+        )
+        result = agent.run("proposal_leasing.md は登録されていますか")
+        assert result.task_kind == "metadata"
+        assert result.stopped_reason == "metadata_pass"
+        assert "proposal_leasing.md" in result.answer
+        assert verifier_calls == []   # verifier NEVER called
+        assert retrieve_calls == []   # retriever NEVER called
+
     def test_action_path_bypasses_verifier(self) -> None:
         """Action prompts must never reach the verifier — the inner agent's
         draft becomes the answer as-is.

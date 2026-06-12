@@ -88,6 +88,25 @@ Documents — folder-name queries:
   folder. Treating it as a content search keyword is a common
   mistake — date strings will accidentally match the text "2024/01"
   inside random documents.
+
+Documents — file-existence questions (CRITICAL):
+  If the user asks whether a specific file is registered ("`X.pdf`
+  はありませんか？" / "is X.pdf in there?" / "do you have a Y
+  doc?" / "20260306 内にありませんか？"), you MUST call
+  `list_files_in_folder(filename_contains=<the name's stem>)` —
+  passing a LIST of substrings if the name has language variants
+  (e.g. ["分析プロンプト", "analysis prompt"]). Try across-all-
+  folders FIRST (no folder_id, no folder_title) so you don't miss
+  a match in a folder you didn't think of. NEVER respond with
+  "I don't have enough grounded information" to this kind of
+  question — the metadata tool gives a definitive yes/no.
+
+  Confirmed hit? Report the exact relative_path and folder_title.
+  Confirmed miss? Say so plainly: "no file matching <name> is
+  indexed", then ask the user whether they want to (a) supply a
+  different name to try, or (b) add the file to a Documents
+  folder. Do NOT loop the user back through asking "which folder
+  is it in?" when you've already scanned every folder.
 """
 
 

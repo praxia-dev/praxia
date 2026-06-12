@@ -190,6 +190,34 @@ _BATCH_KEYWORDS = (
 )
 
 
+# Tokens that flag a *metadata* lookup against the Documents library —
+# "is `X.pdf` in there?", "list the files in folder Y", "what's the
+# newest spec?". These are tool-answerable with certainty (the file
+# either exists in the index or it doesn't); routing them through the
+# grounding verifier means a 0-hit pre-retrieve produces a bogus
+# "I don't have enough grounded information…" abstain. The user
+# reported exactly that for "分析プロンプト.txt はありませんか？" —
+# the file lookup never even got tried. alpha31+ routes these to a
+# dedicated path that skips the verifier and nudges the inner agent
+# toward list_files_in_folder / list_document_folders / read_document.
+_METADATA_KEYWORDS = (
+    # JA — explicit existence / lookup phrases
+    "ありませんか", "ありますか", "ありませんか？", "ありますか？",
+    "存在しますか", "存在する？", "登録されていますか",
+    "見つけて", "探して", "あるか教えて",
+    "ファイル一覧", "ファイル名", "ファイルを表示",
+    "登録されている文書", "ドキュメント一覧",
+    # EN — existence / lookup
+    "is there a ", "are there any ", "do you have a ",
+    "do you have any ", "exists in", "is it in",
+    "do i have a ", "do i have any ",
+    "list the files", "list files", "what files",
+    "show me the files", "what's the filename",
+    "find the file", "look up the file",
+    "is <", "exists?", "registered?",
+)
+
+
 _SYNTHESIS_KEYWORDS = (
     # English — generative / creative verbs
     "draft", "make a", "write a", "create a", "design a",
@@ -214,14 +242,24 @@ def default_task_classifier(user_input: str) -> str:
     - ``"batch"``: per-item fan-out across multiple files / docs (alpha22+).
       Verifier skipped, no pre-retrieval — the inner agent is expected
       to call ``run_parallel_tasks`` so each item gets its own answer.
+    - ``"metadata"`` (alpha31+): a Documents existence / lookup / listing
+      query — "is X.pdf there?", "list the files in Y", "find a
+      proposal file". Verifier skipped, no pre-retrieval — the inner
+      agent must call list_files_in_folder / list_document_folders /
+      read_document. The earlier verifier-route abstained with
+      "I don't have enough grounded information" because pre-retrieve
+      returned nothing for filename-lookup queries (chunks don't
+      index filenames).
     - ``"synthesis"``: the input asks for a generated artefact (draft,
       proposal, summary, deck). Sources are still retrieved (as
       inspiration) but the verifier is bypassed because per-claim
       grounding doesn't fit a creative output.
     - ``"knowledge"`` (default): grounded fact-QA — verifier runs.
 
-    Precedence: action > batch > synthesis > knowledge. "Write code
-    that summarises each PDF" reads as code work, not batch.
+    Precedence: action > batch > metadata > synthesis > knowledge.
+    "Write code that summarises each PDF" reads as code work, not
+    batch; "list the files and summarise each" reads as batch first,
+    not metadata.
     """
     lowered = user_input.lower()
     for kw in _ACTION_KEYWORDS:
@@ -230,6 +268,9 @@ def default_task_classifier(user_input: str) -> str:
     for kw in _BATCH_KEYWORDS:
         if kw in lowered:
             return "batch"
+    for kw in _METADATA_KEYWORDS:
+        if kw in lowered:
+            return "metadata"
     for kw in _SYNTHESIS_KEYWORDS:
         if kw in lowered:
             return "synthesis"
@@ -630,6 +671,69 @@ class CommandedAgent:
             )
             batch_result.add_usage(inner_result.usage)
             return batch_result
+
+        # alpha31+: metadata lookup — file existence / listing /
+        # filename search. Same shape as batch (skip pre-retrieve +
+        # skip verifier) but with a different nudge that points the
+        # LLM at the *metadata* tools rather than fan-out.
+        # Why this isn't routed through the verifier: pre-retrieve
+        # uses CHUNK content as the haystack, but filenames aren't in
+        # the chunk text. A query like "分析プロンプト.txt は
+        # ありませんか？" gets 0 hits from pre-retrieve, then the
+        # verifier abstains with "I don't have enough grounded
+        # information…" — even though list_files_in_folder would
+        # answer it in one call.
+        if task_kind == "metadata":
+            nudge = (
+                "This is a Documents metadata lookup (does a file "
+                "exist? what's in a folder? find a file by name). "
+                "You MUST call the metadata tools — DO NOT abstain "
+                "with 'I don't have enough grounded information'. "
+                "Recipe:\n"
+                "  1. If the user named a specific filename, call "
+                "`list_files_in_folder(filename_contains=<name "
+                "stem>)` — use a LIST of substrings if the name has "
+                "language variants ('分析プロンプト' + 'analysis "
+                "prompt'). Try across-all-folders (no folder_id / "
+                "folder_title) first.\n"
+                "  2. If the user named a FOLDER (date-like string, "
+                "project name), call `list_document_folders` first to "
+                "confirm it's a registered folder, then "
+                "`list_files_in_folder(folder_title=<that>)`.\n"
+                "  3. If a single file matched and the user asked "
+                "about its content, call `read_document(doc_id=…)`.\n"
+                "  4. Tell the user explicitly what you found OR did "
+                "not find — including the exact relative_path of any "
+                "matches and the folder it's in. Do not loop back to "
+                "asking the user for clarification when the tool has "
+                "already given you the answer."
+            )
+            augmented = f"{nudge}\n\n---\n\n{user_input}"
+            inner_result = self.inner.run(augmented, history=history, images=images)
+            self._audit(
+                "commander.metadata_pass",
+                f"user:{self.inner.user_id}",
+                metadata={"input_chars": str(len(user_input))},
+            )
+            meta_result = CommandedResult(
+                answer=(inner_result.final_text or "").strip(),
+                verdict=Verdict(
+                    groundedness=0.0,
+                    per_claim=[],
+                    unsupported_claims=[],
+                    decision="accept",
+                    rationale=(
+                        "Metadata lookup — answered via Documents "
+                        "metadata tools; per-claim grounding not "
+                        "applicable to existence / listing queries."
+                    ),
+                ),
+                sources=[],
+                stopped_reason="metadata_pass",
+                task_kind=task_kind,
+            )
+            meta_result.add_usage(inner_result.usage)
+            return meta_result
 
         if sources is None:
             sources = self.retriever(user_input)
