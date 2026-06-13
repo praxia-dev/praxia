@@ -248,6 +248,16 @@ class TestTaskRouterK6:
         "is there a file called X.pdf?",
         "do you have any proposal docs?",
         "list the files in contracts folder",
+        # alpha32+: bare filename mentions (no interrogative). User
+        # replies to a clarifying turn with just a filename — must
+        # still trigger metadata so list_files_in_folder runs.
+        "分析プロンプト.txt です",
+        "分析プロンプト.txtです",
+        "see proposal.pdf",
+        "proposal_leasing.md",
+        "Q3_report.docx",
+        "1.txt",
+        "  proposal.PDF  ",
     ])
     def test_metadata_prompts_classified_as_metadata(self, prompt: str) -> None:
         """alpha31 regression: file existence / listing queries must

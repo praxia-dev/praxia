@@ -190,6 +190,35 @@ _BATCH_KEYWORDS = (
 )
 
 
+import re as _re
+
+
+# alpha32+: bare-filename detection. When the user's input contains
+# something that LOOKS like an indexed filename — e.g. "分析プロンプト.txt
+# です", "see proposal_v3.pdf", "Q3_report.docx" — route to metadata
+# regardless of sentence form. Previously the classifier only caught
+# explicit interrogatives ("X.txt はありませんか？") so a flat declarative
+# fell back to knowledge and the verifier abstained on it.
+#
+# Extension list covers everything Praxia's parsers support per
+# Documents UI (PDF / Office / images / structured / code) plus a few
+# code extensions the agent might be asked about. We keep this in sync
+# with the supported_label chip strip in Documents.svelte.
+_FILENAME_TOKEN_RE = _re.compile(
+    # Filename-like token: one or more word / dot / hyphen / underscore
+    # characters (including JA kana / kanji ranges) followed by a dot
+    # and one of the supported extensions. The negative lookahead
+    # `(?![a-zA-Z0-9])` rejects partial matches (e.g. ".docxs" or
+    # ".pdfreader") but allows JA particles immediately after the
+    # extension (です / が / を / etc.) since those don't match [a-zA-Z0-9].
+    r"[\w　-ヿ一-鿿.\-]{1,120}"
+    r"\.(?:pdf|docx?|pptx?|xlsx?|md|markdown|txt|csv|tsv|json|ya?ml|html?|"
+    r"png|jpe?g|gif|webp|py|ts|tsx|js|jsx|rs|go|java|cs|cpp|c|h)"
+    r"(?![a-zA-Z0-9])",
+    flags=_re.IGNORECASE,
+)
+
+
 # Tokens that flag a *metadata* lookup against the Documents library —
 # "is `X.pdf` in there?", "list the files in folder Y", "what's the
 # newest spec?". These are tool-answerable with certainty (the file
@@ -218,20 +247,38 @@ _METADATA_KEYWORDS = (
 )
 
 
-_SYNTHESIS_KEYWORDS = (
-    # English — generative / creative verbs
+# alpha32+: split synthesis into VERBS (explicit "generate X" intent)
+# and NOUNS (subject-only mentions like "proposal" / "提案"). Verbs
+# are checked BEFORE the filename regex — "summary.docx を作って"
+# should route to synthesis because the user wants to GENERATE the
+# file. Nouns are checked AFTER the filename regex — "proposal.pdf"
+# alone is metadata (the user wants to look up the existing file),
+# while "提案を作って" alone is synthesis (no extension, clear
+# generative verb).
+_SYNTHESIS_VERBS = (
+    # English — explicit generative verbs
     "draft", "make a", "write a", "create a", "design a",
     "compose", "outline", "summarize", "summarise", "brainstorm",
-    "propose", "proposal", "make slides", "make a presentation",
+    "make slides", "make a presentation",
     "make a report", "write a report", "generate a", "render a",
     "design slides", "design a deck",
-    # Japanese
+    # Japanese — explicit generative verbs / verb endings
     "作成して", "作って", "起草", "草稿", "下書き",
-    "提案", "プレゼン", "発表資料",
-    "アイデア", "考案", "案を",
-    "サマリ", "要約", "纏めて", "まとめて",
-    "デザイン", "資料を作",
+    "纏めて", "まとめて",
+    "資料を作",
     "出力して下さい", "出力してください", "生成して",
+)
+_SYNTHESIS_NOUNS = (
+    # English — subject nouns that imply generation when paired with
+    # a verb but not on their own. Kept for the case where the user
+    # is brief: "proposal please" / "プレゼン". A bare filename with
+    # extension still wins (handled by precedence in the classifier).
+    "propose", "proposal",
+    "プレゼン", "発表資料",
+    "提案",
+    "アイデア", "考案", "案を",
+    "サマリ", "要約",
+    "デザイン",
 )
 
 
@@ -271,7 +318,26 @@ def default_task_classifier(user_input: str) -> str:
     for kw in _METADATA_KEYWORDS:
         if kw in lowered:
             return "metadata"
-    for kw in _SYNTHESIS_KEYWORDS:
+    # alpha32+: synthesis VERBS take precedence over filename detection
+    # so "summary.docx を作って" still routes to synthesis (user wants
+    # to GENERATE the file).
+    for kw in _SYNTHESIS_VERBS:
+        if kw in lowered:
+            return "synthesis"
+    # Bare filename — "分析プロンプト.txt です" / "see proposal.pdf" /
+    # "proposal_leasing.md" — even without an interrogative phrase or
+    # an existence verb, the presence of a recognisable filename in the
+    # input is treated as a metadata query. This catches the broken
+    # case where the user replies to a clarifying turn with just a
+    # filename, which earlier classifiers missed because the
+    # declarative form didn't match any keyword.
+    if _FILENAME_TOKEN_RE.search(user_input):
+        return "metadata"
+    # Synthesis NOUNS — bare nouns that imply generation only when
+    # there's no other signal. Sits BELOW filename detection so
+    # "proposal.pdf" (specific file, metadata) beats "proposal" the
+    # word.
+    for kw in _SYNTHESIS_NOUNS:
         if kw in lowered:
             return "synthesis"
     return "knowledge"

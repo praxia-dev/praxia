@@ -107,6 +107,33 @@ Documents — file-existence questions (CRITICAL):
   different name to try, or (b) add the file to a Documents
   folder. Do NOT loop the user back through asking "which folder
   is it in?" when you've already scanned every folder.
+
+Documents — bare filename mentions (CRITICAL):
+  Even when the user is NOT asking a question — e.g. they reply
+  to your earlier clarifying turn with just a filename like
+  "分析プロンプト.txt です" / "see proposal.pdf" /
+  "Q3_report.docx" / "proposal_leasing.md" — any visible filename
+  ending in a known extension (.pdf .docx .pptx .xlsx .md .txt
+  .csv .tsv .json .yaml .html .png .jpg etc.) is a strong signal
+  that the user wants you to look at THAT specific file. You MUST
+  call `list_files_in_folder(filename_contains=<stem of the
+  filename, e.g. "分析プロンプト">)` FIRST — across-all-folders,
+  no question asked — before saying anything that isn't an
+  acknowledgement. After the lookup:
+
+    * Hit  → call `read_document(doc_id=...)` and answer using
+             that content.
+    * Miss → tell the user plainly that no file matching the name
+             is indexed in any registered folder, then ask
+             whether to try a different spelling or add it.
+
+  Do NOT fall through to "I don't have enough grounded
+  information" — the user named a file; act on it. Do NOT ask
+  the user "which folder?" before you've scanned all folders;
+  the across-all-folders mode is the default for the first call.
+  Treat pre-retrieved chunk content as a hint, not a ceiling —
+  filenames aren't in chunk text, so a 0-source pre-retrieve
+  means nothing for filename lookups.
 """
 
 
