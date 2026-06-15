@@ -398,6 +398,85 @@ def _doc_mtime(doc) -> float:
     return float(mt)
 
 
+def _render_document(
+    agent: AutonomousAgent,
+    text: str,
+    format: str = "pptx",
+    title: str | None = None,
+    filename: str | None = None,
+) -> dict[str, Any]:
+    """Render Markdown / plain text into PPTX / DOCX / HTML / MD / JSON.
+
+    Use this when the user asks to **export** a piece of content the
+    agent has just produced — "スライドを出力して" / "PPTX で出して" /
+    "Word で書き出して" / "export as a deck". The expected workflow is:
+
+      1. In a prior turn, the agent produced a body of content
+         (a draft, a slide outline, a summary).
+      2. The user replies with an export verb ("output as slides").
+      3. The agent calls THIS tool, passing the prior draft as
+         `text` and the requested `format`. Do NOT ask the user
+         to re-supply the content — read it from your own prior
+         message.
+
+    `text` is Markdown by default. `format` is one of: pptx, docx,
+    html, md, json. `title` becomes the document title where the
+    exporter supports one (slide deck title slide, DOCX heading).
+    `filename` is the basename WITHOUT extension; the exporter
+    appends the right one. If omitted, defaults to "Praxia_export".
+    Files are written under ``<memory_dir>/exports/``; the absolute
+    path is returned so the user can open it.
+    """
+    if not text or not text.strip():
+        return {"saved": False, "error": "text is required (the content to render)"}
+    fmt = (format or "pptx").lower().lstrip(".")
+    try:
+        from praxia.io.exporters import export_as, supported_formats
+    except ImportError as e:
+        return {"saved": False, "error": f"exporters not installed: {e}"}
+    if fmt not in supported_formats():
+        return {
+            "saved": False,
+            "error": (
+                f"unknown format {fmt!r}. Supported: "
+                f"{', '.join(sorted(supported_formats()))}"
+            ),
+        }
+
+    import time as _time
+    safe_name = (filename or "Praxia_export").strip().rstrip(".")
+    # Strip any user-supplied extension since the exporter picks it.
+    if "." in safe_name and safe_name.rsplit(".", 1)[1].lower() in {
+        "pptx", "docx", "html", "md", "json", "txt",
+    }:
+        safe_name = safe_name.rsplit(".", 1)[0]
+    # Append a timestamp so repeat exports don't clobber.
+    stamp = _time.strftime("%Y%m%d_%H%M%S")
+    safe_name = f"{safe_name}_{stamp}"
+
+    out_dir = Path(agent.memory_dir) / "exports" / agent.user_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        kwargs: dict[str, Any] = {}
+        if title:
+            kwargs["title"] = title
+        result = export_as(text, format=fmt, **kwargs)
+        path = out_dir / f"{safe_name}.{result.suggested_extension}"
+        path.write_bytes(result.bytes)
+    except Exception as e:  # pragma: no cover
+        return {"saved": False, "error": f"export failed: {e}"}
+
+    return {
+        "saved": True,
+        "format": result.format,
+        "path": str(path),
+        "filename": path.name,
+        "bytes": len(result.bytes),
+        "title": title or "",
+    }
+
+
 def _list_files_in_folder(
     agent: AutonomousAgent,
     folder_id: str | None = None,
@@ -1331,6 +1410,65 @@ def builtin_tools() -> dict[str, AgentTool]:
             handler=_read_document,
         ),
         AgentTool(
+            name="render_document",
+            description=(
+                "Render Markdown / plain text into PPTX / DOCX / HTML / "
+                "MD / JSON and save it to disk. Use this when the user "
+                "asks to **export** content the agent has produced: "
+                "'スライドを出力して' / 'PPTX で出して' / 'Word で書き出"
+                "して' / 'export as a deck' / 'render this as slides'. "
+                "Workflow: in a prior turn you produced a draft; the "
+                "user now asks to materialise it. Call this tool with "
+                "your own prior draft text as `text` and the requested "
+                "format. Do NOT ask the user to re-supply the content "
+                "OR to specify slide count / theme / audience — read "
+                "the draft straight from your last assistant message "
+                "in the history. After success, tell the user the "
+                "file path and that they can open it from there."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": (
+                            "The content to render. Pass the prior "
+                            "assistant draft verbatim — Markdown is "
+                            "the canonical input; the PPTX exporter "
+                            "splits on headings and bullet lists."
+                        ),
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["pptx", "docx", "html", "md", "json"],
+                        "default": "pptx",
+                        "description": (
+                            "Output format. 'pptx' for slides, 'docx' "
+                            "for Word, 'html' for a self-contained "
+                            "webpage."
+                        ),
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": (
+                            "Optional title (used as PPTX title slide / "
+                            "DOCX H1). Use the user's language."
+                        ),
+                    },
+                    "filename": {
+                        "type": "string",
+                        "description": (
+                            "Optional basename (no extension). Defaults "
+                            "to 'Praxia_export'. A timestamp is appended "
+                            "automatically to avoid clobbering."
+                        ),
+                    },
+                },
+                "required": ["text"],
+            },
+            handler=_render_document,
+        ),
+        AgentTool(
             name="schedule_recurring_task",
             description=(
                 "Create a recurring scheduled agent run. Call this when "
@@ -1359,16 +1497,25 @@ def builtin_tools() -> dict[str, AgentTool]:
                     "prompt": {
                         "type": "string",
                         "description": (
-                            "The prompt to run on each firing. Make it "
-                            "self-contained — the LLM will see this with "
-                            "no surrounding conversation context."
+                            "The prompt to run on each firing. Make "
+                            "it self-contained — the LLM will see "
+                            "this with no surrounding conversation "
+                            "context. **Write it in the SAME "
+                            "language the user spoke**: a JA user "
+                            "should see a JA prompt in the Schedules "
+                            "tab, not a translated English one. e.g. "
+                            "if the user said '毎週月曜の朝に Documents "
+                            "の変更を要約して', the prompt should be "
+                            "「直近 7 日間の Documents の変更点を要約し"
+                            "てください。新規ファイル・主な更新を含め"
+                            "る」 — not 'Summarize the past 7 days…'."
                         ),
                     },
                     "label": {
                         "type": "string",
                         "description": (
                             "Optional short label for the user-facing "
-                            "Schedules list."
+                            "Schedules list. Use the user's language."
                         ),
                     },
                 },
@@ -1410,16 +1557,29 @@ def builtin_tools() -> dict[str, AgentTool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": (
-                            "One prompt per item the user wants processed. "
-                            "Each prompt must be self-contained — the LLM "
-                            "running each child sees only that prompt."
+                            "One prompt per item the user wants "
+                            "processed. Each prompt must be self-"
+                            "contained — the LLM running each child "
+                            "sees only that prompt. **Write every "
+                            "prompt in the SAME language the user "
+                            "spoke**: if the user said 'Documents の "
+                            "各 PDF からアクションアイテムを抽出して', "
+                            "each child prompt should be JA like "
+                            "「ファイル X.pdf からアクションアイテム "
+                            "(担当・期限・次のアクション) を抽出してく"
+                            "ださい。」 — not 'Extract action items "
+                            "from X.pdf'. The parent batch label is "
+                            "derived from the first prompt; if "
+                            "prompts are EN the label will be EN."
                         ),
                     },
                     "label": {
                         "type": "string",
                         "description": (
                             "Optional short label for the user-facing "
-                            "Batches list."
+                            "Batches list. Use the user's language. "
+                            "If omitted, the first prompt's first "
+                            "line becomes the label."
                         ),
                     },
                     "max_concurrency": {

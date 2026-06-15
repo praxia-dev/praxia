@@ -204,6 +204,29 @@ import re as _re
 # Documents UI (PDF / Office / images / structured / code) plus a few
 # code extensions the agent might be asked about. We keep this in sync
 # with the supported_label chip strip in Documents.svelte.
+# alpha33+: numeric-count batch detection. "PDF 8 件" / "8 つの議事録"
+# / "5 PDFs" / "複数のファイル" — these all imply per-item fan-out
+# even when the literal "全件 / each / for every" tokens are absent.
+# The classifier missed them and routed to knowledge → verifier
+# abstained on what was clearly a batch intent.
+_BATCH_NOUNS = (
+    r"pdfs?|files?|docs?|documents?|ファイル|資料|文書|"
+    r"議事録|レポート|reports?|契約書|提案書"
+)
+_BATCH_COUNT_RE = _re.compile(
+    # Three shapes the JA + EN classifier needs to catch:
+    #   (a) digit + counter      → "8 件", "10 個", "5 つ"
+    #   (b) digit + plural noun  → "5 PDFs", "8 議事録", "3 documents"
+    #   (c) quantifier (+ "の") + noun → "複数の議事録", "several files"
+    r"(?:"
+    r"\d+\s*(?:件|個|つ|本|枚)"
+    r"|\d+\s*(?:" + _BATCH_NOUNS + r")"
+    r"|(?:複数|何件か|several|multiple)\s*(?:の\s*)?(?:" + _BATCH_NOUNS + r")"
+    r")",
+    flags=_re.IGNORECASE,
+)
+
+
 _FILENAME_TOKEN_RE = _re.compile(
     # Filename-like token: one or more word / dot / hyphen / underscore
     # characters (including JA kana / kanji ranges) followed by a dot
@@ -315,6 +338,11 @@ def default_task_classifier(user_input: str) -> str:
     for kw in _BATCH_KEYWORDS:
         if kw in lowered:
             return "batch"
+    # alpha33+: numeric-count phrases like "PDF 8 件" / "8 つの議事録"
+    # / "5 PDFs" — implicit per-item fan-out without the literal
+    # "for each" / "全件" / "各" tokens.
+    if _BATCH_COUNT_RE.search(user_input):
+        return "batch"
     for kw in _METADATA_KEYWORDS:
         if kw in lowered:
             return "metadata"

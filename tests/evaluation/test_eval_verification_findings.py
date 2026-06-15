@@ -238,6 +238,63 @@ class TestTaskRouterK6:
         assert default_task_classifier(prompt) == "knowledge"
 
     @pytest.mark.parametrize("prompt", [
+        # alpha33+: numeric-count batch phrases. Caught the demo-recording
+        # failure: "Documents の PDF 8 件から…" was missed by the literal
+        # _BATCH_KEYWORDS list and abstained.
+        "Documents の PDF 8 件からアクションアイテムを抽出して",
+        "8 つの議事録 PDF から要約",
+        "5 PDFs を要約",
+        "複数の議事録から要点抽出",
+        "複数のファイルを分類",
+        "several files to summarise",
+        "multiple documents please",
+    ])
+    def test_numeric_count_classified_as_batch(self, prompt: str) -> None:
+        assert default_task_classifier(prompt) == "batch"
+
+    def test_render_document_tool_registered(self) -> None:
+        """alpha33+ regression: render_document must be in builtin tools
+        so the agent can materialise prior-turn drafts as PPTX/DOCX/etc.
+        Without this, 'スライドを出力して' has no tool to land on and
+        the agent loops back to clarifying questions."""
+        from praxia.agent.tools import builtin_tools
+        tools = builtin_tools()
+        assert "render_document" in tools
+        schema = tools["render_document"].parameters_schema
+        # `text` is required (the content to render — prior draft).
+        assert "text" in schema["required"]
+        # `format` must enumerate at least pptx/docx/html so the LLM
+        # knows it's not a free-form string.
+        fmt_enum = schema["properties"]["format"].get("enum", [])
+        for needed in ("pptx", "docx", "html", "md"):
+            assert needed in fmt_enum, f"render_document missing {needed} format"
+
+    def test_render_document_produces_pptx_bytes(self, tmp_path) -> None:
+        """End-to-end smoke: render_document(format='pptx') with a
+        markdown body actually writes a non-trivial .pptx to disk.
+        Catches regressions in the underlying exporter wiring."""
+        from unittest.mock import MagicMock
+        from praxia.agent.tools import _render_document
+
+        agent = MagicMock()
+        agent.user_id = "alice"
+        agent.memory_dir = str(tmp_path)
+        res = _render_document(
+            agent,
+            text="# Q3 Retro\n\n- bullet 1\n- bullet 2",
+            format="pptx",
+            title="Q3 Review",
+        )
+        assert res["saved"] is True
+        assert res["format"] == "pptx"
+        # python-pptx output is typically 25-60 KB for a small deck;
+        # any value > 1 KB means the exporter actually built a file.
+        assert res["bytes"] > 1024
+        from pathlib import Path as _P
+        assert _P(res["path"]).exists()
+        assert _P(res["path"]).suffix == ".pptx"
+
+    @pytest.mark.parametrize("prompt", [
         # JA — existence / lookup phrases the user actually typed when
         # the bug surfaced.
         "分析プロンプト.txt はありませんか？",

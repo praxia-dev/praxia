@@ -247,6 +247,48 @@ def build_router(*, current_user: Any, storage: Path):
 
     # --- thread persistence (lightweight clone — keeps this router self-contained) ----
 
+    def _load_thread_history(
+        user_id: str,
+        thread_id: str,
+        *,
+        max_messages: int = 30,
+    ) -> list[dict[str, str]]:
+        """Read the thread's last ``max_messages`` user+assistant turns
+        so the agent can see the prior conversation context.
+
+        alpha33+ fix for a long-standing latent bug: previously the
+        agent router persisted every message but never loaded the
+        history back into ``agent.run(history=...)``. Every chat turn
+        ran statelessly, so follow-ups like "スライドを出力して"
+        (referring to a draft in the previous assistant turn) couldn't
+        use the prior content. The UI showed a conversation but the
+        LLM didn't see one.
+
+        Returns a list of ``{role, content}`` dicts in chronological
+        order — what AutonomousAgent expects as ``history``. Returns
+        an empty list when the thread doesn't exist (so callers don't
+        crash on a brand-new conversation).
+        """
+        import json
+        p = chats_root / user_id / f"{thread_id}.json"
+        if not p.exists():
+            return []
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return []
+        msgs = data.get("messages") or []
+        # Keep only the trailing window — long threads otherwise
+        # blow the prompt budget on weaker models.
+        msgs = msgs[-int(max_messages):]
+        out: list[dict[str, str]] = []
+        for m in msgs:
+            role = m.get("role")
+            content = m.get("content")
+            if role in ("user", "assistant") and isinstance(content, str):
+                out.append({"role": role, "content": content})
+        return out
+
     def _append_to_thread(
         user_id: str,
         thread_id: str,
@@ -368,6 +410,13 @@ def build_router(*, current_user: Any, storage: Path):
             user_images=list(req.images or []),
         )
 
+        # alpha33+: load prior turns BEFORE appending the new user
+        # message — otherwise the new message would appear twice in
+        # the agent's view (once in history, once in the prompt).
+        thread_history: list[dict[str, str]] = []
+        if req.thread_id:
+            thread_history = _load_thread_history(user.id, req.thread_id)
+
         # If thread_id supplied, persist user message first (so the agent
         # sees it as user-said, and so retries pick it up).
         user_msg_id = None
@@ -385,7 +434,11 @@ def build_router(*, current_user: Any, storage: Path):
                     max_verify_rounds=max(1, int(req.max_verify_rounds)),
                     require_citations=True,
                 )
-                cresult = agent.run(augmented_prompt, images=merged_images or None)
+                cresult = agent.run(
+                    augmented_prompt,
+                    history=thread_history or None,
+                    images=merged_images or None,
+                )
                 final_text = cresult.answer
                 # Serialise the retrieved sources so the UI can render a
                 # "where did [D#N] come from" panel. We cap the preview
@@ -415,7 +468,11 @@ def build_router(*, current_user: Any, storage: Path):
                     pending_file_operations=list(pending_file_ops),
                 )
             else:
-                result = inner.run(augmented_prompt, images=merged_images or None)
+                result = inner.run(
+                    augmented_prompt,
+                    history=thread_history or None,
+                    images=merged_images or None,
+                )
                 resp = AgentRunResponse(
                     text=result.final_text,
                     tool_calls=[
