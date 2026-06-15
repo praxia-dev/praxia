@@ -398,6 +398,282 @@ def _doc_mtime(doc) -> float:
     return float(mt)
 
 
+def _get_batch_results(
+    agent: AutonomousAgent,
+    batch_id: str,
+    *,
+    wait_for_completion: bool = True,
+    timeout_sec: int = 60,
+    max_chars_per_child: int = 4000,
+) -> dict[str, Any]:
+    """Fetch the per-child results of a previously-launched batch.
+
+    Pair with ``run_parallel_tasks``: after fanning out across N
+    files, the user typically asks for the aggregate ("一覧にまとめ
+    て" / "consolidate the results" / "merge the action items").
+    Without this tool the LLM has no way to read back what the
+    children produced and falls back to asking the user to paste
+    the results manually — which is exactly the failure that
+    motivated alpha34.
+
+    Args:
+      batch_id: the id returned by ``run_parallel_tasks``. The LLM
+        gets it from its own prior assistant message in the thread
+        (history is now threaded in via alpha33).
+      wait_for_completion: poll every ~1s up to ``timeout_sec`` until
+        every child has reached a terminal state (done / error /
+        cancelled). Default True because the typical "now consolidate"
+        flow happens seconds after the fan-out.
+      timeout_sec: hard cap on the wait. Bounded at 5..300.
+      max_chars_per_child: truncate each child's result text so the
+        aggregate doesn't blow up the LLM context window. 4 000
+        chars per child × 100 children ≤ 400k chars, well below
+        most providers' context. The LLM can re-fetch one child at
+        higher detail if needed.
+
+    Returns ``{found, batch_id, label, total, counts, children:
+    [{task_id, prompt, status, result_text, error}, ...]}``.
+    """
+    if not batch_id or not batch_id.strip():
+        return {"found": False, "error": "batch_id is required"}
+
+    try:
+        from praxia.server.routers.batch import _load as _load_batch
+        from praxia.server.routers.tasks import _load as _load_task
+    except ImportError:
+        return {"found": False, "error": "praxia[server] not installed"}
+
+    storage = Path(agent.memory_dir)
+    user_id = agent.user_id
+    batch = _load_batch(storage, user_id, batch_id.strip())
+    if batch is None:
+        return {
+            "found": False,
+            "error": (
+                f"batch_id {batch_id!r} not found for this user. "
+                "Confirm the id from your prior assistant message "
+                "or list recent batches via the Batches tab."
+            ),
+        }
+
+    import time as _t
+    deadline = _t.time() + max(5, min(int(timeout_sec or 60), 300))
+    terminal = {"done", "error", "cancelled"}
+
+    def _snapshot() -> list:
+        return [_load_task(storage, user_id, tid) for tid in batch.task_ids]
+
+    tasks = _snapshot()
+    if wait_for_completion:
+        while _t.time() < deadline:
+            unfinished = [t for t in tasks if t is not None and t.status not in terminal]
+            if not unfinished:
+                break
+            _t.sleep(1.0)
+            tasks = _snapshot()
+
+    counts: dict[str, int] = {"pending": 0, "running": 0, "done": 0, "error": 0, "cancelled": 0, "missing": 0}
+    children: list[dict[str, Any]] = []
+    for tid, task in zip(batch.task_ids, tasks):
+        if task is None:
+            counts["missing"] += 1
+            children.append({"task_id": tid, "status": "missing"})
+            continue
+        counts[task.status] = counts.get(task.status, 0) + 1
+        # Result body — agent worker stores it under `task.result["text"]`
+        # (the final_text from inner.run). For verified runs the answer
+        # lands at `task.result["answer"]`; check both.
+        result_text = ""
+        if task.result:
+            result_text = str(task.result.get("text") or task.result.get("answer") or "")
+        truncated = len(result_text) > max_chars_per_child
+        if truncated:
+            result_text = result_text[: int(max_chars_per_child)]
+        children.append({
+            "task_id": task.id,
+            "prompt": (task.args.get("prompt") or "")[:500],
+            "status": task.status,
+            "result_text": result_text,
+            "result_truncated": truncated,
+            "error": task.error or "",
+        })
+
+    return {
+        "found": True,
+        "batch_id": batch.id,
+        "label": batch.label or "",
+        "total": len(batch.task_ids),
+        "counts": counts,
+        "children": children,
+    }
+
+
+def _get_task_result(
+    agent: AutonomousAgent,
+    task_id: str,
+    *,
+    wait_for_completion: bool = True,
+    timeout_sec: int = 60,
+    max_chars: int = 8000,
+) -> dict[str, Any]:
+    """Read the result of one previously-created agent Task by id.
+
+    Tasks here are the records the Tasks tab shows: each one wraps a
+    single agent_run (scheduler-fired or test-triggered). When the
+    user asks "あのタスクの結果は？" / "what did task X return?",
+    call this. Same wait-on-completion behaviour as
+    get_batch_results.
+    """
+    if not task_id or not task_id.strip():
+        return {"found": False, "error": "task_id is required"}
+    try:
+        from praxia.server.routers.tasks import _load as _load_task
+    except ImportError:
+        return {"found": False, "error": "praxia[server] not installed"}
+    storage = Path(agent.memory_dir)
+    user_id = agent.user_id
+    task = _load_task(storage, user_id, task_id.strip())
+    if task is None:
+        return {
+            "found": False,
+            "error": f"task_id {task_id!r} not found for this user.",
+        }
+    import time as _t
+    deadline = _t.time() + max(5, min(int(timeout_sec or 60), 300))
+    terminal = {"done", "error", "cancelled"}
+    if wait_for_completion:
+        while task.status not in terminal and _t.time() < deadline:
+            _t.sleep(1.0)
+            task = _load_task(storage, user_id, task_id.strip())
+            if task is None:
+                break
+    result_text = ""
+    if task and task.result:
+        result_text = str(task.result.get("text") or task.result.get("answer") or "")
+    truncated = len(result_text) > max_chars
+    if truncated:
+        result_text = result_text[: int(max_chars)]
+    return {
+        "found": True,
+        "task_id": task.id,
+        "status": task.status,
+        "prompt": (task.args.get("prompt") or "")[:500],
+        "created_at": task.created_at,
+        "finished_at": task.finished_at,
+        "result_text": result_text,
+        "result_truncated": truncated,
+        "error": task.error or "",
+    }
+
+
+def _list_recent_tasks(
+    agent: AutonomousAgent,
+    limit: int = 20,
+    status: str | None = None,
+) -> dict[str, Any]:
+    """List the user's recent Tasks (newest first).
+
+    Pair with ``get_task_result``: when the user says "show me my
+    recent tasks" / "最近のタスク見せて" / "what failed this week?"
+    this returns a compact list of task summaries. ``status`` filters
+    to one of pending / running / done / error / cancelled.
+    """
+    try:
+        from praxia.server.routers.tasks import _load as _load_task, _tasks_dir
+    except ImportError:
+        return {"tasks": [], "count": 0, "error": "praxia[server] not installed"}
+    storage = Path(agent.memory_dir)
+    d = _tasks_dir(storage, agent.user_id)
+    rows: list[dict[str, Any]] = []
+    for f in d.glob("*.json"):
+        rec = _load_task(storage, agent.user_id, f.stem)
+        if rec is None:
+            continue
+        if status and rec.status != status:
+            continue
+        rows.append({
+            "task_id": rec.id,
+            "kind": rec.kind,
+            "status": rec.status,
+            "created_at": rec.created_at,
+            "finished_at": rec.finished_at,
+            "prompt": (rec.args.get("prompt") or "")[:200],
+            "batch_id": rec.args.get("_batch_id") or "",
+            "schedule_id": rec.args.get("_schedule_id") or "",
+        })
+    rows.sort(key=lambda r: r.get("created_at") or 0.0, reverse=True)
+    n = max(1, min(int(limit or 20), 200))
+    return {"tasks": rows[:n], "count": min(n, len(rows)), "total_in_store": len(rows)}
+
+
+def _list_recent_batches(
+    agent: AutonomousAgent,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """List the user's recent Batches (newest first).
+
+    Useful when the user says "あのバッチの結果は？" but didn't
+    repeat the batch_id — the LLM can list recent batches, find
+    the one matching context (label / created_at / prompt
+    keywords), then call get_batch_results with its id.
+    """
+    try:
+        from praxia.server.routers.batch import _load as _load_batch, _batches_dir
+    except ImportError:
+        return {"batches": [], "count": 0, "error": "praxia[server] not installed"}
+    storage = Path(agent.memory_dir)
+    d = _batches_dir(storage, agent.user_id)
+    rows: list[dict[str, Any]] = []
+    for f in d.glob("*.json"):
+        rec = _load_batch(storage, agent.user_id, f.stem)
+        if rec is None:
+            continue
+        rows.append({
+            "batch_id": rec.id,
+            "label": rec.label or "",
+            "task_count": len(rec.task_ids),
+            "created_at": rec.created_at,
+        })
+    rows.sort(key=lambda r: r.get("created_at") or 0.0, reverse=True)
+    n = max(1, min(int(limit or 10), 100))
+    return {"batches": rows[:n], "count": min(n, len(rows))}
+
+
+def _list_my_schedules(
+    agent: AutonomousAgent,
+    include_disabled: bool = False,
+) -> dict[str, Any]:
+    """List the user's cron-style Schedules.
+
+    Pair with ``schedule_recurring_task``: after creating a schedule
+    the user often asks "予定一覧出して" / "what schedules do I
+    have?". Returns each with schedule_id + cron + prompt + next /
+    last run timestamps + enabled flag.
+    """
+    try:
+        from praxia.server.routers.schedules import _load_all_for_user
+    except ImportError:
+        return {"schedules": [], "count": 0, "error": "praxia[server] not installed"}
+    storage = Path(agent.memory_dir)
+    records = _load_all_for_user(storage, agent.user_id) or []
+    rows: list[dict[str, Any]] = []
+    for rec in records:
+        if not include_disabled and not rec.enabled:
+            continue
+        rows.append({
+            "schedule_id": rec.id,
+            "cron": rec.cron,
+            "prompt": rec.prompt[:200],
+            "enabled": rec.enabled,
+            "created_at": rec.created_at,
+            "last_run_at": rec.last_run_at,
+            "last_task_id": rec.last_task_id,
+            "next_run_at": rec.next_run_at,
+        })
+    rows.sort(key=lambda r: r.get("next_run_at") or 0.0)
+    return {"schedules": rows, "count": len(rows)}
+
+
 def _render_document(
     agent: AutonomousAgent,
     text: str,
@@ -1596,6 +1872,194 @@ def builtin_tools() -> dict[str, AgentTool]:
                 "required": ["prompts"],
             },
             handler=_run_parallel_tasks,
+        ),
+        AgentTool(
+            name="get_batch_results",
+            description=(
+                "Fetch the per-child results of a batch you (or a "
+                "prior turn) already launched via "
+                "`run_parallel_tasks`. Call this WHEN the user "
+                "asks to aggregate / merge / consolidate the results "
+                "('8 件分のアクションアイテムを一覧にまとめて' / "
+                "'consolidate the action items across all PDFs' / "
+                "'merge them into one list'). The batch_id comes "
+                "from your own prior assistant message — the thread "
+                "history now carries it, so look at the previous "
+                "turn first.\n"
+                "\n"
+                "By default this waits up to 60s for every child to "
+                "finish (poll every ~1s) so the aggregate is "
+                "complete. Pass wait_for_completion=False to get a "
+                "snapshot of whatever's done so far, without waiting. "
+                "Each child returns task_id + the original prompt + "
+                "status + result_text (truncated to "
+                "max_chars_per_child, default 4000). Counts summary "
+                "tells the LLM how many are done/error/in-flight at "
+                "a glance.\n"
+                "\n"
+                "After fetching, synthesise the aggregate in the "
+                "user's language: a one-paragraph summary across "
+                "files PLUS a per-file bullet list with the source "
+                "filename. DO NOT ask the user to paste the results "
+                "in — that's the bug this tool exists to fix."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "batch_id": {
+                        "type": "string",
+                        "description": (
+                            "Hex id returned by run_parallel_tasks. "
+                            "Required."
+                        ),
+                    },
+                    "wait_for_completion": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": (
+                            "Poll until every child terminates (or "
+                            "timeout). Set False for an immediate "
+                            "snapshot of partial results."
+                        ),
+                    },
+                    "timeout_sec": {
+                        "type": "integer",
+                        "minimum": 5,
+                        "maximum": 300,
+                        "default": 60,
+                        "description": (
+                            "Max seconds to wait when "
+                            "wait_for_completion=True. Bounded."
+                        ),
+                    },
+                    "max_chars_per_child": {
+                        "type": "integer",
+                        "minimum": 200,
+                        "maximum": 50000,
+                        "default": 4000,
+                        "description": (
+                            "Truncate each child's result_text to "
+                            "this many chars so the aggregate fits "
+                            "the context window."
+                        ),
+                    },
+                },
+                "required": ["batch_id"],
+            },
+            handler=_get_batch_results,
+        ),
+        AgentTool(
+            name="list_recent_batches",
+            description=(
+                "List the user's recent Batches (newest first), so "
+                "the LLM can find a batch_id by context when the user "
+                "didn't repeat it. Returns each batch's id, label, "
+                "child task_count, and created_at. Follow with "
+                "`get_batch_results(batch_id=...)` to read the per-"
+                "child outputs."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "default": 10,
+                    },
+                },
+            },
+            handler=_list_recent_batches,
+        ),
+        AgentTool(
+            name="get_task_result",
+            description=(
+                "Read the result of one previously-created agent Task "
+                "by id. Tasks are the records the Tasks tab shows — "
+                "each one wraps a single agent_run (scheduler-fired "
+                "or test-triggered). Call this when the user asks "
+                "about a specific task ('あのタスクの結果は？' / "
+                "'what did task X return?'). Default waits up to 60s "
+                "for in-flight runs to terminate, same shape as "
+                "get_batch_results."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string"},
+                    "wait_for_completion": {
+                        "type": "boolean", "default": True,
+                    },
+                    "timeout_sec": {
+                        "type": "integer",
+                        "minimum": 5, "maximum": 300, "default": 60,
+                    },
+                    "max_chars": {
+                        "type": "integer",
+                        "minimum": 200, "maximum": 50000, "default": 8000,
+                    },
+                },
+                "required": ["task_id"],
+            },
+            handler=_get_task_result,
+        ),
+        AgentTool(
+            name="list_recent_tasks",
+            description=(
+                "List the user's recent Tasks (newest first). Useful "
+                "for '最近のタスクは？' / 'show me failed tasks this "
+                "week' / 'what did the agent do yesterday?'. Optional "
+                "`status` filter (pending / running / done / error / "
+                "cancelled). Each row carries task_id, kind, status, "
+                "the original prompt (truncated), parent batch_id or "
+                "schedule_id when applicable. Follow with "
+                "`get_task_result(task_id=...)` for the full text."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1, "maximum": 200, "default": 20,
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending", "running", "done",
+                            "error", "cancelled",
+                        ],
+                        "description": (
+                            "Optional status filter. Omit for all."
+                        ),
+                    },
+                },
+            },
+            handler=_list_recent_tasks,
+        ),
+        AgentTool(
+            name="list_my_schedules",
+            description=(
+                "List the user's cron-style Schedules created via "
+                "`schedule_recurring_task` (or via the Schedules tab). "
+                "Each entry: schedule_id, cron expression, prompt "
+                "(truncated), enabled flag, last_run_at, "
+                "last_task_id, next_run_at. Sorted by next_run_at "
+                "ascending so the soonest-firing schedule comes "
+                "first. Use this for '予定一覧' / 'what schedules "
+                "do I have?' / 'when does the next one fire?'. "
+                "Disabled schedules are hidden by default — pass "
+                "include_disabled=true to see them too."
+            ),
+            parameters_schema={
+                "type": "object",
+                "properties": {
+                    "include_disabled": {
+                        "type": "boolean",
+                        "default": False,
+                    },
+                },
+            },
+            handler=_list_my_schedules,
         ),
         AgentTool(
             name="final_answer",
