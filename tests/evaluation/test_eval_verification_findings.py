@@ -272,7 +272,14 @@ class TestTaskRouterK6:
     def test_render_document_produces_pptx_bytes(self, tmp_path) -> None:
         """End-to-end smoke: render_document(format='pptx') with a
         markdown body actually writes a non-trivial .pptx to disk.
-        Catches regressions in the underlying exporter wiring."""
+        Catches regressions in the underlying exporter wiring.
+
+        Skipped when python-pptx is not installed — the PPTX exporter
+        is in the ``praxia[office]`` optional extra. The plain CI
+        suite (no extras) auto-skips; running with extras runs the
+        end-to-end check.
+        """
+        pytest.importorskip("pptx")
         from unittest.mock import MagicMock
         from praxia.agent.tools import _render_document
 
