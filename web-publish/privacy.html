@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy Policy — Praxia</title>
+  <meta name="description" content="Privacy policy for Praxia Desktop and Praxia OSS — what data we collect, what we don't, and how third-party LLM providers fit in." />
+  <link rel="canonical" href="https://praxia.tools/privacy.html" />
+  <link rel="stylesheet" href="styles.css?v=alpha38" />
+  <style>
+    .legal-wrap {
+      max-width: 760px;
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+      line-height: 1.7;
+      color: #1f2937;
+    }
+    .legal-wrap h1 { font-size: 2rem; margin-bottom: 0.4rem; }
+    .legal-wrap h2 { font-size: 1.3rem; margin-top: 2.4rem; color: #1F3A8A; }
+    .legal-wrap h3 { font-size: 1.05rem; margin-top: 1.6rem; }
+    .legal-wrap .stamp { color: #6b7280; font-size: 0.9rem; margin-bottom: 2rem; }
+    .legal-wrap ul { padding-left: 1.4rem; }
+    .legal-wrap li { margin-bottom: 0.4rem; }
+    .legal-wrap code { background: #f3f4f6; padding: 1px 6px; border-radius: 4px; font-size: 0.9em; }
+    .legal-wrap .callout {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      margin: 1.4rem 0;
+      color: #92400e;
+    }
+    .legal-wrap .back { display: inline-block; margin-bottom: 1rem; color: #1F3A8A; text-decoration: none; }
+    .legal-wrap .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="legal-wrap">
+    <a class="back" href="/">← Praxia</a>
+    <h1>Praxia — Privacy Policy</h1>
+    <p class="stamp">Last updated: 2026-06-17 · Version 1.0</p>
+
+    <p>
+      Praxia is a <strong>local-first AI workspace</strong>. The desktop
+      application stores your documents, conversations, and workspace
+      files on your own machine and never uploads them to our servers.
+      We do not operate a backend that holds your content.
+    </p>
+
+    <div class="callout">
+      <strong>One important caveat:</strong> Praxia routes your prompts
+      and selected document context to the LLM provider you configure
+      (OpenAI, Anthropic, Azure OpenAI, Google Gemini, Ollama, etc.).
+      That third-party request is governed by <em>that provider's</em>
+      privacy policy, not ours. Picking a local model (Ollama) keeps
+      the entire request on your machine.
+    </div>
+
+    <h2>1. What Praxia Desktop stores on your machine</h2>
+    <p>
+      Praxia Desktop creates a workspace folder on your computer (default:
+      <code>%APPDATA%\Praxia\</code>) and stores:
+    </p>
+    <ul>
+      <li>Your chat threads and message history</li>
+      <li>Indexed text snippets of the Documents folders you registered</li>
+      <li>Vector embeddings of those snippets (for retrieval)</li>
+      <li>Scheduled tasks, batch results, and saved workspace files</li>
+      <li>Your API keys for the LLM providers you configured, in OS-level secure storage (Windows Credential Manager)</li>
+    </ul>
+    <p>
+      None of the above is transmitted to praxia.tools or to any server
+      we operate. You can inspect or delete this data at any time by
+      removing the workspace folder.
+    </p>
+
+    <h2>2. What is sent to the LLM provider you choose</h2>
+    <p>
+      When you send a chat message, run a batch, generate a document, or
+      execute a scheduled task, Praxia constructs a prompt that may
+      include:
+    </p>
+    <ul>
+      <li>Your message text</li>
+      <li>Conversation history of the current thread (last ~30 turns)</li>
+      <li>Retrieved snippets from your indexed documents — only the
+          chunks the retriever judged relevant, not the entire library</li>
+      <li>Your selected schedule / batch metadata when relevant</li>
+    </ul>
+    <p>
+      This prompt is sent over HTTPS to the API endpoint of the provider
+      you configured. We do not see, log, or proxy that traffic.
+    </p>
+    <p>
+      <strong>Common providers and their data handling notes:</strong>
+    </p>
+    <ul>
+      <li><strong>OpenAI</strong> (api.openai.com): per their API
+          data-usage policy, content sent via the API is not used to
+          train OpenAI models by default. <a href="https://openai.com/policies/api-data-usage-policies" target="_blank" rel="noopener noreferrer">Reference</a>.</li>
+      <li><strong>Anthropic</strong> (api.anthropic.com): same — API
+          inputs and outputs are not used to train models by default.
+          <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer">Reference</a>.</li>
+      <li><strong>Azure OpenAI</strong>: governed by your Azure tenant
+          settings. Microsoft does not use Azure OpenAI inputs for
+          training. <a href="https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/data-privacy" target="_blank" rel="noopener noreferrer">Reference</a>.</li>
+      <li><strong>Google Gemini</strong> (generativelanguage.googleapis.com):
+          governed by Google Cloud terms.
+          <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Reference</a>.</li>
+      <li><strong>Ollama / LM Studio</strong> (localhost): the request
+          never leaves your machine.</li>
+    </ul>
+    <p>
+      If you switch providers in Settings, Praxia immediately starts
+      using the new one — there is no migration or copy of past data
+      to the new provider.
+    </p>
+
+    <h2>3. Telemetry and analytics</h2>
+    <h3>3.1 Praxia Desktop (the Windows app)</h3>
+    <p>
+      Praxia Desktop ships with <strong>telemetry disabled by default</strong>.
+      It does not phone home, count starts, or report errors back to us.
+    </p>
+    <p>
+      The only outbound HTTP requests the app makes on its own are:
+    </p>
+    <ul>
+      <li>A periodic check to <code>https://api.github.com/repos/praxia-dev/praxia/releases</code> to detect new versions. This is a public, unauthenticated GitHub endpoint and does not identify you.</li>
+      <li>OAuth callback round-trips when you connect a SaaS provider (Slack, GitHub, Notion, etc.) — these go directly to the provider, not to us.</li>
+    </ul>
+
+    <h3>3.2 The praxia.tools website</h3>
+    <p>
+      The landing page at <a href="https://praxia.tools/">praxia.tools</a>
+      uses Google Analytics 4 (measurement ID <code>G-2128CCW5WP</code>).
+      GA4 is loaded only after you accept the consent banner, and
+      collects standard page-view metrics (page URL, language, browser
+      family, country). It does not see anything inside the desktop app.
+    </p>
+
+    <h2>4. Open-source core (praxia on PyPI)</h2>
+    <p>
+      The orchestration core that Praxia Desktop bundles is published
+      as the
+      <a href="https://pypi.org/project/praxia/" target="_blank" rel="noopener noreferrer"><code>praxia</code></a>
+      package under Apache License 2.0. Anyone can audit the code on
+      <a href="https://github.com/praxia-dev/praxia" target="_blank" rel="noopener noreferrer">GitHub</a>
+      and verify how prompts are constructed, which endpoints are called,
+      and what local storage looks like. The package itself emits no
+      telemetry.
+    </p>
+
+    <h2>5. Children's privacy</h2>
+    <p>
+      Praxia is a productivity tool for adults and is not directed at
+      children under 13. We do not knowingly collect data from children.
+    </p>
+
+    <h2>6. Your choices</h2>
+    <ul>
+      <li><strong>Stop sending data to a cloud LLM</strong>: switch the
+          provider to Ollama or LM Studio in Settings.</li>
+      <li><strong>Stop the desktop app from contacting GitHub for
+          updates</strong>: disable the in-app updater in Settings.</li>
+      <li><strong>Delete everything Praxia stored</strong>: uninstall the
+          app and remove the workspace folder
+          (<code>%APPDATA%\Praxia\</code>).</li>
+      <li><strong>Opt out of website analytics</strong>: decline the
+          consent banner on praxia.tools, or use any standard tracker-
+          blocker.</li>
+    </ul>
+
+    <h2>7. Contact</h2>
+    <p>
+      Questions about this policy: open a GitHub Issue at
+      <a href="https://github.com/praxia-dev/praxia/issues" target="_blank" rel="noopener noreferrer">github.com/praxia-dev/praxia/issues</a>.
+    </p>
+
+    <h2>8. Changes to this policy</h2>
+    <p>
+      We may revise this policy. Material changes will be noted at the
+      top of this page with a new version stamp. The current version is
+      always at <a href="https://praxia.tools/privacy.html">praxia.tools/privacy.html</a>.
+    </p>
+  </div>
+</body>
+</html>
