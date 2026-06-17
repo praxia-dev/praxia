@@ -15,6 +15,8 @@ from praxia.agent.commander import (
     CommandedResult,
     DEFAULT_ABSTAIN_MESSAGE,
     DefaultMemoryRetriever,
+    LLMTaskClassifier,
+    default_task_classifier,
 )
 from praxia.agent.result import AgentResult
 from praxia.agent.verifier import ClaimScore, Source, Verdict
@@ -202,6 +204,11 @@ class TestAcceptPath:
 
 
 class TestAbstainPath:
+    """Legacy blocking mode (verifier_mode='blocking') replaces the
+    draft with the abstain_message. Default mode is now 'advisory' —
+    see TestAdvisoryAbstain below — so each test that wants the old
+    behavior opts in explicitly."""
+
     def test_abstain_returns_abstain_message_and_no_citations(self):
         inner = _FakeInnerAgent(drafts=["I'll just guess things"])
         verifier = _ScriptedVerifier(verdicts=[_verdict_abstain()])
@@ -209,6 +216,7 @@ class TestAbstainPath:
             inner,  # type: ignore[arg-type]
             verifier=verifier,
             retriever=lambda q: _sources(("L1#0", "x")),
+            verifier_mode="blocking",
         )
         result = agent.run("q?")
         assert result.stopped_reason == "abstain"
@@ -223,9 +231,39 @@ class TestAbstainPath:
             verifier=verifier,
             retriever=lambda q: _sources(("L1#0", "x")),
             abstain_message="custom abstain text",
+            verifier_mode="blocking",
         )
         result = agent.run("q?")
         assert result.answer == "custom abstain text"
+
+
+class TestAdvisoryAbstain:
+    """alpha39+: advisory is the default. The inner agent's draft is
+    returned unchanged and the verifier rationale is exposed via
+    `advisory_note` for the UI to render as a soft warning badge."""
+
+    def test_advisory_keeps_draft_and_sets_note(self):
+        inner = _FakeInnerAgent(drafts=["the actual answer the agent produced"])
+        verifier = _ScriptedVerifier(verdicts=[_verdict_abstain()])
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=verifier,
+            retriever=lambda q: _sources(("L1#0", "x")),
+        )
+        result = agent.run("q?")
+        assert result.stopped_reason == "abstain_advisory"
+        assert result.answer == "the actual answer the agent produced"
+        assert result.advisory_note.startswith("Low grounding")
+        # The verdict is still on the result so callers can inspect it.
+        assert result.verdict.decision == "abstain"
+
+    def test_advisory_is_the_default_mode(self):
+        agent = CommandedAgent(
+            _FakeInnerAgent(drafts=["x"]),  # type: ignore[arg-type]
+            verifier=_ScriptedVerifier(verdicts=[_verdict_abstain()]),
+            retriever=lambda q: _sources(("L1#0", "x")),
+        )
+        assert agent.verifier_mode == "advisory"
 
 
 # ---------------------------------------------------------------------------
@@ -265,6 +303,7 @@ class TestRedraftLoop:
             verifier=verifier,
             retriever=lambda q: _sources(("L1#0", "x")),
             max_verify_rounds=3,
+            verifier_mode="blocking",
         )
         result = agent.run("q?")
         assert result.stopped_reason == "abstain"
@@ -278,7 +317,7 @@ class TestRedraftLoop:
 
 class TestMaxRoundsBudget:
     def test_max_rounds_with_abstain_default(self):
-        # 2 rounds, both redraft → exhausted → default policy abstains.
+        # 2 rounds, both redraft → exhausted → blocking policy abstains.
         # min_groundedness_improvement=0 disables the no-improvement
         # early-stop so we can specifically exercise the max-rounds path.
         inner = _FakeInnerAgent(drafts=["d1", "d2"])
@@ -292,6 +331,7 @@ class TestMaxRoundsBudget:
             retriever=lambda q: _sources(("L1#0", "x")),
             max_verify_rounds=2,
             min_groundedness_improvement=0.0,
+            verifier_mode="blocking",
         )
         result = agent.run("q?")
         assert result.stopped_reason == "abstain"
@@ -299,6 +339,11 @@ class TestMaxRoundsBudget:
         assert len(result.rounds) == 2
 
     def test_max_rounds_without_abstain_returns_last_draft(self):
+        # Legacy: blocking mode + abstain_on_max_rounds=False → returns
+        # the last draft with stopped_reason="max_rounds". The advisory
+        # default also returns the last draft (with stopped_reason
+        # ="abstain_advisory") so callers get the inner LLM's output
+        # in both, but the legacy reason is preserved when blocking.
         inner = _FakeInnerAgent(drafts=["d1", "d2"])
         verifier = _ScriptedVerifier(verdicts=[
             _verdict_redraft(["a"]),
@@ -311,6 +356,7 @@ class TestMaxRoundsBudget:
             max_verify_rounds=2,
             abstain_on_max_rounds=False,
             min_groundedness_improvement=0.0,
+            verifier_mode="blocking",
         )
         result = agent.run("q?")
         assert result.stopped_reason == "max_rounds"
@@ -318,7 +364,8 @@ class TestMaxRoundsBudget:
 
     def test_single_round_then_redraft_abstains(self):
         # max_verify_rounds=1 means no actual redraft happens — first
-        # verdict is final.
+        # verdict is final. Test blocking semantics here; advisory is
+        # covered by TestAdvisoryAbstain.
         inner = _FakeInnerAgent(drafts=["only draft"])
         verifier = _ScriptedVerifier(verdicts=[_verdict_redraft(["x"])])
         agent = CommandedAgent(
@@ -326,6 +373,7 @@ class TestMaxRoundsBudget:
             verifier=verifier,
             retriever=lambda q: _sources(("L1#0", "x")),
             max_verify_rounds=1,
+            verifier_mode="blocking",
         )
         result = agent.run("q?")
         assert result.stopped_reason == "abstain"
@@ -420,6 +468,156 @@ class TestAuditLogging:
         assert len(rounds) == 2
         assert rounds[0]["metadata"]["decision"] == "redraft"
         assert rounds[1]["metadata"]["decision"] == "accept"
+
+
+# ---------------------------------------------------------------------------
+# LLMTaskClassifier (Phase A — alpha39+)
+# ---------------------------------------------------------------------------
+
+
+class _FakeLLM:
+    """Tiny LLM stub for classifier tests. Returns a scripted text."""
+    def __init__(self, *, text: str = "", raise_exc: Exception | None = None) -> None:
+        self.text = text
+        self.raise_exc = raise_exc
+        self.calls: list[dict[str, Any]] = []
+
+    def complete(self, messages, *, max_tokens=None, temperature=None, **_):
+        self.calls.append({
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        })
+        if self.raise_exc is not None:
+            raise self.raise_exc
+        return type("R", (), {"text": self.text})()
+
+
+class TestLLMTaskClassifier:
+    @pytest.mark.parametrize("model_reply, expected", [
+        ("synthesis", "synthesis"),
+        ("action", "action"),
+        ("batch", "batch"),
+        ("metadata", "metadata"),
+        ("knowledge", "knowledge"),
+        # Tolerance: trailing punctuation / quotes / case
+        ("Synthesis.", "synthesis"),
+        ('"action"', "action"),
+        ("`knowledge`", "knowledge"),
+        # JSON envelope tolerance
+        ('{"kind": "batch"}', "batch"),
+        ('  {"intent":"metadata"}  ', "metadata"),
+        # Sub-token (model added an extra word)
+        ("synthesis verb", "synthesis"),
+    ])
+    def test_parses_clean_and_messy_replies(self, model_reply, expected):
+        clf = LLMTaskClassifier(llm=_FakeLLM(text=model_reply))
+        assert clf("any prompt") == expected
+
+    def test_falls_back_to_keyword_on_garbage_reply(self):
+        # Model returned nonsense → fall back to keyword. "implement"
+        # hits _ACTION_KEYWORDS so the fallback returns "action".
+        clf = LLMTaskClassifier(llm=_FakeLLM(text="i have no idea"))
+        assert clf("implement a binary search") == "action"
+
+    def test_falls_back_to_keyword_on_exception(self):
+        clf = LLMTaskClassifier(llm=_FakeLLM(raise_exc=RuntimeError("boom")))
+        # "for each pdf" hits _BATCH_KEYWORDS
+        assert clf("for each pdf, extract action items") == "batch"
+
+    def test_empty_input_returns_knowledge_without_llm_call(self):
+        fake = _FakeLLM(text="never reached")
+        clf = LLMTaskClassifier(llm=fake)
+        assert clf("") == "knowledge"
+        assert clf("   ") == "knowledge"
+        assert fake.calls == []
+
+    def test_long_input_skips_llm_and_uses_fallback(self):
+        fake = _FakeLLM(text="never reached")
+        clf = LLMTaskClassifier(llm=fake, max_input_chars=100)
+        long_text = "x" * 200 + " for each pdf"
+        # >100 chars → straight to keyword fallback (which sees "for each" → batch)
+        assert clf(long_text) == "batch"
+        assert fake.calls == []
+
+    def test_request_uses_low_temperature_and_small_token_budget(self):
+        fake = _FakeLLM(text="synthesis")
+        clf = LLMTaskClassifier(llm=fake)
+        clf("draft a deck")
+        assert len(fake.calls) == 1
+        assert fake.calls[0]["temperature"] == 0.0
+        assert fake.calls[0]["max_tokens"] <= 32  # small budget — we expect one token
+
+    def test_custom_fallback_callable_is_invoked(self):
+        calls: list[str] = []
+
+        def my_fallback(x: str) -> str:
+            calls.append(x)
+            return "metadata"
+
+        clf = LLMTaskClassifier(
+            llm=_FakeLLM(raise_exc=RuntimeError("nope")),
+            fallback=my_fallback,
+        )
+        assert clf("anything") == "metadata"
+        assert calls == ["anything"]
+
+
+class TestCommandedAgentWiresClassifier:
+    def test_explicit_classifier_wins(self):
+        called: list[str] = []
+
+        def custom(x: str) -> str:
+            called.append(x)
+            return "synthesis"
+
+        agent = CommandedAgent(
+            _FakeInnerAgent(drafts=["x"]),  # type: ignore[arg-type]
+            verifier=_ScriptedVerifier(verdicts=[_verdict_accept()]),
+            retriever=lambda q: _sources(("L1#0", "x")),
+            task_classifier=custom,
+            scout_llm=_FakeLLM(text="batch"),  # would say batch — but custom wins
+        )
+        agent.run("any prompt")
+        assert called == ["any prompt"]
+
+    def test_scout_llm_auto_wires_llm_classifier(self):
+        scout = _FakeLLM(text="knowledge")
+        agent = CommandedAgent(
+            _FakeInnerAgent(drafts=["x"]),  # type: ignore[arg-type]
+            verifier=_ScriptedVerifier(verdicts=[_verdict_accept()]),
+            retriever=lambda q: _sources(("L1#0", "x")),
+            scout_llm=scout,
+        )
+        assert isinstance(agent.task_classifier, LLMTaskClassifier)
+
+    def test_no_scout_llm_still_wires_llm_classifier_via_inner(self):
+        """Even without a configured scout model, the classifier defaults
+        to the LLM path using the inner agent's LLM — same pattern as
+        the verifier wiring. Keyword classifier is the fallback inside
+        the LLM classifier itself, not the default."""
+        inner = _FakeInnerAgent(drafts=["x"])
+        # Attach a fake LLM to the inner so the classifier has something
+        # to call.
+        inner.llm = _FakeLLM(text="knowledge")
+        agent = CommandedAgent(
+            inner,  # type: ignore[arg-type]
+            verifier=_ScriptedVerifier(verdicts=[_verdict_accept()]),
+            retriever=lambda q: _sources(("L1#0", "x")),
+        )
+        assert isinstance(agent.task_classifier, LLMTaskClassifier)
+
+    def test_explicit_default_keyword_classifier_opt_out(self):
+        """Callers can still pass `default_task_classifier` explicitly
+        to opt out of the LLM path (e.g. for offline / deterministic
+        tests)."""
+        agent = CommandedAgent(
+            _FakeInnerAgent(drafts=["x"]),  # type: ignore[arg-type]
+            verifier=_ScriptedVerifier(verdicts=[_verdict_accept()]),
+            retriever=lambda q: _sources(("L1#0", "x")),
+            task_classifier=default_task_classifier,
+        )
+        assert agent.task_classifier is default_task_classifier
 
 
 # ---------------------------------------------------------------------------

@@ -77,6 +77,14 @@ class AgentRunResponse(BaseModel):
     # Commander-only:
     verdict_decision: str | None = None
     verdict_groundedness: float | None = None
+    # alpha39+ advisory mode: when the verifier didn't fully ground
+    # the answer, the inner draft is still returned in `text` and this
+    # field carries the verifier's short rationale. The UI renders it
+    # as a soft warning badge above the message — earlier alphas just
+    # replaced the message with a generic abstention text, which threw
+    # away tool-call results when the classifier misrouted intent to
+    # the knowledge path. See commander._advisory_note for format.
+    advisory_note: str | None = None
     citations: list[str] = []
     rounds: int | None = None
     # Full source records the commander retrieved before drafting. Each
@@ -462,6 +470,7 @@ def build_router(*, current_user: Any, storage: Path):
                     stopped_reason=cresult.stopped_reason,
                     verdict_decision=cresult.verdict.decision,
                     verdict_groundedness=cresult.verdict.groundedness,
+                    advisory_note=(cresult.advisory_note or None),
                     citations=list(cresult.citations),
                     sources=sources_payload,
                     rounds=len(cresult.rounds),
@@ -496,9 +505,19 @@ def build_router(*, current_user: Any, storage: Path):
 
         # Persist assistant reply
         if req.thread_id:
+            asst_metadata: dict[str, Any] = {
+                "verified": req.verified,
+                "model": req.model,
+            }
+            if resp.advisory_note:
+                # alpha39+: surface advisory mode in the persisted thread
+                # so the warning badge survives reloads.
+                asst_metadata["advisory_note"] = resp.advisory_note
+                asst_metadata["verdict_decision"] = resp.verdict_decision
+                asst_metadata["verdict_groundedness"] = resp.verdict_groundedness
             asst_msg_id = _append_to_thread(
                 user.id, req.thread_id, "assistant", final_text,
-                metadata={"verified": req.verified, "model": req.model},
+                metadata=asst_metadata,
             )
             resp.user_message_id = user_msg_id
             resp.assistant_message_id = asst_msg_id

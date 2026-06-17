@@ -50,7 +50,10 @@ from praxia.agent.commander import (
     CommandedRound,
     DEFAULT_ABSTAIN_MESSAGE,
     DefaultMemoryRetriever,
+    LLMTaskClassifier,
     Retriever,
+    TaskClassifier,
+    default_task_classifier,
 )
 from praxia.agent.result import AgentResult, ToolCallTrace
 from praxia.agent.verifier import (
@@ -73,6 +76,10 @@ __all__ = [
     "DEFAULT_ABSTAIN_MESSAGE",
     "DefaultMemoryRetriever",
     "Retriever",
+    # Task classifier — LLM-based + keyword fallback
+    "TaskClassifier",
+    "default_task_classifier",
+    "LLMTaskClassifier",
     # Verifier protocol + default impl + dataclasses
     "Verifier",
     "LLMGroundingVerifier",

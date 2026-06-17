@@ -159,6 +159,8 @@ class TestPromotionWeightsK4a:
 class TestNoImprovementStopK4b:
     def test_flat_groundedness_triggers_no_improvement_abort(self) -> None:
         # Round 1: 0.5, Round 2: 0.5 → no improvement → abort.
+        # Test the blocking semantics; advisory keeps the last_draft
+        # and stops with "abstain_advisory" instead.
         inner = _FakeInnerAgent(drafts=["d1", "d2", "d3"])
         verifier = _ScriptedVerifier(verdicts=[
             _redraft(0.5),
@@ -170,6 +172,7 @@ class TestNoImprovementStopK4b:
             verifier=verifier,
             retriever=lambda q: _src(("L1#0", "x")),
             max_verify_rounds=3,
+            verifier_mode="blocking",
         )
         result = agent.run("What is the capital of France?")
         assert result.stopped_reason == "no_improvement"
@@ -205,9 +208,10 @@ class TestNoImprovementStopK4b:
             retriever=lambda q: _src(("L1#0", "x")),
             max_verify_rounds=2,
             min_groundedness_improvement=0.0,
+            verifier_mode="blocking",
         )
         result = agent.run("knowledge question about something")
-        # No early stop → max_rounds path → default abstain
+        # No early stop → max_rounds path → default abstain (blocking).
         assert result.stopped_reason == "abstain"
 
 
@@ -666,7 +670,9 @@ class TestNoSourcesFallback:
     def test_disabling_fallback_keeps_strict_abstain(self) -> None:
         """Compliance-mode deployments can flip the flag off and get
         the old strict-abstain behaviour back — the verifier sees the
-        empty source list and abstains explicitly."""
+        empty source list and abstains explicitly. Requires
+        ``verifier_mode='blocking'`` since alpha39 defaults to
+        'advisory' which keeps the inner draft."""
         inner = _FakeInnerAgent(drafts=["d1"])
         # Verifier returns abstain on the empty-source draft (exactly
         # what LLMGroundingVerifier does in production with no sources).
@@ -676,6 +682,7 @@ class TestNoSourcesFallback:
             verifier=verifier,
             retriever=lambda q: [],
             fallback_when_no_sources=False,
+            verifier_mode="blocking",
         )
         result = agent.run("hi")
         # Fallback path NOT taken — the verifier abstain decided it.

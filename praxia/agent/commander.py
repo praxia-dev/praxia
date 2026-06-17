@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from praxia.agent.autonomous import AutonomousAgent
 from praxia.agent.result import AgentResult
@@ -154,6 +154,16 @@ _ACTION_KEYWORDS = (
     "run the", "run this", "execute", "deploy",
     "fix the bug", "patch", "compile", "build the",
     "install", "rebase", "git ", "npm ", "pip install",
+    # English — scheduling / recurring jobs (route to action so the
+    # inner LLM emits a schedule tool call instead of falling through
+    # to the grounding verifier, which would abstain).
+    "schedule a", "schedule the", "schedule this",
+    "set up a schedule", "set up a recurring",
+    "set a reminder", "remind me", "recurring job",
+    "every monday", "every tuesday", "every wednesday",
+    "every thursday", "every friday", "every saturday",
+    "every sunday", "every day", "every week", "every month",
+    "weekly,", "daily,", "monthly,",
     # Japanese
     "コードを書", "実装して", "リファクタ", "デバッグ",
     "実行して", "走らせて", "ビルドして", "コンパイル",
@@ -282,6 +292,7 @@ _SYNTHESIS_VERBS = (
     # English — explicit generative verbs
     "draft", "make a", "write a", "create a", "design a",
     "compose", "outline", "summarize", "summarise", "brainstorm",
+    "consolidate", "merge the", "combine the",
     "make slides", "make a presentation",
     "make a report", "write a report", "generate a", "render a",
     "design slides", "design a deck",
@@ -372,6 +383,169 @@ def default_task_classifier(user_input: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# LLM-based classifier (alpha39+)
+# ---------------------------------------------------------------------------
+#
+# The keyword classifier above is fast and deterministic but every new
+# user phrasing that misses the keyword set silently falls through to
+# "knowledge" and (before alpha39) the verifier abstained on it. Phase A
+# replaces the keyword path with a single cheap-LLM call that returns
+# the task kind directly. The keyword classifier is kept as a fallback
+# for when the LLM is unavailable, returns garbage, or the input is so
+# long it's obviously not an intent-style prompt.
+
+_VALID_TASK_KINDS = ("action", "batch", "metadata", "synthesis", "knowledge")
+
+_LLM_CLASSIFIER_SYSTEM_PROMPT = """You classify a user's prompt to an AI \
+agent into exactly ONE intent token. Reply with ONLY the token — no \
+punctuation, no JSON, no explanation.
+
+Valid tokens and what they mean:
+
+  action     — imperative coding / shell / tool command. Examples:
+               "implement a binary search in python", "git rebase main",
+               "deploy this", "コードを書いて", "実装して", "ビルドして".
+
+  batch      — apply the SAME operation to EACH of multiple items
+               separately. The user expects per-item fan-out, not one
+               combined answer. Examples:
+                 "for each PDF in Documents, extract action items"
+                 "summarise every doc in the folder"
+                 "8つの議事録から決定事項を抽出"
+                 "全ファイルからアクションアイテムを抽出"
+
+  metadata   — a lookup against the user's document store: does file
+               X exist, list files in folder Y, find the proposal.
+               Examples:
+                 "is proposal.pdf there?"
+                 "list the files in Q3"
+                 "X.docx はありますか"
+                 "find the latest spec".
+
+  synthesis  — generate a new artefact: draft, deck, summary, proposal,
+               plan, schedule. INCLUDES recurring/scheduled requests
+               ("every Monday morning, summarize Documents changes") and
+               consolidation ("merge the batch results"). Examples:
+                 "draft a Q3 retrospective deck"
+                 "make a presentation about X"
+                 "summarize the batch results into one list"
+                 "consolidate the action items"
+                 "render it as a PowerPoint deck"
+                 "毎週月曜の朝に Documents の変更を要約して"
+                 "Q3 売上の振り返り資料を作って"
+                 "結果をまとめて"
+
+  knowledge  — fact-question grounded in retrieved sources. The user
+               wants an evidence-backed answer to a question, not a
+               new artefact. Default when none of the above fit.
+               Examples:
+                 "what's the deadline for the migration?"
+                 "explain the auth flow"
+                 "X についてまとめて教えて" (asking, not generating)
+
+Pick the single best fit. If two could apply, prefer:
+  action > batch > metadata > synthesis > knowledge
+"""
+
+
+@dataclass
+class LLMTaskClassifier:
+    """LLM-based intent classifier — replacement for the keyword path.
+
+    The keyword classifier (:func:`default_task_classifier`) is kept as
+    ``fallback``: if the LLM call raises, times out, or returns a token
+    that isn't in :data:`_VALID_TASK_KINDS`, we fall back so the loop
+    still makes progress.
+
+    Args:
+        llm: cheap LLM used for the classification call. Recommended:
+            haiku-class / gpt-5-nano. Tied to the same LLM the verifier
+            and decomposer use ("scout_llm").
+        fallback: classifier to use when the LLM is unavailable / wrong.
+            Default: keyword-based :func:`default_task_classifier`.
+        max_response_tokens: cap on the LLM's reply. The reply is one
+            token in normal operation; we cap small so a chatty model
+            can't burn budget.
+        system_prompt: override the classifier instructions.
+        max_input_chars: prompts longer than this skip the LLM call and
+            go straight to the fallback. Long inputs are usually pasted
+            documents (knowledge) and rarely benefit from the LLM
+            classifier. Default 4000.
+    """
+
+    llm: "LLM"
+    fallback: TaskClassifier = field(default_factory=lambda: default_task_classifier)
+    max_response_tokens: int = 16
+    system_prompt: str = _LLM_CLASSIFIER_SYSTEM_PROMPT
+    max_input_chars: int = 4000
+
+    def __call__(self, user_input: str) -> str:
+        text = (user_input or "").strip()
+        if not text:
+            return "knowledge"
+        if len(text) > self.max_input_chars:
+            return self.fallback(text)
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": text[: self.max_input_chars]},
+        ]
+        try:
+            resp = self.llm.complete(
+                messages,
+                max_tokens=self.max_response_tokens,
+                temperature=0.0,
+            )
+        except Exception:
+            _log.warning(
+                "LLMTaskClassifier: complete() failed; falling back to keyword classifier",
+                exc_info=True,
+            )
+            return self.fallback(text)
+        kind = self._parse(resp.text)
+        if kind in _VALID_TASK_KINDS:
+            return kind
+        _log.warning(
+            "LLMTaskClassifier: model returned invalid kind %r; falling back",
+            (resp.text or "")[:80],
+        )
+        return self.fallback(text)
+
+    @staticmethod
+    def _parse(raw: str) -> str:
+        """Accept either a bare token or a JSON envelope.
+
+        Tolerates models that add quotes, trailing periods, or wrap the
+        token in ``{"kind": "..."}`` even though the prompt asks for a
+        bare reply. Keeps the door open for a future tool-call-style
+        structured-output path without breaking the bare-token contract.
+        """
+        if not raw:
+            return ""
+        s = raw.strip().strip("`'\"., ").lower()
+        if s in _VALID_TASK_KINDS:
+            return s
+        # JSON envelope tolerance
+        try:
+            import json as _json
+            # Lift the first {...} block if the model wrapped the token
+            start = s.find("{")
+            end = s.rfind("}")
+            if 0 <= start < end:
+                obj = _json.loads(s[start : end + 1])
+                if isinstance(obj, dict):
+                    k = str(obj.get("kind") or obj.get("intent") or "").strip().lower()
+                    if k in _VALID_TASK_KINDS:
+                        return k
+        except Exception:  # noqa: BLE001 — best-effort parse
+            pass
+        # Sub-token: model produced "synthesis." or "synthesis verb"
+        for tok in _VALID_TASK_KINDS:
+            if s.startswith(tok):
+                return tok
+        return ""
+
+
+# ---------------------------------------------------------------------------
 # Result type
 # ---------------------------------------------------------------------------
 
@@ -389,9 +563,14 @@ class CommandedResult:
     sources: list[Source] = field(default_factory=list)
     citations: list[str] = field(default_factory=list)
     rounds: list["CommandedRound"] = field(default_factory=list)
-    stopped_reason: str = "accept"            # accept | abstain | max_rounds | no_improvement | bypass_action | no_sources_fallback | synthesis_pass
+    stopped_reason: str = "accept"            # accept | abstain | abstain_advisory | max_rounds | no_improvement | bypass_action | no_sources_fallback | synthesis_pass
     task_kind: str = "knowledge"              # knowledge | action | synthesis — picked by TaskClassifier
     usage: dict[str, int] = field(default_factory=dict)
+    # advisory mode only: human-readable note describing why the
+    # verifier did not fully ground the answer. The draft itself is
+    # still returned in `answer` — the UI can render this as a soft
+    # warning badge above the message instead of replacing the text.
+    advisory_note: str = ""
 
     def add_usage(self, more: dict[str, int]) -> None:
         for k, v in more.items():
@@ -645,11 +824,14 @@ class CommandedAgent:
         min_groundedness_improvement: float = 0.05,
         fallback_when_no_sources: bool = True,
         abstain_message: str = DEFAULT_ABSTAIN_MESSAGE,
+        verifier_mode: Literal["blocking", "advisory"] = "advisory",
         require_citations: bool = True,
         per_layer_limit: int = 5,
     ) -> None:
         if max_verify_rounds < 1:
             raise ValueError("max_verify_rounds must be >= 1")
+        if verifier_mode not in ("blocking", "advisory"):
+            raise ValueError("verifier_mode must be 'blocking' or 'advisory'")
         if min_groundedness_improvement < 0:
             raise ValueError("min_groundedness_improvement must be >= 0")
         self.inner = inner
@@ -662,12 +844,24 @@ class CommandedAgent:
         self.retriever = retriever or self._build_default_retriever(
             per_layer_limit, decomposer_llm=sub_llm if scout_llm is not None else None
         )
-        self.task_classifier = task_classifier or default_task_classifier
+        # alpha39+: default to the LLM intent classifier — the keyword
+        # path becomes the fallback inside LLMTaskClassifier itself.
+        # We pass `sub_llm` (scout if set, otherwise the inner LLM, same
+        # pattern as the verifier above) so even users without a
+        # configured scout model still benefit from the LLM-based
+        # classification. Callers can still pass
+        # `task_classifier=default_task_classifier` to opt out, or pass
+        # their own callable for full control.
+        if task_classifier is not None:
+            self.task_classifier = task_classifier
+        else:
+            self.task_classifier = LLMTaskClassifier(llm=sub_llm)
         self.max_verify_rounds = int(max_verify_rounds)
         self.abstain_on_max_rounds = bool(abstain_on_max_rounds)
         self.min_groundedness_improvement = float(min_groundedness_improvement)
         self.fallback_when_no_sources = bool(fallback_when_no_sources)
         self.abstain_message = abstain_message
+        self.verifier_mode = verifier_mode
         self.require_citations = bool(require_citations)
 
     # --- public API --------------------------------------------------------
@@ -979,11 +1173,25 @@ class CommandedAgent:
                 return result
 
             if verdict.decision == "abstain":
-                result.answer = self.abstain_message
                 result.verdict = verdict
-                result.citations = []
                 result.rounds = rounds
-                result.stopped_reason = "abstain"
+                if self.verifier_mode == "advisory":
+                    # Keep the inner agent's actual draft — including
+                    # any tool calls it made — and surface the verifier's
+                    # rationale as a soft annotation instead. The earlier
+                    # blocking behavior replaced legitimate tool-call
+                    # responses (schedule, batch, render_document) with a
+                    # generic "I don't have enough grounded information"
+                    # message whenever the classifier misrouted intent
+                    # to the knowledge path. See feedback_keyword_router.md.
+                    result.answer = last_draft or self.abstain_message
+                    result.citations = list(verdict.cited_source_ids)
+                    result.advisory_note = self._advisory_note(verdict)
+                    result.stopped_reason = "abstain_advisory"
+                else:
+                    result.answer = self.abstain_message
+                    result.citations = []
+                    result.stopped_reason = "abstain"
                 self._audit_end(result)
                 return result
 
@@ -1008,11 +1216,17 @@ class CommandedAgent:
                         "groundedness_now": f"{verdict.groundedness:.3f}",
                     },
                 )
-                result.answer = self.abstain_message
                 result.verdict = verdict
-                result.citations = []
                 result.rounds = rounds
-                result.stopped_reason = "no_improvement"
+                if self.verifier_mode == "advisory":
+                    result.answer = last_draft or self.abstain_message
+                    result.citations = list(verdict.cited_source_ids)
+                    result.advisory_note = self._advisory_note(verdict)
+                    result.stopped_reason = "abstain_advisory"
+                else:
+                    result.answer = self.abstain_message
+                    result.citations = []
+                    result.stopped_reason = "no_improvement"
                 self._audit_end(result)
                 return result
 
@@ -1029,7 +1243,12 @@ class CommandedAgent:
         # Exhausted budget with the last verdict still "redraft"
         result.verdict = last_verdict or result.verdict
         result.rounds = rounds
-        if self.abstain_on_max_rounds:
+        if self.verifier_mode == "advisory":
+            result.answer = last_draft or self.abstain_message
+            result.citations = list(result.verdict.cited_source_ids)
+            result.advisory_note = self._advisory_note(result.verdict)
+            result.stopped_reason = "abstain_advisory"
+        elif self.abstain_on_max_rounds:
             result.answer = self.abstain_message
             result.stopped_reason = "abstain"
         else:
@@ -1097,6 +1316,31 @@ class CommandedAgent:
         if f"[{cited}]" in draft or all(f"[{sid}]" in draft for sid in verdict.cited_source_ids):
             return draft
         return f"{draft}\n\nSources: [{cited}]"
+
+    def _advisory_note(self, verdict: Verdict) -> str:
+        """Human-readable description of why grounding was weak.
+
+        The UI renders this as a tooltip/subtext on a soft warning
+        badge above the assistant message. We keep it short — one
+        line — and concrete (groundedness number + which claims
+        weren't backed). The actual answer text is delivered as-is.
+        """
+        g = max(0.0, min(1.0, float(verdict.groundedness)))
+        if verdict.unsupported_claims:
+            first = verdict.unsupported_claims[0].strip()
+            if len(first) > 120:
+                first = first[:117] + "…"
+            extra = ""
+            if len(verdict.unsupported_claims) > 1:
+                extra = f" (+{len(verdict.unsupported_claims) - 1} more)"
+            return (
+                f"Low grounding (G={g:.2f}). "
+                f"Unbacked claim: \"{first}\"{extra}"
+            )
+        rationale = (verdict.rationale or "Not enough evidence to ground every claim.").strip()
+        if len(rationale) > 160:
+            rationale = rationale[:157] + "…"
+        return f"Low grounding (G={g:.2f}). {rationale}"
 
     # --- defaults ---------------------------------------------------------
 
