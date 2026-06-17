@@ -206,14 +206,28 @@
       "pt-BR": "Início rápido ↓",
     },
     "hero.video.full": {
-      en: "Watch the full version on YouTube (60s)",
-      ja: "YouTube でフル版を見る (60秒)",
-      "zh-CN": "在 YouTube 上观看完整版 (60秒)",
-      ko: "YouTube에서 전체 영상 보기 (60초)",
-      es: "Ver la versión completa en YouTube (60s)",
-      fr: "Voir la version complète sur YouTube (60s)",
-      de: "Vollversion auf YouTube ansehen (60s)",
-      "pt-BR": "Assistir versão completa no YouTube (60s)",
+      en: "Watch the full demo on YouTube (4 min)",
+      ja: "YouTube でフルデモを見る (4分)",
+      "zh-CN": "在 YouTube 上观看完整演示 (4分钟)",
+      ko: "YouTube에서 전체 데모 영상 보기 (4분)",
+      es: "Ver la demo completa en YouTube (4 min)",
+      fr: "Voir la démo complète sur YouTube (4 min)",
+      de: "Komplette Demo auf YouTube ansehen (4 Min.)",
+      "pt-BR": "Assistir demo completa no YouTube (4 min)",
+    },
+    // alpha39+: separate JA/EN demo videos. JA UI → JA video; every
+    // other language → EN video. The element carrying data-i18n-href
+    // ="hero.video.url" gets its `href` swapped to the right URL on
+    // language change.
+    "hero.video.url": {
+      en: "https://youtu.be/Z3DFa2saHJg",
+      ja: "https://youtu.be/ZMieRZZPn_Q",
+      "zh-CN": "https://youtu.be/Z3DFa2saHJg",
+      ko: "https://youtu.be/Z3DFa2saHJg",
+      es: "https://youtu.be/Z3DFa2saHJg",
+      fr: "https://youtu.be/Z3DFa2saHJg",
+      de: "https://youtu.be/Z3DFa2saHJg",
+      "pt-BR": "https://youtu.be/Z3DFa2saHJg",
     },
     "hero.cta_star": {
       en: "★ Star on GitHub",
@@ -1055,6 +1069,13 @@
       const key = el.getAttribute("data-i18n-title");
       const dict = T[key];
       if (dict) el.title = dict[lang] || dict["en"];
+    });
+
+    // Hrefs — language-aware links (e.g. JA YouTube vs EN YouTube)
+    document.querySelectorAll("[data-i18n-href]").forEach(el => {
+      const key = el.getAttribute("data-i18n-href");
+      const dict = T[key];
+      if (dict) el.setAttribute("href", dict[lang] || dict["en"]);
     });
 
     // Show / hide translation-status notice
