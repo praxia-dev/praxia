@@ -107,9 +107,17 @@ class AgentRunResponse(BaseModel):
 
 class ApplyFileOpRequest(BaseModel):
     """Body for POST /workspace/apply — execute one previously-queued
-    file operation after the user approved it."""
+    file operation after the user approved it.
+
+    alpha40+: optional thread_id / assistant_message_id let the server
+    record the applied op onto that message's metadata so the green
+    "✓ saved to <path>" notice survives a thread reload. Old clients
+    that don't send these still work, they just lose the persistence.
+    """
     workspace_root: str
     op: dict[str, Any]
+    thread_id: str | None = None
+    assistant_message_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -515,6 +523,19 @@ def build_router(*, current_user: Any, storage: Path):
                 asst_metadata["advisory_note"] = resp.advisory_note
                 asst_metadata["verdict_decision"] = resp.verdict_decision
                 asst_metadata["verdict_groundedness"] = resp.verdict_groundedness
+            # alpha40+: persist per-message sources/citations/pending_ops
+            # so the chat UI can anchor the side panels to each assistant
+            # bubble — without these, scrolling back to an older message
+            # loses the [D#N] sources, the pending-Apply preview, and the
+            # saved-file links. Mirrors the alpha37 savedNotices pattern.
+            if resp.sources:
+                asst_metadata["sources"] = [dict(s) for s in resp.sources]
+            if resp.citations:
+                asst_metadata["citations"] = list(resp.citations)
+            if resp.pending_file_operations:
+                asst_metadata["pending_file_operations"] = [
+                    dict(op) for op in resp.pending_file_operations
+                ]
             asst_msg_id = _append_to_thread(
                 user.id, req.thread_id, "assistant", final_text,
                 metadata=asst_metadata,
@@ -557,6 +578,53 @@ def build_router(*, current_user: Any, storage: Path):
         )
         if "error" in result:
             raise HTTPException(400, result["error"])
+
+        # alpha40+: append to the assistant message's applied_file_operations
+        # so the UI green badge persists across reloads.
+        if req.thread_id and req.assistant_message_id:
+            try:
+                _append_applied_op_to_message(
+                    user.id,
+                    req.thread_id,
+                    req.assistant_message_id,
+                    result,
+                )
+            except Exception:
+                _log.exception(
+                    "Failed to persist applied op on message %s",
+                    req.assistant_message_id,
+                )
+
         return result
+
+    def _append_applied_op_to_message(
+        user_id: str,
+        thread_id: str,
+        message_id: str,
+        applied_op: dict[str, Any],
+    ) -> None:
+        """Append one applied op record to the named message's
+        ``applied_file_operations`` metadata list.
+
+        Silent if the thread / message can't be found — we don't want
+        a persistence quirk to roll back a successful file write.
+        """
+        import json as _json
+        p = chats_root / user_id / f"{thread_id}.json"
+        if not p.exists():
+            return
+        data = _json.loads(p.read_text(encoding="utf-8"))
+        for m in data.get("messages", []):
+            if m.get("id") != message_id:
+                continue
+            meta = m.setdefault("metadata", {})
+            applied = meta.setdefault("applied_file_operations", [])
+            applied.append(applied_op)
+            data["updated_at"] = time.time()
+            p.write_text(
+                _json.dumps(data, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            return
 
     return router
