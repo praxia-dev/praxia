@@ -681,7 +681,7 @@ def _render_document(
     title: str | None = None,
     filename: str | None = None,
 ) -> dict[str, Any]:
-    """Render Markdown / plain text into PPTX / DOCX / HTML / MD / JSON.
+    """Render Markdown / plain text / structured slide spec into PPTX / DOCX / HTML / MD / JSON.
 
     Use this when the user asks to **export** a piece of content the
     agent has just produced — "スライドを出力して" / "PPTX で出して" /
@@ -702,6 +702,55 @@ def _render_document(
     appends the right one. If omitted, defaults to "Praxia_export".
     Files are written under ``<memory_dir>/exports/``; the absolute
     path is returned so the user can open it.
+
+    PPTX QUALITY — STRUCTURED SLIDE SPEC (preferred over plain markdown):
+    For PPTX output, the exporter recognises fenced slide blocks. Each
+    block routes to a styled template (Praxia indigo+amber palette,
+    Yu Gothic for JA / Segoe UI for EN, 16:9 layout). Use them instead
+    of `# / ##` markdown for higher-quality decks:
+
+      ```slide:cover
+      title: Q3 Sales Review
+      subtitle: ARR progression, customer feedback, roadmap
+      kicker: 2026 Q3 RETROSPECTIVE
+      ```
+
+      ```slide:section
+      label: Customer Feedback
+      number: 2
+      ```
+
+      ```slide:kpi
+      title: Q3 highlights
+      kpis:
+        - {label: ARR added, value: $412k, delta: +$32k}
+        - {label: NPS, value: 42, delta: +4 pts}
+      ```
+
+      ```slide:chart
+      title: ARR per quarter
+      chart_type: bar           # or "line" / "hbar"
+      labels: [Q1, Q2, Q3 target, Q3 actual]
+      values: [285, 340, 380, 412]
+      series_names: [ARR]       # optional, omit for single series
+      y_label: ARR ($k)
+      takeaways:
+        - Q3 came in $32k above target
+        - Self-service trial drove the lift
+      ```
+
+      ```slide:bullets
+      title: Roadmap commitments
+      bullets:
+        - Ship Q4 onboarding revamp by 2026-10-15
+        - Cut large-doc load latency to under 3s P95
+      ```
+
+    Pick the right template per slide: KPI/chart for numbers, cover
+    for the first slide, section for chapter breaks, bullets only
+    when content is qualitative. Plain `# / ##` markdown is still
+    accepted as a fallback but produces uniform bullet slides only —
+    not what you want for a "Q3 review deck".
     """
     if not text or not text.strip():
         return {"saved": False, "error": "text is required (the content to render)"}
