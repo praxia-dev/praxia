@@ -680,6 +680,7 @@ def _render_document(
     format: str = "pptx",
     title: str | None = None,
     filename: str | None = None,
+    review: bool = False,
 ) -> dict[str, Any]:
     """Render Markdown / plain text / structured slide spec into PPTX / DOCX / HTML / MD / JSON.
 
@@ -792,7 +793,7 @@ def _render_document(
     except Exception as e:  # pragma: no cover
         return {"saved": False, "error": f"export failed: {e}"}
 
-    return {
+    response: dict[str, Any] = {
         "saved": True,
         "format": result.format,
         "path": str(path),
@@ -800,6 +801,43 @@ def _render_document(
         "bytes": len(result.bytes),
         "title": title or "",
     }
+
+    # alpha39+: optional vision-LLM review pass. Only runs for PPTX
+    # because that's where the design-quality problem is acute; the
+    # other formats are mostly textual and don't benefit. The agent
+    # passes review=True only when the user explicitly asks for a
+    # quality check OR the host enables it by policy.
+    if review and result.format == "pptx":
+        response["review"] = _run_pptx_review(agent, path)
+
+    return response
+
+
+def _run_pptx_review(agent: AutonomousAgent, pptx_path: Path) -> dict[str, Any]:
+    """Run the vision-LLM design critique on a saved PPTX.
+
+    Soft-fails: if LibreOffice / pypdfium2 are missing, returns a
+    structured `skipped` result with the install hint. We don't want
+    a missing optional dep to abort the whole `render_document` call
+    — the .pptx was already saved successfully.
+    """
+    from praxia.io.pptx_to_png import check_dependencies, render_pptx_to_pngs
+    from praxia.io.document_reviewer import PptxReviewer
+
+    ok, reason = check_dependencies()
+    if not ok:
+        return {"skipped": True, "reason": reason}
+    try:
+        png_paths = render_pptx_to_pngs(pptx_path)
+    except Exception as e:  # pragma: no cover — covered by the check above
+        return {"skipped": True, "reason": f"PPTX rendering failed: {e}"}
+
+    try:
+        reviewer = PptxReviewer(llm=agent.llm)
+        deck_review = reviewer.review_pngs(png_paths)
+    except Exception as e:
+        return {"skipped": True, "reason": f"vision review failed: {e}"}
+    return {"skipped": False, **deck_review.to_dict()}
 
 
 def _list_files_in_folder(
@@ -1786,6 +1824,22 @@ def builtin_tools() -> dict[str, AgentTool]:
                             "Optional basename (no extension). Defaults "
                             "to 'Praxia_export'. A timestamp is appended "
                             "automatically to avoid clobbering."
+                        ),
+                    },
+                    "review": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Opt in to the vision-LLM review pass. When "
+                            "true and format='pptx', each slide is "
+                            "rendered to PNG (LibreOffice + pypdfium2) "
+                            "and shown to a vision-capable LLM for a "
+                            "design critique (typography, palette, "
+                            "layout, density, hierarchy). The review "
+                            "result is returned alongside the file path. "
+                            "Adds ~5-30s and ~$0.05-0.50 per call "
+                            "depending on slide count and provider. "
+                            "Default off."
                         ),
                     },
                 },

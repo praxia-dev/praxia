@@ -109,6 +109,14 @@ office = [
     "python-docx>=1.1",      # Word .docx
     "python-pptx>=0.6",      # PowerPoint .pptx
     "openpyxl>=3.1",         # Excel .xlsx
+    "matplotlib>=3.7",       # charts inside generated decks
+]
+# --- Vision-LLM deck review (PPTX → PNG → critique) ---
+# Requires LibreOffice (soffice binary) installed system-wide; the
+# Python-side dep is pypdfium2 for PDF → PNG rasterisation.
+review = [
+    "pypdfium2>=4.30",       # PDF → PNG without poppler-utils
+    "pillow>=10.0",          # already pulled by other extras
 ]
 # --- Audio I/O (STT + TTS via cloud APIs) ---
 audio = [
