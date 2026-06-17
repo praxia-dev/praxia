@@ -8,7 +8,7 @@
 
 ![Praxia hero](docs/images/hero-banner.svg)
 
-[![Praxia Desktop — 4-minute walkthrough](docs/images/demo-thumb.png)](https://youtu.be/Z3DFa2saHJg "▶ Click to watch (4 min)")
+[![Praxia Desktop — 4-minute walkthrough](docs/images/demo-thumb.gif)](https://youtu.be/Z3DFa2saHJg "▶ Click to watch the full 4-min demo on YouTube")
 
 <sub>📺 [Watch the 4-minute walkthrough](https://youtu.be/Z3DFa2saHJg) · 🚀 [Quickstart](docs/quickstart.md) · 💬 [Discussions](https://github.com/praxia-dev/praxia/discussions)</sub>
 
