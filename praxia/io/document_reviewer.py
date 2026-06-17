@@ -34,12 +34,74 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from praxia.core.llm import LLM
 
+ReviewMode = Literal["vision", "text", "auto"]
+
 _log = logging.getLogger(__name__)
+
+
+_TEXT_REVIEW_SYSTEM_PROMPT = """You are a presentation design reviewer.
+
+You will be shown ONE slide as a TEXT STRUCTURAL DESCRIPTION
+(extracted from the .pptx with python-pptx). The description lists
+every shape, its position in inches, its fill colour as hex, and
+for text shapes the per-run font name + size + colour + bold flag
++ alignment, plus the actual text content.
+
+Treat this as the source of truth even though you can't see the
+actual rendering. Score the same five dimensions you would in a
+visual review:
+
+  typography  Font hierarchy (title >> body, not the same size).
+              Consistent font family across the deck. No default
+              Calibri / Times fallbacks. Praxia uses Yu Gothic
+              (Japanese) or Segoe UI (English).
+  palette     Praxia brand is indigo #1F3A8A primary + amber
+              #F59E0B accent on white/light-grey backgrounds.
+              Flag harsh black-on-white body text, off-palette
+              colours, and inconsistent application.
+  layout      Reason from declared bounds: are shapes overlapping
+              ((x1, y1, w1, h1) intersecting (x2, y2, w2, h2))?
+              Is text crammed near edges? Are KPI tiles unevenly
+              spaced? Is content within the slide_size bounds?
+  density     Bullet count per shape, total text characters per
+              slide. Cap ~5 bullets, one idea per slide.
+  hierarchy   Does the title shape have the largest font on the
+              slide? Is the headline number prominent enough?
+              Are visual weights balanced?
+
+Caveats you should note in low-severity issues (not high):
+  - You can't verify actual font rendering / kerning / fallback
+  - You can't see image / chart content (only their bounds)
+  - You can't detect colour-contrast issues against the bg
+
+Output STRICT JSON exactly matching the vision-mode schema:
+
+{
+  "slide_score": <0-10 overall>,
+  "dimension_scores": {
+    "typography": <0-10>,
+    "palette":    <0-10>,
+    "layout":     <0-10>,
+    "density":    <0-10>,
+    "hierarchy":  <0-10>
+  },
+  "issues": [
+    {
+      "category": "typography" | "palette" | "layout" | "density" | "hierarchy",
+      "severity": "high" | "medium" | "low",
+      "description": "<one concise sentence>",
+      "suggested_fix": "<one concrete fix referencing the
+                        specific shape index from the description>"
+    }
+  ],
+  "strengths": [ "<one sentence>", ... ]
+}
+"""
 
 
 _REVIEW_SYSTEM_PROMPT = """You are a presentation design reviewer.
@@ -114,6 +176,8 @@ class DeckReview:
     """Aggregate review across all slides."""
     slides: list[SlideReview]
     overall_score: float                          # mean of slide scores
+    mode: ReviewMode = "vision"                   # which path produced the review
+    upgrade_hint: str = ""                        # populated for text-mode reviews
 
     @property
     def high_severity_issues(self) -> list[dict[str, Any]]:
@@ -138,9 +202,10 @@ class DeckReview:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialisable view suitable for embedding in a tool result."""
-        return {
+        out: dict[str, Any] = {
             "overall_score": round(self.overall_score, 2),
             "summary": self.summary,
+            "mode": self.mode,
             "slides": [
                 {
                     "slide_number": sr.slide_number,
@@ -156,6 +221,9 @@ class DeckReview:
             ],
             "high_severity_issues": self.high_severity_issues,
         }
+        if self.upgrade_hint:
+            out["upgrade_hint"] = self.upgrade_hint
+        return out
 
 
 class PptxReviewer:
@@ -176,20 +244,103 @@ class PptxReviewer:
         self,
         llm: "LLM",
         *,
+        mode: ReviewMode = "auto",
         system_prompt: str = _REVIEW_SYSTEM_PROMPT,
+        text_system_prompt: str = _TEXT_REVIEW_SYSTEM_PROMPT,
         max_response_tokens: int = 1024,
     ) -> None:
+        if mode not in ("vision", "text", "auto"):
+            raise ValueError("mode must be 'vision', 'text', or 'auto'")
         self.llm = llm
+        self.mode = mode
         self.system_prompt = system_prompt
+        self.text_system_prompt = text_system_prompt
         self.max_response_tokens = max_response_tokens
 
     def review(self, pptx_path: Path) -> DeckReview:
-        """Run the full pipeline. Raises RuntimeError if PPTX rendering
-        dependencies are missing; vision-LLM failures are captured
-        per-slide in ``SlideReview.error`` rather than aborting."""
-        from praxia.io.pptx_to_png import render_pptx_to_pngs
-        png_paths = render_pptx_to_pngs(pptx_path)
-        return self.review_pngs(png_paths)
+        """Run the full pipeline.
+
+        Mode dispatch:
+            - ``mode="vision"`` — requires LibreOffice + pypdfium2.
+              Raises RuntimeError if missing.
+            - ``mode="text"`` — uses python-pptx only. Always works
+              for decks rendered by Praxia.
+            - ``mode="auto"`` (default) — picks vision when its
+              deps are present, otherwise falls back to text and
+              annotates the result with an upgrade hint.
+
+        Per-slide LLM failures are captured in
+        ``SlideReview.error`` rather than aborting the whole review.
+        """
+        effective, upgrade_hint = self._resolve_mode()
+        if effective == "vision":
+            from praxia.io.pptx_to_png import render_pptx_to_pngs
+            png_paths = render_pptx_to_pngs(pptx_path)
+            deck = self.review_pngs(png_paths)
+        else:
+            deck = self._review_text(pptx_path)
+            deck.upgrade_hint = upgrade_hint
+        return deck
+
+    def _resolve_mode(self) -> tuple[ReviewMode, str]:
+        """Pick the effective mode + an optional upgrade hint to attach
+        to the result when text mode fires by default."""
+        if self.mode == "vision":
+            return "vision", ""
+        if self.mode == "text":
+            return "text", ""
+        # auto
+        from praxia.io.pptx_to_png import check_dependencies
+        ok, reason = check_dependencies()
+        if ok:
+            return "vision", ""
+        return "text", (
+            "Text-mode review used. Install LibreOffice + "
+            "pypdfium2 (`pip install pypdfium2`) for vision-mode "
+            "review — catches overlap, contrast, and font-fallback "
+            "issues that the text path can't see. Vision is "
+            f"unavailable now because: {reason}"
+        )
+
+    def _review_text(self, pptx_path: Path) -> DeckReview:
+        """python-pptx structural critique. No LibreOffice required."""
+        from praxia.io.pptx_describer import describe_pptx
+        slide_descs = describe_pptx(pptx_path)
+        slide_reviews = [
+            self._review_slide_text(spec, slide_number=i + 1)
+            for i, spec in enumerate(slide_descs)
+        ]
+        overall = (
+            sum(sr.score for sr in slide_reviews) / len(slide_reviews)
+            if slide_reviews else 0.0
+        )
+        return DeckReview(slides=slide_reviews, overall_score=overall, mode="text")
+
+    def _review_slide_text(self, spec: str, *, slide_number: int) -> SlideReview:
+        messages = [
+            {"role": "system", "content": self.text_system_prompt},
+            {
+                "role": "user",
+                "content": (
+                    f"Review the following slide per the rubric. "
+                    f"Reply with the JSON shape exactly.\n\n{spec}"
+                ),
+            },
+        ]
+        try:
+            resp = self.llm.complete(
+                messages,
+                max_tokens=self.max_response_tokens,
+                response_format="json",
+                temperature=0.0,
+            )
+        except Exception as e:
+            _log.exception("Text LLM call failed for slide %d", slide_number)
+            return SlideReview(
+                slide_number=slide_number, score=0.0,
+                error=f"text LLM call failed: {e}",
+            )
+        return self._build_review(resp.text, slide_number)
 
     def review_pngs(self, png_paths: list[Path]) -> DeckReview:
         """Same as :meth:`review` but accepts pre-rendered PNGs. Used

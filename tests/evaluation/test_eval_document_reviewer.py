@@ -264,3 +264,123 @@ class TestDependencyProbe:
         assert isinstance(ok, bool)
         if not ok:
             assert isinstance(reason, str) and reason
+
+
+# ---------------------------------------------------------------------------
+# Text-mode reviewer — uses python-pptx, no LibreOffice required
+# ---------------------------------------------------------------------------
+
+
+pytest.importorskip("pptx")
+
+
+def _build_minimal_pptx(path: Path) -> None:
+    """Build a small styled deck via the slide_templates so the
+    describer has something realistic to walk. No LibreOffice."""
+    from pptx import Presentation
+    from pptx.util import Inches
+    from praxia.io.slide_templates import (
+        cover_slide, kpi_slide, bullets_slide,
+    )
+    prs = Presentation()
+    prs.slide_width = Inches(13.33)
+    prs.slide_height = Inches(7.5)
+    cover_slide(prs, title="Q3 review", subtitle="Numbers", kicker="2026")
+    kpi_slide(prs, title="Highlights", kpis=[
+        {"label": "ARR", "value": "$412k", "delta": "+$32k"},
+        {"label": "NPS", "value": "42", "delta": "+4"},
+    ])
+    bullets_slide(prs, title="Roadmap", bullets=["Ship X", "Test Y"])
+    prs.save(str(path))
+
+
+class TestTextModeReviewer:
+    def test_describe_pptx_returns_one_string_per_slide(self, tmp_path: Path):
+        from praxia.io.pptx_describer import describe_pptx
+        deck = tmp_path / "deck.pptx"
+        _build_minimal_pptx(deck)
+        descs = describe_pptx(deck)
+        assert len(descs) == 3
+        # Each description carries the structural fields the LLM
+        # needs: a slide marker, layout name, slide size, shape blocks
+        for d in descs:
+            assert d.startswith("=== Slide")
+            assert "slide_size:" in d
+            assert "Shape 1" in d
+
+    def test_describer_captures_palette_hex_codes(self, tmp_path: Path):
+        from praxia.io.pptx_describer import describe_pptx
+        deck = tmp_path / "deck.pptx"
+        _build_minimal_pptx(deck)
+        descs = describe_pptx(deck)
+        # Cover slide has the indigo top panel
+        assert "#1F3A8A" in descs[0]
+        # KPI slide has the amber accent bar
+        assert "#F59E0B" in descs[1]
+
+    def test_text_mode_review_via_explicit_mode(self, tmp_path: Path):
+        from praxia.io.document_reviewer import PptxReviewer
+        deck_path = tmp_path / "deck.pptx"
+        _build_minimal_pptx(deck_path)
+        scripted = [
+            json.dumps({
+                "slide_score": 8 - i,
+                "dimension_scores": {"typography": 8, "palette": 9},
+                "issues": [],
+                "strengths": ["clean palette"],
+            }) for i in range(3)
+        ]
+        llm = _FakeVisionLLM(text=scripted)
+        reviewer = PptxReviewer(llm=llm, mode="text")
+        deck = reviewer.review(deck_path)
+        assert deck.mode == "text"
+        assert len(deck.slides) == 3
+        # All three slides should have non-zero scores
+        assert all(sr.score > 0 for sr in deck.slides)
+        # Verify the user-role message embeds the structural description
+        # (it should contain the "=== Slide N ===" header)
+        user_msg = next(m for m in llm.calls[0]["messages"] if m["role"] == "user")
+        # Text mode uses a plain string content (no multimodal)
+        assert isinstance(user_msg["content"], str)
+        assert "=== Slide" in user_msg["content"]
+
+    def test_auto_mode_falls_back_to_text_when_vision_unavailable(
+        self, tmp_path: Path, monkeypatch
+    ):
+        """Auto mode should pick text mode when the LibreOffice+pypdfium2
+        path isn't available, and stamp the result with an upgrade hint."""
+        from praxia.io import document_reviewer as dr
+        from praxia.io.document_reviewer import PptxReviewer
+        deck_path = tmp_path / "deck.pptx"
+        _build_minimal_pptx(deck_path)
+
+        # Force vision-deps probe to report unavailable.
+        monkeypatch.setattr(
+            "praxia.io.pptx_to_png.check_dependencies",
+            lambda: (False, "(mocked: LibreOffice missing)"),
+        )
+        llm = _FakeVisionLLM(text=json.dumps({"slide_score": 7}))
+        reviewer = PptxReviewer(llm=llm, mode="auto")
+        deck = reviewer.review(deck_path)
+        assert deck.mode == "text"
+        assert deck.upgrade_hint
+        assert "LibreOffice" in deck.upgrade_hint or "vision" in deck.upgrade_hint.lower()
+
+    def test_to_dict_carries_mode_and_upgrade_hint(self, tmp_path: Path, monkeypatch):
+        from praxia.io.document_reviewer import PptxReviewer
+        deck_path = tmp_path / "deck.pptx"
+        _build_minimal_pptx(deck_path)
+        monkeypatch.setattr(
+            "praxia.io.pptx_to_png.check_dependencies",
+            lambda: (False, "(mocked)"),
+        )
+        llm = _FakeVisionLLM(text=json.dumps({"slide_score": 7}))
+        reviewer = PptxReviewer(llm=llm, mode="auto")
+        result = reviewer.review(deck_path).to_dict()
+        assert result["mode"] == "text"
+        assert "upgrade_hint" in result
+
+    def test_invalid_mode_rejected(self):
+        from praxia.io.document_reviewer import PptxReviewer
+        with pytest.raises(ValueError):
+            PptxReviewer(llm=_FakeVisionLLM(text=""), mode="bogus")  # type: ignore[arg-type]

@@ -814,29 +814,23 @@ def _render_document(
 
 
 def _run_pptx_review(agent: AutonomousAgent, pptx_path: Path) -> dict[str, Any]:
-    """Run the vision-LLM design critique on a saved PPTX.
+    """Run the design critique on a saved PPTX.
 
-    Soft-fails: if LibreOffice / pypdfium2 are missing, returns a
-    structured `skipped` result with the install hint. We don't want
-    a missing optional dep to abort the whole `render_document` call
-    — the .pptx was already saved successfully.
+    Uses auto-mode by default: tries vision-mode if LibreOffice +
+    pypdfium2 are available, otherwise falls back to text-mode
+    (python-pptx structural extraction). Text mode is ~70-80% of
+    vision-mode value at zero extra install cost. The result
+    dictionary always carries a `mode` field so the agent can
+    surface which path ran, plus an `upgrade_hint` when text-mode
+    is used by default.
     """
-    from praxia.io.pptx_to_png import check_dependencies, render_pptx_to_pngs
     from praxia.io.document_reviewer import PptxReviewer
 
-    ok, reason = check_dependencies()
-    if not ok:
-        return {"skipped": True, "reason": reason}
     try:
-        png_paths = render_pptx_to_pngs(pptx_path)
-    except Exception as e:  # pragma: no cover — covered by the check above
-        return {"skipped": True, "reason": f"PPTX rendering failed: {e}"}
-
-    try:
-        reviewer = PptxReviewer(llm=agent.llm)
-        deck_review = reviewer.review_pngs(png_paths)
+        reviewer = PptxReviewer(llm=agent.llm, mode="auto")
+        deck_review = reviewer.review(pptx_path)
     except Exception as e:
-        return {"skipped": True, "reason": f"vision review failed: {e}"}
+        return {"skipped": True, "reason": f"review failed: {e}"}
     return {"skipped": False, **deck_review.to_dict()}
 
 
@@ -1830,16 +1824,22 @@ def builtin_tools() -> dict[str, AgentTool]:
                         "type": "boolean",
                         "default": False,
                         "description": (
-                            "Opt in to the vision-LLM review pass. When "
+                            "Opt in to the design-review pass. When "
                             "true and format='pptx', each slide is "
-                            "rendered to PNG (LibreOffice + pypdfium2) "
-                            "and shown to a vision-capable LLM for a "
-                            "design critique (typography, palette, "
-                            "layout, density, hierarchy). The review "
-                            "result is returned alongside the file path. "
-                            "Adds ~5-30s and ~$0.05-0.50 per call "
-                            "depending on slide count and provider. "
-                            "Default off."
+                            "critiqued on typography / palette / layout "
+                            "/ density / hierarchy and the result is "
+                            "returned alongside the file path. Uses "
+                            "vision LLM when LibreOffice + pypdfium2 "
+                            "are installed (best quality), otherwise "
+                            "falls back to a text-mode critique that "
+                            "extracts slide structure via python-pptx "
+                            "(no extra install, ~70-80% of vision-mode "
+                            "value). The result carries a `mode` field "
+                            "so you can tell which path ran, plus an "
+                            "`upgrade_hint` when the fallback was used. "
+                            "Adds ~3-30s and a small LLM cost. "
+                            "Default off — opt in only when the user "
+                            "explicitly asks for a quality check."
                         ),
                     },
                 },
