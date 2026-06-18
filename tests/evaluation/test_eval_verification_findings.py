@@ -712,7 +712,9 @@ class TestNoSourcesFallback:
 
         # 2) Synthesis path retrieves sources, augments the prompt,
         # invokes the inner agent, and DOES NOT call the verifier.
-        inner = _FakeInnerAgent(drafts=["the proposal draft"])
+        # The draft cites [D#0] inline (alpha51+: only cited sources are
+        # surfaced — see the citations assertion below).
+        inner = _FakeInnerAgent(drafts=["the proposal draft [D#0]"])
         verifier_calls: list[str] = []
 
         class _SpyVerifier:
@@ -729,9 +731,12 @@ class TestNoSourcesFallback:
         result = agent.run("Documents を参考に提案資料を作成して下さい")
         assert result.stopped_reason == "synthesis_pass"
         assert result.task_kind == "synthesis"
-        assert result.answer == "the proposal draft"
+        assert result.answer == "the proposal draft [D#0]"
         assert verifier_calls == []  # verifier NEVER invoked
-        # Sources are still surfaced as supplementary citations
+        # alpha51+: synthesis surfaces ONLY the sources actually cited
+        # inline in the draft (keeps the Sources panel free of retrieval
+        # noise). The draft cites [D#0], so it appears; a retrieved-but-
+        # uncited source would be dropped.
         assert result.citations == ["D#0"]
         # The inner agent received the augmented prompt that includes
         # the retrieved source content

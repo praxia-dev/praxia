@@ -1024,7 +1024,17 @@ class CommandedAgent:
             return meta_result
 
         if sources is None:
-            sources = self.retriever(user_input)
+            # Retrieve against the current question PLUS recent conversation
+            # context. A vague follow-up in an established thread ("what's
+            # the top priority?", "make a PPTX of that") has little lexical
+            # / semantic overlap with the documents on its own, so a bare
+            # retrieval returns nothing and the answer silently degrades to
+            # the no-sources fallback (and the 出典 / Sources panel stays
+            # empty). Folding in the last few turns lets the follow-up
+            # inherit the thread's subject and surface the right sources.
+            # The augmented text is used for RETRIEVAL ONLY — the answer
+            # prompt below still uses the user's actual words.
+            sources = self.retriever(self._retrieval_query(user_input, history))
 
         # Aggregate doc-side images attached to retrieved sources (PDF
         # page renders + DOCX/PPTX embedded media) and combine with the
@@ -1043,18 +1053,31 @@ class CommandedAgent:
         # inner agent then produces the artefact with the sources
         # already in context.
         if task_kind == "synthesis":
-            augmented = self._build_initial_prompt(user_input, sources) if sources else user_input
+            augmented = self._build_synthesis_prompt(user_input, sources) if sources else user_input
             inner_result = self.inner.run(augmented, history=history, images=images)
+            answer_text = (inner_result.final_text or "").strip()
+            # Synthesis retrieves on the literal request ("make a PPTX of
+            # that"), which often pulls weakly-related chunks (e.g. a repo
+            # README) the artefact never actually uses. Unlike the
+            # knowledge path — where the verifier vouches for every
+            # retrieved source — here we only expose the sources the
+            # answer CITED inline (``[D#0]``). That keeps the 出典 / Sources
+            # panel honest: it shows the material the output genuinely drew
+            # on, not retrieval noise. When nothing was cited (e.g. a bare
+            # "saved the file" confirmation), the panel is empty rather
+            # than listing a stray README.
+            cited_sources = [s for s in sources if f"[{s.id}]" in answer_text]
             self._audit(
                 "commander.synthesis_pass",
                 f"user:{self.inner.user_id}",
                 metadata={
                     "input_chars": str(len(user_input)),
                     "sources": str(len(sources)),
+                    "cited_sources": str(len(cited_sources)),
                 },
             )
             synth_result = CommandedResult(
-                answer=(inner_result.final_text or "").strip(),
+                answer=answer_text,
                 verdict=Verdict(
                     groundedness=0.0,
                     per_claim=[],
@@ -1065,13 +1088,11 @@ class CommandedAgent:
                         "inspiration; per-claim grounding not applied."
                     ),
                 ),
-                sources=sources,
+                # Only the actually-cited snippets — see comment above.
+                sources=cited_sources,
                 stopped_reason="synthesis_pass",
                 task_kind=task_kind,
-                # Expose the source ids so the UI can still link the
-                # output to the inspiration material — they aren't
-                # "verified citations" but they ARE traceable.
-                citations=[s.id for s in sources],
+                citations=[s.id for s in cited_sources],
             )
             synth_result.add_usage(inner_result.usage)
             return synth_result
@@ -1279,6 +1300,84 @@ class CommandedAgent:
         )
 
     @staticmethod
+    def _retrieval_query(
+        user_input: str,
+        history: list[dict[str, Any]] | None,
+        *,
+        max_context_chars: int = 800,
+    ) -> str:
+        """Build the text used for source retrieval.
+
+        Returns ``user_input`` alone on the first turn. On follow-ups it
+        prepends up to ``max_context_chars`` of the MOST RECENT prior
+        turns (user + assistant) so a context-light question still
+        retrieves against what the thread is actually about. Retrieval
+        embeds/keyword-scores the whole string, so extra topical terms
+        only raise recall — they never appear in the user-facing answer.
+        """
+        if not history:
+            return user_input
+        collected: list[str] = []
+        total = 0
+        for msg in reversed(history):
+            content = (msg.get("content") or "").strip()
+            if not content:
+                continue
+            collected.append(content)
+            total += len(content)
+            if total >= max_context_chars:
+                break
+        if not collected:
+            return user_input
+        context = "\n".join(reversed(collected))[-max_context_chars:]
+        return f"{context}\n{user_input}"
+
+    @staticmethod
+    def _build_synthesis_prompt(user_input: str, sources: list[Source]) -> str:
+        """Prompt for the synthesis path (draft / summary / slide deck /
+        proposal). Unlike :meth:`_build_initial_prompt` — which is the
+        verifier-mode "answer using ONLY these sources" framing — synthesis
+        treats retrieved snippets as OPTIONAL supporting material and makes
+        the CONVERSATION SO FAR the primary input.
+
+        Why this exists: a follow-up like "make a PPTX of that" retrieves
+        on the literal words "make a PPTX", which often matches a weakly-
+        related chunk (e.g. a repo README) rather than the analysis the
+        agent just produced. With the verifier-mode prompt the agent would
+        then anchor on that stray snippet — and, if the snippet happened to
+        say "these are placeholder files, don't use real data", it would
+        emit a caveats-only artefact instead of converting the previous
+        turn's draft. Framing sources as optional + history as primary
+        fixes that: the agent builds the artefact from the prior draft and
+        only leans on a snippet where it genuinely adds a fact.
+        """
+        if not sources:
+            return user_input
+        src_block = "\n\n".join(
+            f"[{s.id}] {s.text.strip()}" for s in sources
+        )
+        return (
+            "You are producing a NEW artefact (draft / summary / slide "
+            "deck / proposal / rewrite) as the user requests below.\n\n"
+            "PRIMARY MATERIAL is the conversation so far — especially any "
+            "draft, analysis, or list you already produced in earlier "
+            "turns. If the user is asking you to reformat / convert / turn "
+            "the previous answer into something (e.g. \"make a PPTX of "
+            "that\", \"summarise the above\"), build directly on that prior "
+            "content.\n\n"
+            "The labelled snippets below are OPTIONAL supporting reference "
+            "only — they may be incomplete or only tangentially related. Do "
+            "NOT restrict yourself to them, and do NOT reduce the output to "
+            "caveats or refuse just because a snippet lacks the details you "
+            "need; use the conversation. Cite a source id inline (e.g. "
+            "[D#0]) only where you actually draw a specific fact from it.\n\n"
+            "=== REFERENCE SNIPPETS (optional) ===\n"
+            f"{src_block}\n\n"
+            "=== USER REQUEST ===\n"
+            f"{user_input}"
+        )
+
+    @staticmethod
     def _build_redraft_prompt(
         user_input: str,
         prev_draft: str,
@@ -1390,15 +1489,28 @@ class CommandedAgent:
             from praxia.server.routers.documents import search_for_user
             user_id = self.inner.user_id
 
+            # Prefer the cheap scout LLM for the query-expansion sub-call;
+            # fall back to the inner agent's main LLM when no scout is set.
+            docs_search_llm = self.scout_llm or self.inner.llm
+
             def _docs_search(q: str):
                 # include_images=True so the retrieved hits also carry
                 # the relevant PDF page render / DOCX-PPTX embedded
                 # images. CommandedAgent aggregates these and forwards
                 # them to inner.run(images=...) for the vision LLM.
+                #
+                # llm=… mirrors the search_documents tool (tools.py): when
+                # embeddings are unavailable, search_for_user uses the LLM
+                # to expand the query (synonyms + cross-language) instead of
+                # degrading to pure keyword scoring. Without this, a JP query
+                # ("アクションアイテム") never matches an EN doc ("action
+                # items"), so the verified retriever returned 0 sources and
+                # the Sources / 出典 panel stayed empty.
                 return search_for_user(
                     memory_dir, user_id, q,
                     limit=per_layer_limit,
                     include_images=True,
+                    llm=docs_search_llm,
                 )
 
             documents_search = _docs_search

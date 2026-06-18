@@ -470,6 +470,17 @@ def build_router(*, current_user: Any, storage: Path):
                         "text_truncated": len(s.text or "") > 500,
                         "metadata": dict(s.metadata or {}),
                     })
+                # alpha43+: also surface documents the agent opened via
+                # the `read_document` tool. Pre-retrieval-only sources
+                # missed the case where the agent saw an empty pre-
+                # retrieve and then explicitly read a named file via
+                # tool call (e.g. "ドキュメントの最新の売上情報" → agent
+                # calls list_files_in_folder, picks the Q3 PDF, calls
+                # read_document on it). Without this, the answer
+                # quoted the PDF in body text but the Sources panel
+                # was empty — confusing for users who expect "agent
+                # used a file → file shows in Sources".
+                _append_tool_read_sources(sources_payload, cresult)
                 resp = AgentRunResponse(
                     text=final_text,
                     tool_calls=[],
@@ -596,6 +607,81 @@ def build_router(*, current_user: Any, storage: Path):
                 )
 
         return result
+
+    def _append_tool_read_sources(
+        sources_payload: list[dict[str, Any]],
+        cresult: Any,
+    ) -> None:
+        """alpha43+: scan the inner agent's tool_calls for successful
+        ``read_document`` calls and surface each opened file as an
+        additional Source in the response payload.
+
+        Why: the pre-retrieval sources list captures embedding-search
+        hits, but the agent often goes "I'll just open file X directly"
+        via the read_document tool (especially when the user names a
+        file or asks for a specific document type). Without this,
+        the answer body cites a file the Sources panel never shows.
+        """
+        import json as _json
+        seen_ids: set[str] = set(s.get("id", "") for s in sources_payload)
+        seen_paths: set[str] = set()
+        for s in sources_payload:
+            md = s.get("metadata") or {}
+            p = md.get("relative_path") or md.get("path")
+            if p:
+                seen_paths.add(str(p))
+
+        # Walk every round's tool calls
+        rounds = getattr(cresult, "rounds", []) or []
+        idx = 0
+        for r in rounds:
+            inner_result = getattr(r, "inner_result", None)
+            if inner_result is None:
+                continue
+            for tc in getattr(inner_result, "tool_calls", []) or []:
+                if getattr(tc, "name", "") != "read_document":
+                    continue
+                if not getattr(tc, "ok", False):
+                    continue
+                raw = getattr(tc, "result_text", "") or ""
+                try:
+                    parsed = _json.loads(raw)
+                except Exception:
+                    continue
+                if not isinstance(parsed, dict) or not parsed.get("found"):
+                    continue
+                rel_path = str(parsed.get("relative_path") or "")
+                if rel_path and rel_path in seen_paths:
+                    continue
+                seen_paths.add(rel_path)
+                # Synth a stable id "D#tool0", "D#tool1", … so the
+                # UI can render the same way as embedding-retrieval
+                # sources. Numbering starts AFTER any existing IDs.
+                while f"D#tool{idx}" in seen_ids:
+                    idx += 1
+                source_id = f"D#tool{idx}"
+                seen_ids.add(source_id)
+                idx += 1
+                text = str(parsed.get("text") or "")
+                sources_payload.append({
+                    "id": source_id,
+                    "kind": "local_document",
+                    "text_preview": text[:500],
+                    "text_truncated": len(text) > 500,
+                    "metadata": {
+                        "doc_id": parsed.get("doc_id"),
+                        "folder_id": parsed.get("folder_id"),
+                        "folder_title": parsed.get("folder_title"),
+                        "relative_path": rel_path,
+                        "extension": parsed.get("extension"),
+                        "size_bytes": parsed.get("size_bytes"),
+                        "mtime": parsed.get("mtime"),
+                        "mtime_iso": parsed.get("mtime_iso"),
+                        "char_count": parsed.get("char_count"),
+                        "chunk_count": parsed.get("chunk_count"),
+                        "via": "read_document_tool",
+                    },
+                })
 
     def _append_applied_op_to_message(
         user_id: str,
