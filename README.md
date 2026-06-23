@@ -12,12 +12,9 @@
 
 <sub>📺 [Watch the 4-minute walkthrough](https://youtu.be/Z3DFa2saHJg) · 🚀 [Quickstart](docs/quickstart.md) · 💬 [Discussions](https://github.com/praxia-dev/praxia/discussions)</sub>
 
-### Install Praxia Desktop (Windows)
+### Install Praxia Desktop (Windows 10 / 11 x64)
 
 [<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="52">](https://apps.microsoft.com/detail/9P9LSR34HZF3)
-
-Windows 10 / 11 x64。Microsoft Store からインストールすると SmartScreen 警告なし、自動更新付き。
-過去のリリースノートは [GitHub Releases](https://github.com/praxia-dev/praxia/releases) を参照。
 
 > **Specialized Multi-Agent Orchestrator with Cyclic Personal/Organizational Memory**
 >
