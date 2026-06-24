@@ -1,357 +1,358 @@
-# Praxia 業種・業務別ユースケース集
+# Praxia Use Cases — Industry & Workflow Catalog
 
-> **このドキュメントの位置付け**: 普及・営業時に使える「具体的な使い方 × Before/After 効果」のカタログ。
-> 数値は業界ベンチマークと初期 PoC の想定値に基づくレンジ表記。実数値は導入企業ごとに検証。
-
----
-
-## 1. 投資 (InvestmentSkill)
-
-### 1-A. スタートアップへのシード投資判断
-
-**業務シーン**: VC のジュニア・アソシエイトが、毎週 5〜10 件のピッチデッキを読んで投資委員会向けの 1 ページ要約を作成する。
-
-| 観点 | Before (従来) | After (Praxia) | 効果 |
-|------|--------------|-------------------|------|
-| 1 件あたり所要時間 | 4〜6 時間 (ピッチ読み + 競合調査 + 財務試算) | **45〜60 分** | **約 80% 削減** |
-| 競合調査の網羅性 | 主要 3〜5 社 | 主要 + 周辺領域 10〜15 社 | **網羅性 3 倍** |
-| Bull/Bear 両論併記 | 担当者によって偏る | 必ず両論 + 反証可能性を提示 | **判断品質の標準化** |
-| 案件処理本数 | 週 5〜10 件 | **週 20〜30 件** | **3 倍のディール検討** |
-
-**個人 → 組織知の循環例**:
-- ベテラン GP が 5 年かけて磨いた「SaaS 系の Burn Multiple 評価ロジック」が個人メモリに蓄積
-- 3 名の異なる担当者が独立に同じ評価軸を使うようになると Sleep-time Consolidator が検出
-- 組織知へ自動昇格 → 新人アソシエイトも初日から同じ目利きで動ける
-
-### 1-B. 上場株式の四半期リバランス
-
-**業務シーン**: 個人投資家・ファミリーオフィスの IFA が、保有銘柄 30 銘柄について四半期ごとにリバランス判断資料を作る。
-
-| 観点 | Before | After |
-|------|--------|-------|
-| 1 銘柄あたり分析時間 | 30〜60 分 | **5〜10 分** |
-| 30 銘柄の総時間 | 15〜30 時間 (3〜4 営業日) | **2.5〜5 時間 (半日)** |
-| 為替・マクロ要因の織り込み | 主要 1〜2 要因 | 5〜7 要因を一貫して評価 |
-| 顧客への説明資料の質 | 担当者依存 | 全顧客同じ品質 + 個別最適化 |
-
-**訴求ポイント**:
-- 「リバランス頻度を月次に上げられる」 → アクティブ運用の差別化
-- 「投資助言ライセンス遵守の文言を自動付加」 → コンプラ事故の防止
-
-### 1-C. M&A デューデリの財務クイックスクリーニング
-
-**業務シーン**: 事業会社の経営企画部が、M&A 候補 20 社のロングリストから 5 社にショート化する初期スクリーニング。
-
-| 観点 | Before | After |
-|------|--------|-------|
-| 20 社の初期分析 | 2 週間 (財務 3 期分 × 20 社) | **2〜3 営業日** |
-| 見逃しリスク (粉飾の兆候等) | 担当者の経験次第 | 異常検知ルール 30 項目を一律適用 |
-| 投資委員会への説明資料 | 翌週月曜まで | **当日中** |
+> 🌐 **日本語版はこちら**: [use-cases.ja.md](use-cases.ja.md)
+>
+> **What this document is**: a catalog of concrete "use case × Before/After impact" examples for evangelism and sales conversations. Figures are ranges based on industry benchmarks and early PoC assumptions; actual numbers should be re-validated per deployment.
 
 ---
 
-## 2. 営業 (SalesSkill, SalesAgentFlow)
+## 1. Investment (`InvestmentSkill`)
 
-### 2-A. 新規アカウントの事前リサーチ + 商談ストーリーボード
+### 1-A. Seed-stage investment decisions
 
-**業務シーン**: B2B SaaS の営業が、新規大手顧客との初回商談に向けて準備する。
+**Scenario**: a VC junior associate reads 5–10 pitch decks per week and prepares one-page summaries for the investment committee.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| リサーチ所要時間 | 4〜8 時間 (IR + プレス + 業界レポート読み込み) | **30〜60 分** |
-| 商談ストーリーボード作成 | 別途 2〜3 時間 | **同時生成 (フロー内で完結)** |
-| 仮説の質 | 主要 1〜2 仮説 | 上位 3 仮説 + 各々の根拠と反証 |
-| FAQ の準備 | 想定 5 問程度を口頭で確認 | **5 問の表形式 (質問 / 推奨回答 / 公開ソース)** |
+| Dimension | Before | After (Praxia) | Effect |
+|---|---|---|---|
+| Time per deal | 4–6 hours (read pitch + competitive scan + financial model) | **45–60 min** | **~80% reduction** |
+| Competitive scan breadth | Top 3–5 players | Top 5 + adjacent 10–15 | **3× breadth** |
+| Bull/bear balance | Skews per associate | Always balanced + falsifiability checks | **Standardized judgment** |
+| Deals processed per week | 5–10 | **20–30** | **3× deal flow** |
 
-**Before の典型的な失敗**:
-> 「IR をざっと読んだだけで臨んだら、相手 CFO から『3 ヶ月前のあの設備投資、御社の製品でカバーできますか?』と聞かれて固まった」
+**Personal → org memory cycle**:
+- A senior GP's hard-won "SaaS Burn Multiple evaluation logic" accumulates in personal memory over years.
+- When 3 different associates independently apply the same lens, the Sleep-time Consolidator detects the pattern.
+- The rubric is auto-promoted to org memory — every new associate inherits the senior's instincts on day one.
 
-**After の具体的な変化**:
-> Praxia が IR と直近 6 ヶ月のプレスを統合し、「設備投資 300 億円のうち電子部品関連 120 億円」を抽出。商談 FAQ の 1 問目で先回りして提案できた。
+### 1-B. Quarterly portfolio rebalancing (public equities)
 
-**数値効果 (PoC 実績想定)**:
-- 提案合意率: **+15〜20pt**
-- 1 商談あたりの準備時間: **6 時間 → 1 時間**
-- 営業 1 人あたり週次商談本数: **3 件 → 6〜8 件**
+**Scenario**: a family-office IFA rebalances a 30-stock portfolio every quarter.
 
-### 2-B. RFP 回答書の作成支援
+| Dimension | Before | After |
+|---|---|---|
+| Time per stock | 30–60 min | **5–10 min** |
+| 30-stock total | 15–30 hours (3–4 business days) | **2.5–5 hours (half day)** |
+| FX & macro factors weighted | 1–2 dominant factors | 5–7 factors evaluated consistently |
+| Quality of client-facing report | Varies by analyst | Same baseline + per-client tailoring |
 
-**業務シーン**: SIer が官公庁・大企業の RFP に対する 50〜100 ページの回答書を作る。
+**Pitch angles**:
+- "Rebalance frequency moves from quarterly to monthly" → active-management differentiator.
+- "Compliance language auto-appended" → reduces advisory-license risk.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 回答書ドラフト時間 | 2 週間 (営業 2 名 + SE 3 名) | **3〜5 営業日** |
-| 過去案件からの転用率 | 30〜50% (担当者の記憶頼み) | **70〜85%** (個人メモリから自動引用) |
-| 抜け漏れ件数 | 5〜10 件 (再質問発生) | **1〜2 件** |
-| 受注率 | ベース | **+5〜10pt** (品質向上による) |
+### 1-C. M&A due diligence — financial quick-screening
 
-**個人 → 組織知の循環例**:
-- ベテラン SE が「金融業向け RFP の付帯条件記述パターン」を 10 年かけて蓄積
-- 個人メモリに記録された言い回しが、3 名以上の異なる SE が転用したタイミングで Shared Block へ昇格
-- 退職予定者の知見が組織標準として継承される (UC-4 知見継承シナリオ)
+**Scenario**: a corporate development team narrows a long list of 20 M&A targets down to 5 for further analysis.
 
-### 2-C. インサイドセールスのリード優先順位付け
-
-**業務シーン**: SaaS スタートアップで毎日 50〜100 件の問合せを処理する IS チーム。
-
-| 観点 | Before | After |
-|------|--------|-------|
-| リード分類所要時間 | 1 件あたり 5 分 (SDR 判断) | **30 秒 (AI 一次判定 → SDR 確認)** |
-| Hot リード見逃し率 | 10〜15% | **3〜5%** |
-| 1 日処理件数 | 50〜80 件 | **150〜200 件** |
-| アポ獲得率 | ベース | **+8〜12pt** |
+| Dimension | Before | After |
+|---|---|---|
+| Initial analysis of 20 targets | 2 weeks (3 fiscal years × 20 companies) | **2–3 business days** |
+| Risk of missing red flags | Depends on analyst experience | 30 anomaly-detection rules applied uniformly |
+| Investment-committee deck | Next Monday at earliest | **Same day** |
 
 ---
 
-## 3. 設計 (DesignSkill)
+## 2. Sales (`SalesSkill`, `SalesAgentFlow`)
 
-### 3-A. 要件定義書の早期レビュー
+### 2-A. New-account pre-meeting research + meeting storyboard
 
-**業務シーン**: SIer のシニア・アーキテクトが、新人 PM が書いた要件定義書を週 3〜5 本レビューする。
+**Scenario**: a B2B SaaS account executive prepares for the first meeting with a major new prospect.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| レビュー 1 本あたりの所要時間 | 2〜4 時間 | **20〜40 分** |
-| シニアの可処分時間 | 週 12〜20 時間レビューに消費 | **週 3〜4 時間 (本質的な指摘のみ集中)** |
-| 抜け漏れ検出 (NFR) | 主要 5〜7 観点 | **DRAGON 全 6 軸で網羅的に検出** |
-| PM の独り立ち期間 | 12〜18 ヶ月 | **6〜9 ヶ月** |
+| Dimension | Before | After |
+|---|---|---|
+| Research time | 4–8 hours (IR filings + press + industry reports) | **30–60 min** |
+| Meeting storyboard | Another 2–3 hours separately | **Generated in the same flow** |
+| Hypothesis quality | 1–2 primary hypotheses | Top 3 + supporting evidence + counter-evidence |
+| FAQ prep | ~5 likely questions, verbal review | **5 questions in a table (question / recommended answer / public source)** |
 
-**Before の典型例**:
-> 「監視・障害対応・運用引き継ぎ」が抜けたまま設計フェーズに入ってしまい、リリース直前に 200 時間の追加工数が発生
+**Typical Before failure**:
+> "Skimmed IR filings, walked in, and the CFO opened with 'will your product cover that 30B yen CapEx we announced three months ago?' I froze."
 
 **After**:
-> Praxia の DesignSkill が要件定義書レビュー時に「NFR 観点で運用設計の記述不足」をフラグ → 設計フェーズ前に解消
+> Praxia merges IR with the last 6 months of press releases, extracts "of the 30B yen CapEx, 12B yen is electronics-related," and surfaces it as FAQ #1. The AE leads with it.
 
-### 3-B. アーキテクチャ選定の意思決定支援
+**Estimated impact (PoC modeling)**:
+- Proposal-acceptance rate: **+15–20pt**
+- Prep time per meeting: **6 hours → 1 hour**
+- Meetings per AE per week: **3 → 6–8**
 
-**業務シーン**: 新規プロジェクトで Monolith / Microservices / Modular Monolith のどれを選ぶか議論する。
+### 2-B. RFP response drafting
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 比較資料作成 | 3〜5 営業日 | **半日** |
-| 評価観点の網羅 | 主要 5〜10 観点 | **15〜20 観点 (Conway / NFR / 運用負荷 / 採用容易性)** |
-| 過去案件との比較 | 担当者の記憶 | **組織メモリから類似案件を自動抽出** |
+**Scenario**: a systems integrator drafts a 50–100 page response to a government or enterprise RFP.
 
-**個人 → 組織知の循環例**:
-- 「2025 年の A 社案件で Microservices に踏み込みすぎて運用負荷が破綻した」という痛い経験が個人メモリに記録
-- 1 年後に別チームが類似決定を検討 → Praxia が過去事例を提示 → 同じ失敗を回避
-- **「組織として失敗から学習する」** メカニズムが初めて機能する
+| Dimension | Before | After |
+|---|---|---|
+| Draft time | 2 weeks (2 AEs + 3 SEs) | **3–5 business days** |
+| Reuse rate from prior bids | 30–50% (relies on memory) | **70–85%** (auto-quoted from personal memory) |
+| Missed items | 5–10 (requiring clarification rounds) | **1–2** |
+| Win rate | Baseline | **+5–10pt** (driven by quality) |
 
-### 3-C. レガシーコードの非機能評価
+**Personal → org memory cycle**:
+- A senior SE accumulates "RFP-response patterns for the financial-services vertical" over a decade.
+- When 3+ different SEs reuse the same phrasing, it's promoted to the shared block.
+- A pending retiree's expertise survives as organizational standard (the knowledge-handover scenario).
 
-**業務シーン**: 20 年運用の基幹システムについて、リファクタ判断のための非機能棚卸し。
+### 2-C. Inside-sales lead prioritization
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 評価所要時間 | 3〜6 ヶ月 (専任 2 名) | **3〜4 週間** |
-| カバー範囲 | サンプリング 30% | **全モジュール網羅** |
-| ROI 試算の精度 | ±50% | **±15%** |
+**Scenario**: an inside-sales team at a SaaS startup processes 50–100 inbound inquiries per day.
+
+| Dimension | Before | After |
+|---|---|---|
+| Lead-triage time | 5 min per lead (SDR judgment) | **30 sec (AI first-pass + SDR confirm)** |
+| Hot-lead miss rate | 10–15% | **3–5%** |
+| Daily throughput | 50–80 leads | **150–200** |
+| Meeting-booking rate | Baseline | **+8–12pt** |
 
 ---
 
-## 4. 購買 (PurchasingSkill)
+## 3. Design / Architecture (`DesignSkill`)
 
-### 4-A. 新規サプライヤー候補の初期評価
+### 3-A. Early review of requirements documents
 
-**業務シーン**: 製造業の購買部が、原材料の新規サプライヤー候補 30 社を 5 社にショート化する。
+**Scenario**: a senior architect at a systems integrator reviews 3–5 requirements documents per week written by junior PMs.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 30 社の初期評価 | 3〜4 週間 (購買担当 3 名) | **3〜5 営業日** |
-| QCD+S 観点の網羅 | Q と C 中心、S は属人的 | **QCDS 全観点 + ESG / 地政学 / カーボン込み** |
-| 失注リスクの早期検知 | 契約締結後に発覚 | **初期評価時点で検出** |
+| Dimension | Before | After |
+|---|---|---|
+| Review time per doc | 2–4 hours | **20–40 min** |
+| Senior's reviewing load | 12–20 hrs/week | **3–4 hrs/week (focused on substantive issues)** |
+| NFR coverage | Top 5–7 dimensions | **All 6 DRAGON axes systematically** |
+| PM ramp time | 12–18 months | **6–9 months** |
 
-**Before の典型的な失敗**:
-> 「単価が安いという理由で選定したが、実は児童労働懸念で取引先が西欧顧客から監査を受け、最終的にシングルソース解消で 2 億円の追加コスト」
+**Typical Before failure**:
+> "Monitoring, incident response, and operational handover were missed in the requirements phase. Pre-release, this created 200 hours of unplanned engineering work."
 
 **After**:
-> PurchasingSkill が ESG リスクを QCD と同等の評価軸で警告 → 初期段階で除外
+> Praxia's DesignSkill flags "operational design coverage missing in NFR section" during requirements review — caught before design phase begins.
 
-### 4-B. RFQ 回収結果の TCO 比較
+### 3-B. Architecture-selection decisions
 
-**業務シーン**: 設備投資 5 億円規模の見積依頼に対して 5〜8 社から RFQ を回収。
+**Scenario**: a new project debates Monolith vs. Microservices vs. Modular Monolith.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| TCO 試算所要時間 | 1〜2 週間 | **2〜3 営業日** |
-| 隠れコストの織り込み | 直接コスト中心 (+ 物流) | **直接 + 物流 + 関税 + 在庫 + 不良率 + 為替** |
-| ベンダーロックイン評価 | 担当者の感覚 | **定量的なリスクスコア** |
-| 経営層への説明資料 | 別途 1 週間 | **同時生成** |
+| Dimension | Before | After |
+|---|---|---|
+| Comparison deck | 3–5 business days | **Half a day** |
+| Evaluation dimensions | 5–10 primary | **15–20 (Conway / NFR / ops load / hiring viability)** |
+| Comparison to prior projects | Relies on memory | **Auto-surfaces analogous past projects from org memory** |
 
-**訴求ポイント**:
-- 「TCO 視点で初期見積より 30% 高い真のコストを発見できる」 → 経営層への説得材料
+**Personal → org memory cycle**:
+- "In the 2025 A-corp project we leaned hard into Microservices; operational load collapsed" — that painful lesson lands in personal memory.
+- A year later a different team is debating a similar choice. Praxia surfaces the prior case. The same mistake is avoided.
+- **"The organization actually learns from failure"** — this is the mechanism that makes it work.
 
-### 4-C. BCP 観点のサプライチェーン棚卸し
+### 3-C. Non-functional assessment of legacy systems
 
-**業務シーン**: コロナ・ウクライナ・台湾海峡リスクを受けた、全社サプライヤー 500 社の BCP 棚卸し。
+**Scenario**: a 20-year-old core system needs a non-functional inventory to inform a refactoring decision.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 500 社の評価所要時間 | 6 ヶ月 (専任チーム 5 名) | **6〜8 週間** |
-| シングルソース検出率 | 70〜80% | **95% 以上** |
-| リスク・マトリクスの精度 | 国レベル | **県・都市レベル + サプライヤー固有** |
-| 経営報告までの期間 | 半年〜1 年 | **2 ヶ月** |
-
----
-
-## 5. 特許 (PatentSkill)
-
-### 5-A. 新規発明の先行技術調査 + 進歩性評価
-
-**業務シーン**: メーカーの研究開発部門で、月 10〜20 件の発明案件について「特許化すべきか / 営業秘密か」の判断資料を作る。
-
-| 観点 | Before | After |
-|------|--------|-------|
-| 1 件あたり調査時間 | 1〜2 営業日 (弁理士 + 研究員) | **2〜4 時間** |
-| 検索式設計 | 弁理士の経験次第 | **シノニム展開 + IPC/FI/Fターム を体系的に網羅** |
-| 進歩性判断の根拠 | 「私の経験では…」 | **構成要素別の対比表 + 阻害要因 / 顕著効果** |
-| 弁理士費用 | 1 件 30〜50 万円 | **1 件 10〜15 万円 (一次調査を内製化)** |
-
-**個人 → 組織知の循環例**:
-- 知財部のベテランが磨いた「半導体分野の検索式テンプレート」が個人メモリに蓄積
-- 別分野の研究員が Praxia 経由でアクセス → クロスドメインの先行技術が見つかる
-- 「組織として知財の蓄積が発酵する」 → 出願戦略の精度向上
-
-### 5-B. 特許クレームの初稿ドラフト
-
-**業務シーン**: スタートアップで弁理士費用を抑えたいが、品質も担保したい。
-
-| 観点 | Before | After |
-|------|--------|-------|
-| 初稿ドラフト所要時間 | 弁理士に丸投げ → 2 週間 | **Praxia で初稿 → 弁理士レビュー: 3 営業日** |
-| 弁理士費用 | 50〜80 万円 | **15〜25 万円 (レビューのみ)** |
-| クレーム記載の戦略性 | 弁理士任せ | **独立クレームの広さ / 従属クレームの段階的限定が事前検討済み** |
-
-### 5-C. 競合特許マップの作成
-
-**業務シーン**: 新製品投入前の特許侵害リスク調査。
-
-| 観点 | Before | After |
-|------|--------|-------|
-| 競合特許 50〜100 件の分析 | 1 ヶ月 (知財部 2 名) | **1 週間** |
-| 侵害リスクの定量化 | 重大度 3 段階 (主観) | **要素単位の対応マトリクス** |
-| 回避設計の提案 | 別途 1 ヶ月 | **同時生成 (回避クレーム案 3 通り)** |
+| Dimension | Before | After |
+|---|---|---|
+| Assessment duration | 3–6 months (2 dedicated FTE) | **3–4 weeks** |
+| Coverage | 30% sampling | **All modules, comprehensive** |
+| ROI estimate accuracy | ±50% | **±15%** |
 
 ---
 
-## 6. 法務 (LegalSkill)
+## 4. Procurement (`PurchasingSkill`)
 
-### 6-A. 契約書レビュー (NDA / 業務委託 / SaaS 利用規約)
+### 4-A. Initial evaluation of new supplier candidates
 
-**業務シーン**: 中堅企業の法務部が、月 50〜100 件の契約書レビューを 2〜3 名で回す。
+**Scenario**: a manufacturer's procurement team narrows 30 candidate raw-materials suppliers down to 5.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 1 件あたりレビュー時間 | 60〜90 分 | **10〜15 分 (一次レビュー)** |
-| 月間処理件数 | 50〜80 件で限界 | **200〜300 件** |
-| Critical リスク見逃し率 | 5〜10% | **1〜2%** |
-| 法務担当の残業時間 | 月 60〜80 時間 | **月 20〜30 時間** |
+| Dimension | Before | After |
+|---|---|---|
+| 30-supplier initial eval | 3–4 weeks (3 procurement FTE) | **3–5 business days** |
+| QCD+S coverage | Q and C lead, S is ad hoc | **All QCDS + ESG + geopolitics + carbon** |
+| Early loss-risk detection | Surfaces after contract signed | **Caught at initial evaluation** |
 
-**Before の典型的な失敗**:
-> 「損害賠償条項の上限 (Cap) が無制限になっていることを見落とし、後日トラブル時に 5 億円規模の請求リスクが顕在化」
+**Typical Before failure**:
+> "Selected on price; later it emerged the supplier was on a child-labor watchlist. Western customers triggered audits. We exited single-source with 200M yen of switching cost."
 
 **After**:
-> LegalSkill が RACE フレームの R (Risk) で 🔴 Critical フラグを自動立て → 締結前に必ず交渉
+> PurchasingSkill weights ESG risk on par with QCD — flagged at initial screening, excluded before contract.
 
-### 6-B. M&A デューデリの法務側分析
+### 4-B. RFQ response TCO comparison
 
-**業務シーン**: 中堅企業の法務部が、M&A 案件で買収候補 3 社の契約書 200〜500 通をレビュー。
+**Scenario**: an RFQ for a 500M yen capital investment goes to 5–8 vendors.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 全契約レビュー所要時間 | 4〜8 週間 (外部法律事務所込み 1,500〜3,000 万円) | **2〜3 週間 (外部費用 600〜1,200 万円)** |
-| Change of Control 条項の検出率 | 80〜90% | **99%** |
-| 偶発債務の発見数 | 担当者依存 | **全契約の網羅的列挙** |
+| Dimension | Before | After |
+|---|---|---|
+| TCO modeling | 1–2 weeks | **2–3 business days** |
+| Hidden costs included | Direct cost + logistics | **Direct + logistics + duties + carrying + defect rate + FX** |
+| Vendor lock-in evaluation | Analyst gut feel | **Quantified risk score** |
+| Executive-ready deck | Another week | **Generated in the same pass** |
 
-**訴求ポイント**:
-- 「外部法律事務所費用 50% 削減」 → 案件 1 件あたり 1,000 万円規模の節約
+**Pitch angle**:
+- "TCO view reveals real cost 30% higher than headline quotes" → ammunition for executive conversations.
 
-### 6-C. グローバル契約の準拠法・管轄レビュー
+### 4-C. BCP-driven supply-chain inventory
 
-**業務シーン**: 海外拠点との契約で、準拠法・仲裁地・管轄裁判所の交渉。
+**Scenario**: post-pandemic + Ukraine + Taiwan-strait risks, a full inventory of 500 suppliers across the firm.
 
-| 観点 | Before | After |
-|------|--------|-------|
-| 国別リスク評価 | 主要国のみ (米・中・EU) | **20+ 国の判例傾向と仲裁地特性を網羅** |
-| 交渉戦略の立案 | 案件毎に弁護士に相談 | **過去案件からの妥協ライン提示** |
-| 締結までの期間 | 3〜6 ヶ月 | **6〜10 週間** |
-
----
-
-## 7. 全業種共通: 個人 → 組織メモリ循環の効果
-
-Praxia の **真の差別化** は、ここまでの個別効果 (時間短縮・品質向上) に加えて、**個人で使うだけで組織知が育つ** こと。長期的・継続的な効果は以下のとおり。
-
-| KPI | Before | After (1 年後) | After (3 年後) |
-|-----|--------|--------------|--------------|
-| 新人独り立ち期間 | 6〜12 ヶ月 | 4〜6 ヶ月 | **2〜3 ヶ月** |
-| ベテラン退職時の知見漏出 | 年数件発生 | 半減 | **ゼロ** |
-| 同部門の品質ばらつき | 担当者間で 2〜3 倍の差 | 50% 縮小 | **20% 以内に収束** |
-| 部門横断のベスプラ流通 | ほぼ無い | 月 5〜10 件 | **月 30 件以上** |
-| AI 活用度 (個人最高 vs 組織平均) | 平均は最高の 30〜50% | 60〜70% | **80% 以上** |
-
-### 具体的な「組織知の発酵」シナリオ
-
-**シナリオ A: 営業ベスプラの自動展開**
-1. **6 ヶ月目** ベテラン営業 1 人が「製造業向け課題抽出プロンプト v1」を磨いて受注率 +20pt 達成
-2. **12 ヶ月目** 同部門 5 人が独立に類似プロンプトを使うようになる
-3. **13 ヶ月目** Sleep-time Consolidator が検出 → 組織共有プロンプトとして自動昇格
-4. **18 ヶ月目** 新人が初日から同じツールセットで戦える
-
-**シナリオ B: 部門横断のクロスポリネーション**
-1. 知財部が磨いた「特許検索式テンプレート」が組織メモリに昇格
-2. R&D 部の研究員が Praxia 経由でアクセス
-3. 自部門外の知見を活用 → 出願戦略の精度向上 + 重複研究の回避
-4. **「サイロ化したナレッジが組織内で流通する」** という、これまで実現困難だった状態に到達
-
-**シナリオ C: 退職時の知見継承**
-1. 30 年勤続のベテラン購買マネージャーが定年退職予定
-2. 退職前 3 ヶ月で Praxia を集中利用 → 暗黙知が個人メモリに蓄積
-3. 「組織メモリへ寄付」モード → 全知見が匿名化・抽象化されて組織標準へ
-4. 後任は退職者の 30 年分の経験値を初日から活用可能
-5. **過去には不可能だった「世代を超えた組織知の継承」が成立**
+| Dimension | Before | After |
+|---|---|---|
+| 500-supplier evaluation | 6 months (5 dedicated FTE) | **6–8 weeks** |
+| Single-source detection rate | 70–80% | **95%+** |
+| Risk-matrix granularity | Country level | **Prefecture / city level + supplier-specific** |
+| Time to executive report | 6–12 months | **2 months** |
 
 ---
 
-## 8. 営業トーク用ピッチ・テンプレート
+## 5. Intellectual Property (`PatentSkill`)
 
-紹介・営業時に使える短文テンプレート。
+### 5-A. Prior-art search + non-obviousness analysis
 
-### 30 秒ピッチ
-> 「Praxia は、ベテランの暗黙知を AI で組織知に変える OSS です。営業・購買・法務など 6 業務領域のエージェントが普段の作業を 5〜8 割短縮しつつ、本人が普通に使うだけで『効くプロンプト』が組織全員のベスプラとして自動的に育ちます。**Apache 2.0 で公開、Claude / ChatGPT / Gemini / Qwen が選べます**。」
+**Scenario**: an R&D group at a manufacturer evaluates 10–20 inventions per month for "patent or trade secret?"
 
-### 業種別キーフレーズ
-| 業種 | キーフレーズ |
-|------|------------|
-| 投資・金融 | 「ジュニア・アソシエイトが初日からシニア並みの目利きで動ける」 |
-| 営業・SaaS | 「ベテラン営業の引き出しを、新人の手元に置く」 |
-| SIer・受託 | 「シニア・アーキテクトのレビュー時間を 1/4 にしながら、品質はむしろ向上」 |
-| 製造業・購買 | 「サプライチェーン・リスクの早期検知で 1 件 1,000 万円規模の損失を防ぐ」 |
-| メーカー・知財 | 「弁理士費用を 50〜70% 削減しながら、特許戦略の精度はむしろ向上」 |
-| 法務 | 「M&A の外部法律事務所費用を半減」 |
+| Dimension | Before | After |
+|---|---|---|
+| Search time per invention | 1–2 business days (attorney + researcher) | **2–4 hours** |
+| Search-query design | Depends on attorney experience | **Synonym expansion + IPC / FI / F-term coverage, systematic** |
+| Non-obviousness reasoning | "In my experience…" | **Element-by-element comparison table + secondary considerations / commercial success** |
+| Attorney fees | 300–500K yen per invention | **100–150K yen (first-pass insourced)** |
+
+**Personal → org memory cycle**:
+- An IP veteran's "semiconductor-domain search templates" accumulate in personal memory.
+- Researchers in unrelated fields access them via Praxia — cross-domain prior art surfaces.
+- **"IP knowledge compounds across the organization"** → filing strategy gets sharper.
+
+### 5-B. First-draft claim writing
+
+**Scenario**: a startup wants to keep attorney costs low without sacrificing claim quality.
+
+| Dimension | Before | After |
+|---|---|---|
+| Initial draft turnaround | Hand to attorney → 2 weeks | **Praxia first draft → attorney review: 3 business days** |
+| Attorney fees | 500–800K yen | **150–250K yen (review only)** |
+| Strategic claim structuring | Outsourced | **Independent-claim breadth / dependent-claim narrowing pre-analyzed** |
+
+### 5-C. Competitive patent landscape mapping
+
+**Scenario**: pre-launch patent-infringement risk assessment for a new product.
+
+| Dimension | Before | After |
+|---|---|---|
+| Analysis of 50–100 competitor patents | 1 month (2 IP FTE) | **1 week** |
+| Infringement-risk quantification | 3-level severity (subjective) | **Element-level mapping matrix** |
+| Design-around proposals | Another month | **Generated in the same pass (3 alternative claim sets)** |
 
 ---
 
-## 9. 採用判断のためのチェックリスト
+## 6. Legal (`LegalSkill`)
 
-導入を検討している企業向けの判断材料。
+### 6-A. Contract review (NDA / MSA / SaaS terms)
 
-- [ ] **対象業務**: ルーチン的な知的作業 (リサーチ・レビュー・比較・分析) が週 10 時間以上ある
-- [ ] **属人化リスク**: ベテランの引退・転職時に組織知の漏出懸念がある
-- [ ] **品質ばらつき**: 担当者間でアウトプット品質に 2 倍以上の差がある
-- [ ] **API 利用**: 主要 LLM (Claude / ChatGPT / Gemini / Qwen) のうち最低 1 つが利用可能
-- [ ] **データ管理**: 個人メモリ・組織メモリの保管先 (社内 / クラウド / オンプレ) が決められる
-- [ ] **PoC 体制**: 3〜10 名のパイロット・ユーザを 2〜3 ヶ月確保できる
+**Scenario**: a mid-market legal team handles 50–100 contract reviews per month with 2–3 lawyers.
 
-3 つ以上 ✅ なら、Praxia の導入効果が出やすい体質と言えます。
+| Dimension | Before | After |
+|---|---|---|
+| Review time per contract | 60–90 min | **10–15 min (first pass)** |
+| Monthly throughput | 50–80 contracts (capacity ceiling) | **200–300** |
+| Critical-risk miss rate | 5–10% | **1–2%** |
+| Lawyer overtime | 60–80 hrs/month | **20–30 hrs/month** |
+
+**Typical Before failure**:
+> "Damages-cap clause was left at 'unlimited.' Surfaced later as a 500M yen exposure when something went wrong."
+
+**After**:
+> LegalSkill flags it in the RACE framework's R (Risk) column with 🔴 Critical — must be negotiated before signature.
+
+### 6-B. M&A legal due diligence
+
+**Scenario**: a mid-market legal team reviews 200–500 contracts across 3 acquisition targets.
+
+| Dimension | Before | After |
+|---|---|---|
+| Full contract review | 4–8 weeks (incl. outside counsel, 15–30M yen) | **2–3 weeks (outside counsel 6–12M yen)** |
+| Change-of-control detection | 80–90% | **99%** |
+| Contingent-liability discovery | Depends on reviewer | **Systematic enumeration across all contracts** |
+
+**Pitch angle**:
+- "Outside-counsel costs cut ~50%" → ~10M yen savings per deal.
+
+### 6-C. Cross-border governing-law and jurisdiction review
+
+**Scenario**: negotiating governing law, arbitration venue, and jurisdiction clauses with overseas counterparties.
+
+| Dimension | Before | After |
+|---|---|---|
+| Country-by-country risk evaluation | Major jurisdictions only (US / China / EU) | **20+ jurisdictions covered (case-law trends + venue characteristics)** |
+| Negotiation strategy | Engage outside counsel per deal | **Org-memory-backed compromise ranges per scenario** |
+| Time to signature | 3–6 months | **6–10 weeks** |
 
 ---
 
-## 10. 次のアクション
+## 7. Cross-cutting: the personal → organizational memory cycle
 
-1. **5 分で試す**: `pip install "praxia[ui]" && praxia ui`
-2. **1 つの業務でパイロット**: 自部門で最も時間を取られている業務 1 つに当てはめてみる
-3. **3 ヶ月後に効果測定**: 時間削減・品質向上・組織知昇格件数を計測
-4. **組織展開の判断**: パイロット結果をベースに、全社展開 vs 部門展開を判断
+Praxia's **true differentiator** isn't the per-task speedup — it's that **organizational knowledge grows as a side effect of individuals using it normally**. Long-term effects compound:
 
-[GitHub](https://github.com/your-org/praxia) | [Quickstart](quickstart.md) | [Architecture](architecture.md)
+| KPI | Before | After (Year 1) | After (Year 3) |
+|---|---|---|---|
+| New-hire ramp time | 6–12 months | 4–6 months | **2–3 months** |
+| Knowledge loss when seniors leave | Several incidents/year | Halved | **Zero** |
+| Within-team output variance | 2–3× spread between people | 50% narrowing | **Within 20%** |
+| Cross-team best-practice flow | Essentially none | 5–10 / month | **30+ / month** |
+| AI utilization (top-individual vs. org average) | Average is 30–50% of top | 60–70% | **80%+** |
+
+### Concrete "knowledge-fermentation" scenarios
+
+**Scenario A: sales best-practice diffusion**
+1. **Month 6** — one senior AE refines a "manufacturing-vertical pain-discovery prompt v1," gaining +20pt win rate.
+2. **Month 12** — 5 other AEs in the same team independently arrive at similar prompts.
+3. **Month 13** — Sleep-time Consolidator detects the convergence → auto-promotes to shared organizational prompt.
+4. **Month 18** — new hires start their first day with the same toolkit.
+
+**Scenario B: cross-team pollination**
+1. The IP team's "patent-search-query templates" get promoted to org memory.
+2. R&D researchers access them via Praxia.
+3. Non-domain expertise reaches the right humans → filing strategy sharpens, duplicate research avoided.
+4. **"Siloed knowledge flows across the organization"** — a state previously hard to engineer.
+
+**Scenario C: knowledge handover at retirement**
+1. A 30-year procurement veteran is 3 months from retirement.
+2. They use Praxia intensively for those 3 months — tacit knowledge accumulates in personal memory.
+3. They opt into "donate to org memory" mode — knowledge is anonymized, abstracted, and promoted.
+4. The successor inherits 30 years of experience on day one.
+5. **Generational knowledge transfer — historically impossible — becomes routine.**
+
+---
+
+## 8. Pitch & talk-track templates
+
+Short templates for evangelism conversations.
+
+### 30-second pitch
+> "Praxia is open-source software that turns the senior expert's tacit knowledge into organizational knowledge using AI. Across 6 workflow domains — sales, procurement, legal, IP, design, investment — agents cut routine work by 50–80%, and as people just use them normally, the prompts that work get auto-promoted as best practices for the whole team. **Apache 2.0; works with Claude, ChatGPT, Gemini, or Qwen.**"
+
+### Vertical-specific one-liners
+| Vertical | Key phrase |
+|---|---|
+| Investment / finance | "Junior associates operate with senior-level instincts on day one." |
+| Sales / SaaS | "Put the senior AE's playbook in the new hire's hand." |
+| Systems integration | "Senior architects' review time cut 75% while quality goes up, not down." |
+| Manufacturing / procurement | "Supply-chain risk caught early — 10M yen losses prevented per incident." |
+| IP / R&D | "Attorney fees cut 50–70% while filing-strategy precision improves." |
+| Legal | "M&A outside-counsel costs cut in half." |
+
+---
+
+## 9. Adoption checklist
+
+Decision criteria for organizations considering Praxia.
+
+- [ ] **Target workflow**: routine knowledge work (research / review / comparison / analysis) consumes 10+ hours/week
+- [ ] **Key-person risk**: concern about knowledge loss when seniors leave
+- [ ] **Quality variance**: 2× or more output-quality spread across the team
+- [ ] **LLM access**: at least one of Claude / ChatGPT / Gemini / Qwen available
+- [ ] **Data residency**: can decide where personal / org memory lives (on-prem / cloud / hybrid)
+- [ ] **PoC capacity**: can dedicate 3–10 pilot users for 2–3 months
+
+3 or more ✅ — Praxia is likely a strong fit.
+
+---
+
+## 10. Next steps
+
+1. **Try it in 5 minutes**: `pip install "praxia[ui]" && praxia ui`
+2. **Pilot on one workflow**: pick the single most time-consuming task in your team and try it
+3. **Measure at 3 months**: time saved, quality lift, and number of items promoted to org memory
+4. **Decide on org-wide rollout**: use pilot data to choose org-wide vs. team-scoped deployment
+
+[GitHub](https://github.com/praxia-dev/praxia) | [Quickstart](quickstart.md) | [Architecture](architecture.md)
