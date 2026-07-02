@@ -35,17 +35,17 @@
 
 ## ⬇ **Try Praxia in 30 seconds — no Python, no setup**
 
-### 👉 [**📦 Download Praxia Desktop for Windows (.exe, 174 MB)**](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-52_x64-setup.exe)
+### 👉 [**Get Praxia Desktop on the Microsoft Store**](https://apps.microsoft.com/detail/9P9LSR34HZF3)
 
-Windows 10 / 11 x64 alpha · Tauri + embedded Python sidecar · zero
+[<img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="52">](https://apps.microsoft.com/detail/9P9LSR34HZF3)
+
+Windows 10 / 11 x64 · Tauri + embedded Python sidecar · zero
 `pip install`, zero `praxia serve`. Paste an LLM API key (Anthropic /
 OpenAI / Azure / Google / Qwen / HF / Ollama) and you're chatting.
-Unsigned alpha — SmartScreen will warn on first launch, click
-**"More info" → "Run anyway"**.
+Installed through the Store, so no SmartScreen warning and updates
+land automatically.
 
-Other downloads · [`.msi` for managed deployment](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-52_x64_en-US.msi)
-· [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest)
-· macOS / Linux coming in Phase 1b.
+macOS / Linux coming in Phase 1b.
 
 ---
 
@@ -729,21 +729,18 @@ CLI users get the same functionality with rich-formatted output:
 
 > ### 🖥 Native desktop app (no Python required)
 >
-> The easiest way to try Praxia is the native desktop installer.
+> The easiest way to try Praxia is the native desktop app on the Microsoft Store.
 >
-> | Platform | Installer | Status |
+> | Platform | Distribution | Status |
 > |---|---|---|
-> | Windows 10 / 11 | `.exe` (NSIS, 174 MB) / `.msi` (WiX, 250 MB) | ✅ **`v0.1.0-alpha27` shipped** |
-> | macOS 12+ | `.dmg` | 🚧 next alpha drop |
-> | Linux (Debian / Ubuntu) | `.deb` / `.AppImage` | 🚧 next alpha drop |
+> | Windows 10 / 11 x64 | [Microsoft Store](https://apps.microsoft.com/detail/9P9LSR34HZF3) | ✅ **shipped** |
+> | macOS 12+ | — | 🚧 Phase 1b |
+> | Linux (Debian / Ubuntu) | — | 🚧 Phase 1b |
 >
-> 📦 **Direct download (Windows, ~174 MB):**
-> [`Praxia.Desktop_0.1.0-52_x64-setup.exe`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-52_x64-setup.exe)
-> · alternatives: [`.msi`](https://github.com/praxia-dev/praxia/releases/latest/download/Praxia.Desktop_0.1.0-52_x64_en-US.msi) for managed deployment ·
-> [all releases & notes](https://github.com/praxia-dev/praxia/releases/latest).
-> The installer is unsigned during alpha, so Windows SmartScreen will warn on
-> first launch — click **"More info" → "Run anyway"** (signed builds land
-> with beta).
+> 👉 **[Get Praxia Desktop on the Microsoft Store](https://apps.microsoft.com/detail/9P9LSR34HZF3)**
+> — installed through the Store, so no SmartScreen warning and updates land
+> automatically. Past release notes remain on
+> [GitHub Releases](https://github.com/praxia-dev/praxia/releases).
 >
 > The desktop app **embeds the Praxia server inside the installer** —
 > install, launch, paste an LLM provider key, and you're running. No
